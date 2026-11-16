@@ -182,6 +182,7 @@ const ACTIONS = {
     if (hdr.getValue() !== JOB_COLS[JOB_COLS.length - 1]) hdr.setValue(JOB_COLS[JOB_COLS.length - 1]).setFontWeight('bold');
     list.forEach(j => {
       if (groupOf_(j.tips) === 'Aizvietošana' && PROMBUTNE.indexOf(j.prombutne) === -1) throw new Error('Norādiet aizvietošanas iemeslu adresei ' + j.adrese + ': atvaļinājums, DNL vai vakance');
+      if (j.prombutne === 'Atvaļinājums' && !j.lidz) throw new Error('Norādiet, līdz kuram datumam ilgst atvaļinājums (' + j.adrese + ')');
     });
     const rows = [];
     list.forEach(j => {

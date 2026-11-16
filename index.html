@@ -1070,7 +1070,7 @@ function rowHtml(j = {}, single) {
       <span class="label">Kāpēc jāaizvieto?</span>
       <div class="shortcuts" style="margin:0">${PROMB.map(([v, ic]) => `<button type="button" class="sc ${j.prombutne === v ? 'on' : ''}" data-prom="${v}">${ic} ${v}</button>`).join('')}</div>
       ${single ? '' : `<div class="vacbox" hidden>
-        <span class="label">Aizvietot līdz (ieskaitot) <span class="opt">· nav obligāti</span></span>
+        <span class="label">Aizvietot līdz (ieskaitot) <span class="opt lidz-opt">· nav obligāti</span></span>
         <input type="date" class="input fLidz" value="${esc(j.lidz || '')}">
         <label class="chk"><input type="checkbox" class="fWeek"> Arī sestdienās un svētdienās</label>
         <div class="vacinfo"></div>
@@ -1097,6 +1097,9 @@ function updateVac(row) {
   const box = row.querySelector('.vacbox'); if (!box) return;
   const on = isRepl && !!wrap.dataset.prom;
   box.hidden = !on;
+  const must = wrap.dataset.prom === 'Atvaļinājums';
+  const opt = box.querySelector('.lidz-opt');
+  opt.textContent = must ? '· obligāti' : '· nav obligāti'; opt.style.color = must ? 'var(--red)' : '';
   const info = row.querySelector('.vacinfo'), lidz = row.querySelector('.fLidz').value;
   if (!on || !lidz) { info.textContent = ''; }
   else if (lidz <= formDate) { info.textContent = 'Datumam jābūt pēc ' + shortDate(formDate); info.classList.add('bad'); }
@@ -1195,6 +1198,9 @@ $('jobForm').onsubmit = async (e) => {
   const noP = items.findIndex(x => groupOfType(x.tips) === 'Aizvietošana' && !x.prombutne);
   if (noP !== -1) { document.querySelectorAll('#jRows .jrow')[noP]?.querySelector('.vacwrap')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return toast(`${noP + 1}. adresei norādiet, kāpēc jāaizvieto: atvaļinājums, DNL vai vakance`, 'err'); }
+  const noL = items.findIndex(x => x.prombutne === 'Atvaļinājums' && !x.lidz);
+  if (noL !== -1) { const f = document.querySelectorAll('#jRows .jrow')[noL]?.querySelector('.fLidz'); f?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => f?.focus(), 300);
+    return toast(`${noL + 1}. adresei norādiet, līdz kuram datumam ilgst atvaļinājums`, 'err'); }
   const badV = items.findIndex(x => x.lidz && x.lidz <= formDate);
   if (badV !== -1) return toast(`${badV + 1}. adresei „līdz” datumam jābūt pēc sākuma datuma`, 'err');
   const total = items.reduce((n, x) => n + seriesDates(formDate, x.lidz, x.brivdienas).length, 0);
