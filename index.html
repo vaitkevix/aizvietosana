@@ -1502,7 +1502,16 @@ $('unitSeg').addEventListener('click', (e) => {
 });
 
 /* ---------- Starts ---------- */
-if (!self.DEMO_API && 'serviceWorker' in navigator) navigator.serviceWorker.register('./firebase-messaging-sw.js').catch(() => {});
+if (!self.DEMO_API && 'serviceWorker' in navigator) {
+  // Automātiska atjaunināšana: kad GitHub ir jauna versija, lietotne pati pārlādējas
+  let reloading = false;
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !reloading) { reloading = true; location.reload(); } });
+  navigator.serviceWorker.register('./firebase-messaging-sw.js').then(reg => {
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    setInterval(() => reg.update().catch(() => {}), 10 * 60 * 1000);
+  }).catch(() => {});
+}
 window.addEventListener('DOMContentLoaded', () => {
   const saved = ls.get('darbi_pin');
   if (saved) tryLogin(saved); else startTeamView();
