@@ -1,7 +1,7 @@
 // Service worker: bezsaistes kešs + Firebase push paziņojumi fonā
 importScripts('./config.js');
 
-const CACHE = 'darbi-v27';
+const CACHE = 'darbi-v28';
 const ASSETS = ['./', './index.html', './config.js', './manifest.json', './icons/icon-192.png', './icon.png'];
 
 self.addEventListener('install', (e) => {

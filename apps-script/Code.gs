@@ -14,7 +14,9 @@ const SH_STAFF = 'Darbinieki';
 const SH_CREW = 'Sastavs';
 const SH_OBJ = 'Objekti';
 const SH_TYPES = 'DarbuVeidi';
-const JOB_COLS = ['ID', 'Datums', 'Adrese', 'Tips', 'Apraksts', 'Vaditajs', 'Brigade', 'Statuss', 'Publicets', 'Izpildits', 'Izveidots', 'Komentars', 'Foto', 'Iemesls', 'Lidz', 'Serija', 'Prombutne'];
+const JOB_COLS = ['ID', 'Datums', 'Adrese', 'Tips', 'Apraksts', 'Vaditajs', 'Brigade', 'Statuss', 'Publicets', 'Izpildits', 'Izveidots', 'Komentars', 'Foto', 'Iemesls', 'Lidz', 'Serija', 'Prombutne', 'Steidzami', 'Laiks', 'Parbaude', 'ParbaudesKomentars'];
+const SH_PROB = 'Problemas';
+const PROB_COLS = ['ID', 'Laiks', 'Adrese', 'Vaditajs', 'Vieniba', 'Apraksts', 'Foto', 'Statuss', 'Atrisinats'];
 const TZ = 'Europe/Riga';
 const PROMBUTNE = ['Atvaļinājums', 'DNL', 'Vakance'];   // aizvietošanas iemesls
 
@@ -35,6 +37,7 @@ function doPost(e) {
     if (req.action === 'teamView') return json_(Object.assign({ ok: true }, teamView_(req)));
     if (req.action === 'teamDone') return json_(Object.assign({ ok: true }, teamDone_(req)));
     if (req.action === 'teamCant') return json_(Object.assign({ ok: true }, teamCant_(req)));
+    if (req.action === 'teamProblem') return json_(Object.assign({ ok: true }, teamProblem_(req)));
     const user = auth_(req.pin);
     if (!user) return json_({ ok: false, error: 'Nepareizs PIN' });
     const fn = ACTIONS[req.action];
@@ -50,7 +53,7 @@ const ACTIONS = {
 
   jobs: (u, r) => {
     const units = units_(r.date);
-    return { jobs: visibleJobs_(u, r.date), units: units, crews: crews_(r.date), staff: staff_(), teamLink: u.role === 'admin' ? teamLink_() : '' };
+    return { jobs: visibleJobs_(u, r.date), units: units, crews: crews_(r.date), staff: staff_(), teamLink: u.role === 'admin' ? teamLink_() : '', problems: problems_(u) };
   },
 
   /** Vienība dienai: izveidot, pārsaukt (oldName) vai mainīt cilvēkus */
@@ -149,6 +152,8 @@ const ACTIONS = {
       job.datums = j.datums; job.adrese = String(j.adrese).trim(); job.tips = j.tips || job.tips; job.apraksts = j.apraksts || '';
       if (j.vaditajs && u.role === 'admin') job.vaditajs = String(j.vaditajs);
       if (j.prombutne !== undefined) job.prombutne = PROMBUTNE.indexOf(j.prombutne) !== -1 ? j.prombutne : '';
+      if (j.steidzami !== undefined) job.steidzami = j.steidzami ? '1' : '';
+      if (j.laiks !== undefined) job.laiks = cleanTime_(j.laiks);
       addObjects_([job.adrese], job.vaditajs);
       writeJob_(sh, job);
       return { job: clean_(job) };
@@ -178,8 +183,7 @@ const ACTIONS = {
     if (!r.date) throw new Error('Norādi datumu');
     const types = jobTypes_().map(t => t.name);
     const objMgr = objectManagers_();
-    const hdr = sheet_(SH_JOBS).getRange(1, JOB_COLS.length);
-    if (hdr.getValue() !== JOB_COLS[JOB_COLS.length - 1]) hdr.setValue(JOB_COLS[JOB_COLS.length - 1]).setFontWeight('bold');
+    jobsSheet_();
     list.forEach(j => {
       if (groupOf_(j.tips) === 'Aizvietošana' && PROMBUTNE.indexOf(j.prombutne) === -1) throw new Error('Norādiet aizvietošanas iemeslu adresei ' + j.adrese + ': atvaļinājums, DNL vai vakance');
       if (j.prombutne === 'Atvaļinājums' && !j.lidz) throw new Error('Norādiet, līdz kuram datumam ilgst atvaļinājums (' + j.adrese + ')');
@@ -192,7 +196,8 @@ const ACTIONS = {
       dates.forEach(d => rows.push(toRow_({
         id: Utilities.getUuid().slice(0, 8), datums: d, adrese: String(j.adrese).trim(), tips: j.tips,
         apraksts: String(j.apraksts || '').trim(), vaditajs: u.role === 'admin' ? String(j.vaditajs || objMgr[normName_(j.adrese)] || r.vaditajs || u.name) : u.name, brigade: '',
-        statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija: serija, foto: j.fotoIds || '', prombutne: PROMBUTNE.indexOf(j.prombutne) !== -1 ? j.prombutne : ''
+        statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija: serija, foto: j.fotoIds || '', prombutne: PROMBUTNE.indexOf(j.prombutne) !== -1 ? j.prombutne : '',
+        steidzami: j.steidzami ? '1' : '', laiks: cleanTime_(j.laiks)
       })));
     });
     const sh = sheet_(SH_JOBS);
@@ -218,7 +223,7 @@ const ACTIONS = {
     if (u.role === 'brigade') throw new Error('Nav atļauts');
     let list = readJobs_().filter(j => j.datums >= r.from && j.datums <= r.to);
     if (u.role === 'vaditajs') list = list.filter(j => j.vaditajs === u.name);
-    return { jobs: list.map(j => ({ datums: j.datums, adrese: j.adrese, tips: j.tips, vaditajs: j.vaditajs, brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, prombutne: j.prombutne, foto: j.foto ? 1 : 0 })) };
+    return { jobs: list.map(j => ({ datums: j.datums, adrese: j.adrese, tips: j.tips, vaditajs: j.vaditajs, brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, prombutne: j.prombutne, foto: j.foto ? 1 : 0, parbaude: j.parbaude, iemesls: j.iemesls, steidzami: j.steidzami })) };
   },
 
   deleteJob: (u, r) => withLock_(() => {
@@ -285,7 +290,7 @@ const ACTIONS = {
         job.izpildits = now_();
         job.komentars = String(r.komentars || '').trim();
         job.foto = splitNames_(job.foto).concat(ids).join(',');
-        job.iemesls = '';
+        job.iemesls = ''; job.parbaude = '';
       } else {
         job.statuss = job.brigade ? 'piešķirts' : 'jauns';
         job.izpildits = '';
@@ -328,6 +333,47 @@ const ACTIONS = {
     }
     sh.appendRow([u.name, r.token, r.device || '', now_()]);
     return {};
+  }),
+
+  /** Vadītājs vai admins pieņem izpildītu darbu vai atgriež to brigādei ar komentāru */
+  review: (u, r) => withLock_(() => {
+    const job = findJob_(r.id);
+    if (!job) throw new Error('Darbs nav atrasts');
+    if (u.role !== 'admin' && job.vaditajs !== u.name) throw new Error('Nav atļauts');
+    if (r.ok) {
+      if (job.statuss !== 'izpildīts') throw new Error('Pieņemt var tikai izpildītu darbu');
+      job.parbaude = 'pieņemts'; job.parbKom = '';
+    } else if (r.undo) {
+      job.parbaude = ''; job.parbKom = '';
+    } else {
+      const kom = String(r.komentars || '').trim();
+      if (!kom) throw new Error('Uzrakstiet, kas jāizlabo');
+      job.parbaude = 'atgriezts'; job.parbKom = kom + ' — ' + u.name;
+      job.statuss = job.brigade ? 'piešķirts' : 'jauns'; job.izpildits = '';
+    }
+    writeJob_(sheet_(SH_JOBS), job);
+    return { job: clean_(job) };
+  }),
+
+  /** Objekta vēsture: visi darbi un problēmas šajā adresē (jaunākie vispirms) */
+  history: (u, r) => {
+    const k = normName_(r.adrese);
+    if (!k) throw new Error('Nav adreses');
+    let list = readJobs_().filter(j => normName_(j.adrese) === k);
+    if (u.role === 'vaditajs') list = list.filter(j => j.vaditajs === u.name);
+    list.sort((a, b) => b.datums.localeCompare(a.datums) || b.izveidots.localeCompare(a.izveidots));
+    const probs = readProblems_().filter(p => normName_(p.adrese) === k && (u.role === 'admin' || p.vaditajs === u.name || !p.vaditajs));
+    return { total: list.length, jobs: list.slice(0, 60).map(clean_), problems: probs.reverse().slice(0, 20) };
+  },
+
+  problems: (u) => ({ problems: problems_(u) }),
+
+  problemDone: (u, r) => withLock_(() => {
+    const p = readProblems_().find(x => x.id === String(r.id));
+    if (!p) throw new Error('Ziņojums nav atrasts');
+    if (u.role !== 'admin' && p.vaditajs && p.vaditajs !== u.name) throw new Error('Nav atļauts');
+    probSheet_().getRange(p._row, 8, 1, 2).setValues([['atrisināts', now_() + ' ' + u.name]]);
+    return { problems: problems_(u) };
   }),
 
   testPush: (u) => ({ sent: notify_([u.name], 'Darbu sadale', 'Paziņojumi strādā ✓') })
@@ -378,7 +424,8 @@ function readJobs_() {
       _row: i + 1, id: String(r[0]), datums: dateStr_(r[1]), adrese: String(r[2]), tips: String(r[3]), apraksts: String(r[4]),
       vaditajs: String(r[5]), brigade: String(r[6]), statuss: String(r[7]), publicets: str_(r[8]), izpildits: str_(r[9]), izveidots: str_(r[10]),
       komentars: String(r[11] || ''), foto: String(r[12] || ''), iemesls: String(r[13] || ''),
-      lidz: dateStr_(r[14]), serija: String(r[15] || ''), prombutne: String(r[16] || '')
+      lidz: dateStr_(r[14]), serija: String(r[15] || ''), prombutne: String(r[16] || ''),
+      steidzami: String(r[17] || '') === '1' ? '1' : '', laiks: timeStr_(r[18]), parbaude: String(r[19] || ''), parbKom: String(r[20] || '')
     });
   }
   return out;
@@ -387,10 +434,71 @@ function readJobs_() {
 function findJob_(id) { return readJobs_().find(j => j.id === String(id)) || null; }
 
 function toRow_(j) {
-  return [j.id, j.datums, j.adrese, j.tips, j.apraksts, j.vaditajs, j.brigade, j.statuss, j.publicets, j.izpildits, j.izveidots, j.komentars || '', j.foto || '', j.iemesls || '', j.lidz || '', j.serija || '', j.prombutne || ''];
+  return [j.id, j.datums, j.adrese, j.tips, j.apraksts, j.vaditajs, j.brigade, j.statuss, j.publicets, j.izpildits, j.izveidots, j.komentars || '', j.foto || '', j.iemesls || '', j.lidz || '', j.serija || '', j.prombutne || '',
+    j.steidzami ? '1' : '', j.laiks ? "'" + j.laiks : '', j.parbaude || '', j.parbKom || ''];
 }
 
-function writeJob_(sh, j) { sh.getRange(j._row, 1, 1, JOB_COLS.length).setValues([toRow_(j)]); }
+function writeJob_(sh, j) { jobsSheet_(); sh.getRange(j._row, 1, 1, JOB_COLS.length).setValues([toRow_(j)]); }
+
+/** Pārliecinās, ka lapā Darbi ir visas kolonnas (jaunās kolonnas pievieno automātiski) */
+let JOB_COLS_OK = false;
+function jobsSheet_() {
+  const sh = sheet_(SH_JOBS);
+  if (JOB_COLS_OK) return sh;
+  if (sh.getMaxColumns() < JOB_COLS.length) sh.insertColumnsAfter(sh.getMaxColumns(), JOB_COLS.length - sh.getMaxColumns());
+  const h = sh.getRange(1, 1, 1, JOB_COLS.length).getValues()[0];
+  if (h.join('|') !== JOB_COLS.join('|')) sh.getRange(1, 1, 1, JOB_COLS.length).setValues([JOB_COLS]).setFontWeight('bold');
+  JOB_COLS_OK = true;
+  return sh;
+}
+
+/** „10:00” — laiks līdz kuram jāizdara */
+function cleanTime_(v) { const m = String(v || '').trim().match(/^(\d{1,2})[:.](\d{2})$/); return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : ''; }
+function timeStr_(v) { return v instanceof Date ? Utilities.formatDate(v, ss_().getSpreadsheetTimeZone(), 'HH:mm') : cleanTime_(v); }
+
+/* ---------------- Problēmas objektos (ziņo brigādes) ---------------- */
+
+function probSheet_() {
+  let sh = sheet_(SH_PROB);
+  if (!sh) {
+    sh = ss_().insertSheet(SH_PROB);
+    sh.getRange(1, 1, 1, PROB_COLS.length).setValues([PROB_COLS]).setFontWeight('bold');
+    sh.getRange('A:I').setNumberFormat('@');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function readProblems_() {
+  const data = probSheet_().getDataRange().getValues();
+  const out = [];
+  for (let i = 1; i < data.length; i++) {
+    const r = data[i]; if (!r[0]) continue;
+    out.push({ _row: i + 1, id: String(r[0]), laiks: str_(r[1]), adrese: String(r[2]), vaditajs: String(r[3]), vieniba: String(r[4]),
+      apraksts: String(r[5]), foto: String(r[6] || ''), statuss: String(r[7] || 'jauns'), atrisinats: str_(r[8]) });
+  }
+  return out;
+}
+
+/** Neatrisinātās problēmas: adminam visas, vadītājam — viņa objektos */
+function problems_(u) {
+  return readProblems_().filter(p => p.statuss !== 'atrisināts' && (u.role === 'admin' || p.vaditajs === u.name))
+    .reverse().map(p => { const c = Object.assign({}, p); delete c._row; return c; });
+}
+
+/** Brigāde (bez PIN) ziņo par problēmu objektā — bojājums, nav piekļuves u.c. */
+function teamProblem_(r) {
+  const adrese = String(r.adrese || '').trim(), teksts = String(r.teksts || '').trim();
+  if (!adrese) throw new Error('Norādiet adresi');
+  if (!teksts) throw new Error('Aprakstiet problēmu');
+  const ids = savePhotos_({ datums: Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'), adrese: adrese + ' problēma' }, r.photos);
+  return withLock_(() => {
+    const mgr = objectManagers_()[normName_(adrese)] || '';
+    probSheet_().appendRow([Utilities.getUuid().slice(0, 8), now_(), adrese, mgr, String(r.vieniba || '').slice(0, 120), teksts.slice(0, 2000), ids.join(','), 'jauns', '']);
+    notify_(namesByRole_('admin').concat(mgr ? [mgr] : []), '⚠ Problēma · ' + adrese, teksts.slice(0, 140));
+    return { saved: true };
+  });
+}
 
 function clean_(j) { const c = Object.assign({}, j); delete c._row; return c; }
 
@@ -417,7 +525,8 @@ function whatsapp_(date) {
       if (j.apraksts && what !== j.apraksts) what += ' (' + j.apraksts + ')';
       if (j.prombutne) what += ' (' + j.prombutne.toLowerCase() + (j.lidz ? ' līdz ' + lvDate_(j.lidz) : '') + ')';
       else if (j.lidz) what += ' (līdz ' + lvDate_(j.lidz) + ')';
-      lines.push(j.adrese + ' - ' + what);
+      if (j.laiks) what += ' (līdz plkst. ' + j.laiks + ')';
+      lines.push((j.steidzami ? '🔥 ' : '') + j.adrese + ' - ' + what);
     });
   });
   const link = teamLink_();
@@ -452,7 +561,8 @@ function teamView_(r) {
   const units = units_(date);
   const jobs = readJobs_().filter(j => j.datums === date && j.brigade).map(j => ({
     id: j.id, datums: j.datums, adrese: j.adrese, tips: j.tips, apraksts: j.apraksts, vaditajs: j.vaditajs,
-    brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, prombutne: j.prombutne, foto: j.foto, komentars: j.komentars, iemesls: j.iemesls, izpildits: j.izpildits
+    brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, prombutne: j.prombutne, foto: j.foto, komentars: j.komentars, iemesls: j.iemesls, izpildits: j.izpildits,
+    steidzami: j.steidzami, laiks: j.laiks, parbaude: j.parbaude, parbKom: j.parbKom
   }));
   const addrs = jobs.map(j => normName_(j.adrese));
   const objects = objects_().filter(o => addrs.indexOf(normName_(o.adrese)) !== -1);
@@ -468,7 +578,7 @@ function teamDone_(r) {
   return withLock_(() => {
     job = findJob_(r.id);
     if (r.done) {
-      job.statuss = 'izpildīts'; job.izpildits = now_(); job.iemesls = '';
+      job.statuss = 'izpildīts'; job.izpildits = now_(); job.iemesls = ''; job.parbaude = '';
       job.komentars = String(r.komentars || '').trim();
       job.foto = splitNames_(job.foto).concat(ids).join(',');
     } else {
