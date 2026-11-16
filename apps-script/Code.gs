@@ -32,6 +32,8 @@ function doPost(e) {
   }
   try {
     if (req.action === 'teamView') return json_(Object.assign({ ok: true }, teamView_(req)));
+    if (req.action === 'teamDone') return json_(Object.assign({ ok: true }, teamDone_(req)));
+    if (req.action === 'teamCant') return json_(Object.assign({ ok: true }, teamCant_(req)));
     const user = auth_(req.pin);
     if (!user) return json_({ ok: false, error: 'Nepareizs PIN' });
     const fn = ACTIONS[req.action];
@@ -435,12 +437,47 @@ function teamView_(r) {
   const units = units_(date);
   const jobs = readJobs_().filter(j => j.datums === date && j.brigade).map(j => ({
     id: j.id, datums: j.datums, adrese: j.adrese, tips: j.tips, apraksts: j.apraksts, vaditajs: j.vaditajs,
-    brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, foto: j.foto
+    brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, foto: j.foto, komentars: j.komentars, iemesls: j.iemesls, izpildits: j.izpildits
   }));
   const addrs = jobs.map(j => normName_(j.adrese));
   const objects = objects_().filter(o => addrs.indexOf(normName_(o.adrese)) !== -1);
   const managers = users_().filter(x => x.role === 'vaditajs').map(x => ({ name: x.name, color: x.color }));
   return { date: date, units: units, jobs: jobs, meta: { objects: objects, managers: managers, jobTypes: jobTypes_() } };
+}
+
+/** Brigāde (bez PIN) atzīmē darbu kā izpildītu vai atceļ atzīmi; var pievienot bildes un komentāru */
+function teamDone_(r) {
+  let job = findJob_(r.id);
+  if (!job || !job.brigade) throw new Error('Darbs nav atrasts vai nav piešķirts vienībai');
+  const ids = r.done ? savePhotos_(job, r.photos) : [];
+  return withLock_(() => {
+    job = findJob_(r.id);
+    if (r.done) {
+      job.statuss = 'izpildīts'; job.izpildits = now_(); job.iemesls = '';
+      job.komentars = String(r.komentars || '').trim();
+      job.foto = splitNames_(job.foto).concat(ids).join(',');
+    } else {
+      job.statuss = 'piešķirts'; job.izpildits = ''; job.iemesls = '';
+    }
+    writeJob_(sheet_(SH_JOBS), job);
+    if (r.done) notify_(namesByRole_('admin').concat(job.vaditajs ? [job.vaditajs] : []), '✓ Izpildīts · ' + job.brigade,
+      job.adrese + (job.komentars ? ' — ' + job.komentars : '') + (ids.length ? ' 📷' + ids.length : ''));
+    return { job: clean_(job) };
+  });
+}
+
+/** Brigāde (bez PIN) ziņo, ka darbu nevar izpildīt */
+function teamCant_(r) {
+  return withLock_(() => {
+    const job = findJob_(r.id);
+    if (!job || !job.brigade) throw new Error('Darbs nav atrasts vai nav piešķirts vienībai');
+    const reason = String(r.iemesls || '').trim();
+    if (!reason) throw new Error('Norādiet iemeslu');
+    job.statuss = 'nevar izpildīt'; job.iemesls = reason; job.izpildits = now_();
+    writeJob_(sheet_(SH_JOBS), job);
+    notify_(namesByRole_('admin').concat(job.vaditajs ? [job.vaditajs] : []), '⚠ Nevar izpildīt · ' + job.brigade, job.adrese + ' — ' + reason);
+    return { job: clean_(job) };
+  });
 }
 
 /* ---------------- Atvaļinājuma sērija ---------------- */

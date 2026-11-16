@@ -783,7 +783,7 @@ function card(j, o = {}) {
     <div class="task-top"><div>
       <h3 class="addr">${esc(j.adrese)}</h3>
       <div class="sub">${esc(typeText(j))}${o.hideMgr ? '' : ` · <b>${esc(j.vaditajs)}</b>`}</div>
-    </div>${o.noPill ? '' : statusPill(j)}</div>
+    </div>${o.noPill || (o.donePill && j.statuss !== 'izpildīts' && j.statuss !== 'nevar izpildīt') ? '' : statusPill(j)}</div>
     ${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}
     ${j.apraksts ? `<div class="note">${esc(j.apraksts)}</div>` : ''}
     ${reportHtml(j)}
@@ -925,9 +925,9 @@ function openCrew(b) {
 
 /* ---------- Klikšķi kartītēs ---------- */
 document.addEventListener('click', async (e) => {
-  if (UV) return;
   const c = e.target.closest('.task'); if (!c || e.target.closest('select, a')) return;
   const job = S.jobs.find(j => j.id === c.dataset.id); if (!job) return;
+  if (UV) return openReport(job);
   if (S.user.role === 'vaditajs' && job.brigade) return toast('Darbs jau piešķirts vienībai — mainīt var tikai admins');
   openEdit(job);
 });
@@ -1256,7 +1256,10 @@ function shrinkImage(file, max = 1600) {
     img.src = url;
   });
 }
-function updateJob(j) { S.jobs = S.jobs.map(x => x.id === j.id ? j : x); render(); }
+function updateJob(j) {
+  if (UV) { S.allJobs = S.allJobs.map(x => x.id === j.id ? Object.assign({}, x, j) : x); return renderTeam(); }
+  S.jobs = S.jobs.map(x => x.id === j.id ? j : x); render();
+}
 function openReport(job) {
   const marked = job.statuss === 'izpildīts' || job.statuss === 'nevar izpildīt';
   const head = `<h3>${esc(job.adrese)}</h3><p class="lead">${esc(typeText(job))} · ${esc(job.vaditajs)}${job.apraksts ? '<br>' + esc(job.apraksts) : ''}</p>`;
@@ -1267,7 +1270,7 @@ function openReport(job) {
       <button class="btn btn-glass btn-block" id="rUndo">Atcelt atzīmi</button>`);
     $('rUndo').onclick = async () => {
       $('rUndo').disabled = true;
-      try { const r = await api('done', { id: job.id, done: false }); closeSheet(); updateJob(r.job); toast('Atzīme atcelta'); }
+      try { const r = await api(UV ? 'teamDone' : 'done', { id: job.id, done: false }); closeSheet(); updateJob(r.job); toast('Atzīme atcelta'); }
       catch (err) { toast(err.message, 'err'); $('rUndo').disabled = false; }
     };
     return;
@@ -1298,7 +1301,7 @@ function openReport(job) {
   $('rThumbs').onclick = (e) => { const b = e.target.closest('button'); if (b) { photos.splice(+b.dataset.i, 1); draw(); } };
   $('rDone').onclick = async () => {
     const b = $('rDone'); b.disabled = true; b.innerHTML = '<span class="spinner"></span>' + (photos.length ? 'Augšupielādē bildes…' : 'Saglabā…');
-    try { const r = await api('done', { id: job.id, done: true, komentars: $('rNote').value, photos }); if (navigator.vibrate) navigator.vibrate(15); closeSheet(); updateJob(r.job); toast('Izpildīts', 'ok'); }
+    try { const r = await api(UV ? 'teamDone' : 'done', { id: job.id, done: true, komentars: $('rNote').value, photos }); if (navigator.vibrate) navigator.vibrate(15); closeSheet(); updateJob(r.job); toast('Izpildīts', 'ok'); }
     catch (err) { toast(err.message, 'err'); b.disabled = false; b.innerHTML = IC.check + 'Atzīmēt kā izpildītu'; }
   };
   $('rCant').onclick = () => { $('rCant').hidden = true; $('rCantBox').hidden = false; $('rCantBox').scrollIntoView({ behavior: 'smooth', block: 'end' }); };
@@ -1309,7 +1312,7 @@ function openReport(job) {
     const why = [reason, $('rWhy').value.trim()].filter(Boolean).join(': ');
     if (!why) return toast('Izvēlieties vai ierakstiet iemeslu', 'err');
     const b = $('rSendCant'); b.disabled = true;
-    try { const r = await api('cantDo', { id: job.id, iemesls: why }); closeSheet(); updateJob(r.job); toast('Nosūtīts adminam un vadītājam', 'ok'); }
+    try { const r = await api(UV ? 'teamCant' : 'cantDo', { id: job.id, iemesls: why }); closeSheet(); updateJob(r.job); toast('Nosūtīts adminam un vadītājam', 'ok'); }
     catch (err) { toast(err.message, 'err'); b.disabled = false; }
   };
 }
@@ -1346,7 +1349,7 @@ async function loadStats() {
 
 /* ---------- Palīdzība un iestatījumi ---------- */
 $('helpBtn').onclick = () => {
-  if (UV) return openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta.</p><p>Darbu vadītāji: spiediet <b>Ienākt</b> augšā un ievadiet PIN, lai pieteiktu darbus. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p>Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
+  if (UV) return openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta.</p><p>Kad darbs paveikts, uzspiediet uz objekta → <b>Atzīmēt kā izpildītu</b> (var pievienot bildes un komentāru). Ja nevar izdarīt — <b>Nevar izpildīt</b> ar iemeslu.</p><p>Darbu vadītāji: spiediet <b>Ienākt</b> augšā un ievadiet PIN, lai pieteiktu darbus. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p>Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
   if (!S.user) return openSheet(`<h3>Kā lietot?</h3><div class="help"><p>Ievadiet PIN kodu, ko jums iedeva admins.</p></div>`);
   const role = S.user.role, perm = ('Notification' in window) ? Notification.permission : 'nav';
   const help = {
@@ -1481,7 +1484,11 @@ function renderTeam() {
   $('heroPending').innerHTML = `<i></i><span>${esc(unitLabel(u))} · ${js.length} ${plural(js.length, 'objekts', 'objekti')}</span>`;
   $('todaySub').textContent = u.name + ' · ' + day;
   S.jobs = js;
-  $('todayList').innerHTML = js.length ? `<div class="list">${js.map(j => card(j, { links: true, noPill: true })).join('')}</div>`
+  const done = js.filter(j => j.statuss === 'izpildīts' || j.statuss === 'nevar izpildīt').length;
+  if (js.length && done === js.length) { $('heroPending').className = 'pending-line ok'; $('heroPending').innerHTML = `<i></i><span>${esc(unitLabel(u))} · visi objekti atzīmēti ✓</span>`; }
+  $('todayList').innerHTML = js.length ? `<div class="card panel" style="margin-bottom:12px;padding:14px 16px"><div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px"><span>Paveikts</span><span>${done} / ${js.length}</span></div>
+       <div class="progress"><span style="width:${Math.round(done / js.length * 100)}%"></span></div></div>
+     <div class="list">${js.map(j => card(j, { links: true, mark: true, donePill: true })).join('')}</div>`
     : emptyBox('Darbu nav', 'Jūsu vienībai šajā dienā darbi nav piešķirti.', IC.plan);
 }
 $('unitSeg').addEventListener('click', (e) => {
