@@ -286,6 +286,9 @@
   .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px 18px}
   .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--g-brd-2);font-size:12.5px;font-weight:700;color:var(--ink-2)}
   .chip.vac{background:var(--blue-soft);color:var(--blue);border-color:transparent}
+  .mgr-hint{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13px;color:var(--ink-2)}
+  .mgr-hint .dot{width:9px;height:9px;border-radius:50%}
+  #mgrField:not(.need) #mgrChips{opacity:.75}
   .chip.key{background:var(--amber-soft);color:var(--amber);border-color:transparent;white-space:normal}
   .chip.grp{background:var(--blue-soft);color:var(--blue);border-color:transparent}
   .sc .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 0 1.5px rgba(255,255,255,.7)}
@@ -488,7 +491,7 @@
         <button type="button" class="ai-btn" id="aiFormBtn"><span class="ai-spark">✨</span><span><b>Pieteikt ar mākslīgo intelektu jeb AI</b><small>Ielīmējiet vai nodiktējiet ziņu — forma aizpildīsies pati</small></span></button>
         <div class="ai-note ok" id="aiFormNote" hidden></div>
         <div class="field" id="mgrField" hidden>
-          <span class="label">Darbu vadītājs</span>
+          <span class="label">Darbu vadītājs <span class="opt" id="mgrNote">· tiek ņemts no adreses</span></span>
           <div class="shortcuts" id="mgrChips" style="margin:0"></div>
         </div>
         <div class="field">
@@ -912,6 +915,22 @@ function myObjects() {
   const me = S.user.name, objs = S.meta.objects || [];
   return [...objs.filter(o => o.vaditajs === me), ...objs.filter(o => o.vaditajs !== me)];
 }
+function objOf(a) { const k = String(a || '').trim().toLowerCase(); return (S.meta.objects || []).find(o => o.adrese.toLowerCase() === k); }
+/** Zem katras adreses parāda vadītāju no objektu saraksta (tikai adminam) */
+function mgrHints() {
+  if (!S.user || S.user.role !== 'admin') return;
+  let missing = false, any = false;
+  document.querySelectorAll('#jRows .jrow').forEach(r => {
+    const a = r.querySelector('.fAddr').value.trim(), o = objOf(a), m = o && o.vaditajs;
+    let h = r.querySelector('.mgr-hint');
+    if (!h) { h = document.createElement('div'); h.className = 'mgr-hint'; r.querySelector('.combo').after(h); }
+    h.innerHTML = m ? `<span class="dot" style="background:${esc(managerColor(m) || 'var(--ink-3)')}"></span>Vadītājs: <b>${esc(m)}</b>` : '';
+    h.hidden = !m;
+    if (a) { any = true; if (!m) missing = true; }
+  });
+  $('mgrNote').textContent = !any ? 'Tiek ņemts no adreses. Izvēlieties, ja adresei vadītājs nav norādīts.' : missing ? 'Kādai adresei vadītājs nav norādīts — izvēlieties, kam to pierakstīt.' : 'Visām adresēm vadītājs ņemts no saraksta ✓';
+  $('mgrField').classList.toggle('need', missing);
+}
 function comboHtml(val) {
   return `<div class="combo ${val ? 'picked' : ''}">${IC.search}
     <input class="input combo-input fAddr" value="${esc(val || '')}" placeholder="Sāciet rakstīt adresi…" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -939,12 +958,12 @@ function bindCombo(root) {
     e.preventDefault();
     const combo = b.closest('.combo'), inp = combo.querySelector('.fAddr');
     inp.value = b.dataset.a; combo.classList.add('picked'); combo.querySelector('.combo-clear').hidden = false;
-    b.parentElement.hidden = true; inp.blur();
+    b.parentElement.hidden = true; inp.blur(); mgrHints();
   });
   root.addEventListener('click', (e) => {
     const c = e.target.closest('.combo-clear'); if (!c) return;
     const combo = c.closest('.combo'), inp = combo.querySelector('.fAddr');
-    inp.value = ''; combo.classList.remove('picked'); c.hidden = true; inp.focus();
+    inp.value = ''; combo.classList.remove('picked'); c.hidden = true; inp.focus(); mgrHints();
   });
 }
 
@@ -1066,12 +1085,13 @@ function initForm(prefill) {
   }
   drawFormDays(); numberRows();
   document.querySelectorAll('#jRows .jrow').forEach(updateVac);
+  mgrHints();
 }
 $('formDaySeg').addEventListener('click', (e) => { const b = e.target.closest('button[data-d]'); if (b) { formDate = b.dataset.d; drawFormDays(); } });
 $('formDaySeg').addEventListener('change', (e) => { if (e.target.value) { formDate = e.target.value; drawFormDays(); } });
 bindCombo($('jRows'));
 $('jRows').addEventListener('click', (e) => {
-  if (e.target.closest('.jdel')) { e.target.closest('.jrow').remove(); numberRows(); return; }
+  if (e.target.closest('.jdel')) { e.target.closest('.jrow').remove(); numberRows(); mgrHints(); return; }
   const sc = e.target.closest('[data-sc]');
   if (sc) { const t = sc.closest('.field').querySelector('.fNote'); t.value = (t.value.trim() ? t.value.trim().replace(/[.]?$/, '. ') : '') + sc.dataset.sc + '.'; }
 });
@@ -1080,9 +1100,9 @@ $('jRows').addEventListener('change', (e) => {
   if (e.target.classList.contains('fVac') && e.target.checked && !row.querySelector('.fLidz').value) row.querySelector('.fLidz').value = addDays(formDate, 6);
   updateVac(row);
 });
-$('jRows').addEventListener('input', (e) => { if (e.target.classList.contains('fAddr')) updateSubmit(); });
+$('jRows').addEventListener('input', (e) => { if (e.target.classList.contains('fAddr')) { updateSubmit(); mgrHints(); } });
 $('addRowBtn').onclick = () => {
-  $('jRows').insertAdjacentHTML('beforeend', rowHtml()); numberRows();
+  $('jRows').insertAdjacentHTML('beforeend', rowHtml()); numberRows(); mgrHints();
   const last = $('jRows').lastElementChild; last.scrollIntoView({ behavior: 'smooth', block: 'center' });
   setTimeout(() => last.querySelector('.fAddr').focus(), 300);
 };
@@ -1090,7 +1110,7 @@ $('jobForm').onsubmit = async (e) => {
   e.preventDefault();
   const items = collectRows().filter(x => x.adrese || x.tips || x.apraksts);
   if (!items.length) return toast('Pievienojiet adresi', 'err');
-  if (S.user.role === 'admin' && !formMgr) { $('mgrField').scrollIntoView({ behavior: 'smooth', block: 'center' }); return toast('Izvēlieties darbu vadītāju', 'err'); }
+  if (S.user.role === 'admin' && !formMgr && items.some(x => !(objOf(x.adrese) || {}).vaditajs)) { $('mgrField').scrollIntoView({ behavior: 'smooth', block: 'center' }); return toast('Kādai adresei nav vadītāja — izvēlieties, kam to pierakstīt', 'err'); }
   const bad = items.findIndex(x => !x.adrese || !x.tips);
   if (bad !== -1) return toast(`${bad + 1}. adresei trūkst ${!items[bad].adrese ? 'adreses' : 'darba'}`, 'err');
   const badV = items.findIndex(x => x.lidz && x.lidz <= formDate);

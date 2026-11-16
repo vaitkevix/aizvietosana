@@ -159,6 +159,7 @@ const ACTIONS = {
     if (!list.length) throw new Error('Pievieno vismaz vienu adresi');
     if (!r.date) throw new Error('Norādi datumu');
     const types = jobTypes_().map(t => t.name);
+    const objMgr = objectManagers_();
     const rows = [];
     list.forEach(j => {
       if (types.indexOf(j.tips) === -1) throw new Error('Izvēlies darbu adresei ' + j.adrese);
@@ -166,7 +167,7 @@ const ACTIONS = {
       const serija = dates.length > 1 ? Utilities.getUuid().slice(0, 8) : '';
       dates.forEach(d => rows.push(toRow_({
         id: Utilities.getUuid().slice(0, 8), datums: d, adrese: String(j.adrese).trim(), tips: j.tips,
-        apraksts: String(j.apraksts || '').trim(), vaditajs: u.role === 'admin' ? String(j.vaditajs || r.vaditajs || u.name) : u.name, brigade: '',
+        apraksts: String(j.apraksts || '').trim(), vaditajs: u.role === 'admin' ? String(j.vaditajs || objMgr[normName_(j.adrese)] || r.vaditajs || u.name) : u.name, brigade: '',
         statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija: serija
       })));
     });
@@ -558,11 +559,27 @@ function typesSheet_() {
 function objects_() {
   const sh = objSheet_();
   const data = sh.getRange(1, 1, Math.max(sh.getLastRow(), 1), 4).getValues();
+  const canon = {};
+  users_().filter(x => x.role === 'vaditajs').forEach(m => canon[normName_(m.name)] = m.name);
   const out = [];
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0]) out.push({ adrese: String(data[i][0]).trim(), vaditajs: String(data[i][1] || '').trim(),
+    const v = String(data[i][1] || '').trim();
+    if (data[i][0]) out.push({ adrese: String(data[i][0]).trim(), vaditajs: canon[normName_(v)] || v,
       grupa: String(data[i][2] || 'SH objekti').trim(), piekluve: String(data[i][3] || '').trim() });
   }
+  return out;
+}
+
+/** Vārdu salīdzināšanai: bez garumzīmēm, mazie burti */
+function normName_(s) { return String(s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+/** {normalizēta adrese: vadītāja vārds kā lapā Lietotaji} */
+function objectManagers_() {
+  const mgrs = users_().filter(x => x.role === 'vaditajs');
+  const canon = {};
+  mgrs.forEach(m => canon[normName_(m.name)] = m.name);
+  const out = {};
+  objects_().forEach(o => { if (o.vaditajs) out[normName_(o.adrese)] = canon[normName_(o.vaditajs)] || o.vaditajs; });
   return out;
 }
 
