@@ -787,6 +787,7 @@ function card(j, o = {}) {
     ${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}
     ${j.apraksts ? `<div class="note">${esc(j.apraksts)}</div>` : ''}
     ${reportHtml(j)}
+    ${o.edit ? `<div class="links"><button class="chip-link" data-act="edit">✏️ Labot</button></div>` : ''}
     ${o.assign ? `<div class="assign"><select class="select" data-act="assign" aria-label="Vienība">
         <option value="">— Piešķirt vienībai —</option>
         ${unitNames(j.brigade).map(b => `<option value="${esc(b)}" ${b === j.brigade ? 'selected' : ''}>${esc(b)}${S.crews[b]?.length ? ' · ' + esc(S.crews[b].join(', ')) : ''}</option>`).join('')}
@@ -822,7 +823,7 @@ function renderPlan() {
   const groups = [['', list.filter(j => !j.brigade)]].concat(names.map(b => [b, list.filter(j => j.brigade === b)]));
   $('planList').innerHTML = groups.filter(g => g[1].length).map(([b, js]) =>
     `<div class="section-t"><span>${b ? esc(b) + (S.crews[b]?.length ? ' · ' + esc(S.crews[b].join(', ')) : '') : 'Nepiešķirti'}</span><span class="n">${js.length}</span></div>
-     <div class="list">${js.map(j => card(j, { assign: true })).join('')}</div>`).join('');
+     <div class="list">${js.map(j => card(j, { assign: true, edit: true })).join('')}</div>`).join('');
 }
 $('planFilter').addEventListener('click', (e) => { const b = e.target.closest('button[data-f]'); if (b) { S.planFilter = b.dataset.f; renderPlan(); } });
 $('planSearch').addEventListener('input', () => renderPlan());
@@ -842,7 +843,7 @@ async function showWhatsApp() {
 
 /* ---------- Vadītājs: mani darbi ---------- */
 function renderMine() {
-  $('mineList').innerHTML = S.jobs.length ? `<div class="list">${S.jobs.map(j => card(j, { showBrig: true, hideMgr: true })).join('')}</div>`
+  $('mineList').innerHTML = S.jobs.length ? `<div class="list">${S.jobs.map(j => card(j, { showBrig: true, hideMgr: true, edit: !j.brigade })).join('')}</div>`
     : emptyBox('Nav pieteikumu', 'Šai dienai neesat pieteicis darbus. Piesakiet cilnē „Jauns”.', IC.plus);
 }
 
@@ -1359,20 +1360,21 @@ $('helpBtn').onclick = () => {
   openSheet(`<h3>${esc(S.user.name)}</h3><p class="lead">${role === 'admin' ? 'Admins' : 'Darbu vadītājs'}</p>
     <div class="help">${help}</div>
     <div class="menu">
-      <button id="mPush">🔔 ${perm === 'granted' ? 'Paziņojumi ieslēgti' : 'Ieslēgt paziņojumus'}<span>${perm === 'granted' ? '✓' : '›'}</span></button>
-      ${perm === 'granted' ? '<button id="mTest">📲 Sūtīt testa paziņojumu<span>›</span></button>' : ''}
+      ${pushOn() ? `<button id="mPush">🔔 ${perm === 'granted' ? 'Paziņojumi ieslēgti' : 'Ieslēgt paziņojumus'}<span>${perm === 'granted' ? '✓' : '›'}</span></button>
+      ${perm === 'granted' ? '<button id="mTest">📲 Sūtīt testa paziņojumu<span>›</span></button>' : ''}` : ''}
       <!--DEMO_MENU-->
       <button id="mOut" class="red">Iziet<span>›</span></button>
     </div>
     ${isIOS && !standalone ? '<p class="lead" style="margin-top:12px">Paziņojumiem iPhone: Safari → Kopīgot → „Pievienot sākuma ekrānam”, tad atveriet lietotni no ikonas.</p>' : ''}
     <p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
-  $('mPush').onclick = self.DEMO_API ? () => toast('Demo: paziņojumi parādās ekrāna augšā') : enablePush;
+  if ($('mPush')) $('mPush').onclick = self.DEMO_API ? () => toast('Demo: paziņojumi parādās ekrāna augšā') : enablePush;
   if ($('mTest')) $('mTest').onclick = async () => { try { const r = await api('testPush'); toast(r.sent ? 'Nosūtīts' : 'Neizdevās — pārbaudiet Firebase', r.sent ? 'ok' : 'err'); } catch (e) { toast(e.message, 'err'); } };
   $('mOut').onclick = () => { ls.del('darbi_pin'); location.reload(); };
   if ($('mReset')) $('mReset').onclick = () => self.DEMO_RESET();
 };
 
 /* ---------- Push paziņojumi ---------- */
+function pushOn() { return !!(self.DEMO_API || (CFG.firebase && CFG.firebase.apiKey)); }
 function fbReady() { return CFG.firebase && CFG.firebase.apiKey && self.firebase; }
 async function enablePush() {
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return toast(isIOS && !standalone ? 'Vispirms pievienojiet lietotni sākuma ekrānam' : 'Šī pārlūkprogramma neatbalsta paziņojumus', 'err');
