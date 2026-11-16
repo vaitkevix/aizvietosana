@@ -614,7 +614,7 @@ function whatsapp_(date) {
     lines.push('', '*' + b + '*');
     if (crews[b] && crews[b].length) lines.push(crews[b].join(', '));
     byBrig[b].forEach(j => {
-      const extra = groupOf_(j.tips) === 'Papilddarbs';
+      const extra = groupOf_(j.tips) !== 'Aizvietošana';
       let what = extra ? (j.tips === 'Papilddarbs' || j.tips === 'Cits papilddarbs' ? (j.apraksts || 'papilddarbs') : j.tips) : j.tips.toLowerCase();
       if (j.apraksts && what !== j.apraksts) what += ' (' + j.apraksts + ')';
       if (j.prombutne) what += ' (' + j.prombutne.toLowerCase() + (j.lidz ? ' līdz ' + lvDate_(j.lidz) : '') + ')';
@@ -867,8 +867,14 @@ function typesSheet_() {
     sh.getRange(1, 1, 1, 2).setValues([['Darbs', 'Grupa']]).setFontWeight('bold');
     sh.getRange(2, 1, 8, 2).setValues([
       ['Sētnieks', 'Aizvietošana'], ['Abi', 'Aizvietošana'], ['Uzkopēja', 'Aizvietošana'],
-      ['Lapu savākšana', 'Papilddarbs'], ['Sniega tīrīšana', 'Papilddarbs'], ['Kāpņu telpas mazgāšana', 'Papilddarbs'],
-      ['Teritorijas sakopšana', 'Papilddarbs'], ['Cits papilddarbs', 'Papilddarbs']
+      ['Kāpņu telpas mazgāšana', 'Uzkopšana'], ['Logu mazgāšana', 'Uzkopšana'], ['Lifta kabīnes tīrīšana', 'Uzkopšana'],
+      ['Ģenerālā uzkopšana', 'Uzkopšana'], ['Uzkopšana pēc remonta', 'Uzkopšana'], ['Pagraba / bēniņu sakopšana', 'Uzkopšana'],
+      ['Pazemes stāvvietas uzkopšana', 'Uzkopšana'], ['Atkritumu novietnes sakopšana', 'Uzkopšana'], ['Grafiti / sludinājumu noņemšana', 'Uzkopšana'],
+      ['Dezinfekcija', 'Uzkopšana'], ['Teritorijas sakopšana', 'Teritorija'], ['Rotaļu laukuma sakopšana', 'Teritorija'],
+      ['Lielgabarīta atkritumu savākšana', 'Teritorija'], ['Notekrenu tīrīšana', 'Teritorija'], ['Lapu savākšana', 'Sezonālie darbi'],
+      ['Sniega tīrīšana', 'Sezonālie darbi'], ['Pretslīdes kaisīšana (smilts / sāls)', 'Sezonālie darbi'], ['Ledus un lāsteku notīrīšana', 'Sezonālie darbi'],
+      ['Pavasara sakopšana', 'Sezonālie darbi'], ['Zāles pļaušana', 'Sezonālie darbi'], ['Krūmu un dzīvžogu apgriešana', 'Sezonālie darbi'],
+      ['Puķu dobju kopšana un ravēšana', 'Sezonālie darbi'], ['Laistīšana', 'Sezonālie darbi'], ['Cits papilddarbs', 'Papilddarbs']
     ]);
     sh.setFrozenRows(1);
   }

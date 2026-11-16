@@ -688,7 +688,13 @@ let UV = null;   // brigāžu skats (bez PIN) — aktīvs, kamēr neviens nav ie
 const tr = (lv, ru) => UV && LANG === 'ru' ? ru : lv;
 const RU = {
   types: { 'Sētnieks': 'дворник', 'Abi': 'дворник и уборщица', 'Uzkopēja': 'уборщица', 'Papilddarbs': 'доп. работа', 'Lapu savākšana': 'сбор листьев',
-    'Sniega tīrīšana': 'уборка снега', 'Kāpņu telpas mazgāšana': 'мытьё лестницы', 'Teritorijas sakopšana': 'уборка территории', 'Cits papilddarbs': 'другая работа' },
+    'Sniega tīrīšana': 'уборка снега', 'Kāpņu telpas mazgāšana': 'мытьё лестницы', 'Teritorijas sakopšana': 'уборка территории', 'Cits papilddarbs': 'другая работа',
+    'Logu mazgāšana': 'мытьё окон', 'Lifta kabīnes tīrīšana': 'уборка кабины лифта', 'Ģenerālā uzkopšana': 'генеральная уборка', 'Uzkopšana pēc remonta': 'уборка после ремонта',
+    'Pagraba / bēniņu sakopšana': 'уборка подвала / чердака', 'Pazemes stāvvietas uzkopšana': 'уборка подземной парковки', 'Atkritumu novietnes sakopšana': 'уборка мусорной площадки',
+    'Grafiti / sludinājumu noņemšana': 'удаление граффити / объявлений', 'Dezinfekcija': 'дезинфекция', 'Rotaļu laukuma sakopšana': 'уборка детской площадки',
+    'Lielgabarīta atkritumu savākšana': 'сбор крупногабаритного мусора', 'Notekrenu tīrīšana': 'чистка водостоков', 'Pretslīdes kaisīšana (smilts / sāls)': 'посыпка (песок / соль)',
+    'Ledus un lāsteku notīrīšana': 'удаление льда и сосулек', 'Pavasara sakopšana': 'весенняя уборка', 'Zāles pļaušana': 'покос травы', 'Krūmu un dzīvžogu apgriešana': 'стрижка кустов и живой изгороди',
+    'Puķu dobju kopšana un ravēšana': 'уход за клумбами и прополка', 'Laistīšana': 'полив' },
   promb: { 'Atvaļinājums': 'Отпуск', 'DNL': 'Больничный', 'Vakance': 'Вакансия' },
   reasons: { 'Nav piekļuves': 'Нет доступа', 'Nav cilvēku': 'Нет людей', 'Laika apstākļi': 'Погода', 'Nav inventāra': 'Нет инвентаря', 'Iedzīvotāji traucē': 'Мешают жильцы' },
   wd: ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'],
