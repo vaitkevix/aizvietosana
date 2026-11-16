@@ -436,7 +436,7 @@ function aiPrompt_(r) {
 }
 
 function aiWrite_(u, r) {
-  const text = aiCall_(AI_SYSTEM, aiPrompt_(r), 400);
+  const text = aiCall_(AI_SYSTEM, aiPrompt_(r), 2000);
   return String(text || '').trim().replace(/^["„“]|["”“]$/g, '');
 }
 
@@ -458,7 +458,7 @@ function aiParse_(u, r) {
     '"datums" = diena, uz kuru attiecas darbi (piem. "rīt" → rītdienas datums); ja nav minēts, null. ' +
     '"lidz" aizpildi tikai, ja aizvietojamais ir atvaļinājumā/prombūtnē līdz konkrētam datumam. ' +
     '"aizvietot sētnieku" → tips "Sētnieks"; "abus"/"sētnieku un apkopēju" → "Abi". Neizdomā adreses.';
-  const raw = aiCall_(system, prompt, 1500);
+  const raw = aiCall_(system, prompt, 8000);
   const m = String(raw).match(/\{[\s\S]*\}/);
   if (!m) throw new Error('AI neatgrieza pieteikumu');
   const data = JSON.parse(m[0]);
