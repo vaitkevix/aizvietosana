@@ -79,7 +79,9 @@ const ACTIONS = {
     else sh.appendRow([r.date, name, persons.join(', ')]);
     if (old && old !== name) {
       const js = sheet_(SH_JOBS);
-      readJobs_().filter(j => j.datums === r.date && j.brigade === old).forEach(j => { j.brigade = name; writeJob_(js, j); });
+      readJobs_().filter(j => j.datums === r.date && brigs_(j.brigade).indexOf(old) !== -1).forEach(j => {
+        j.brigade = brigs_(j.brigade).map(b => b === old ? name : b).join(' | '); writeJob_(js, j);
+      });
     }
     const known = staff_().map(s => s.name);
     const st = staffSheet_();
@@ -95,8 +97,10 @@ const ACTIONS = {
       if (dateStr_(data[i][0]) === r.date && String(data[i][1]) === r.name) sh.deleteRow(i + 1);
     }
     const js = sheet_(SH_JOBS);
-    readJobs_().filter(j => j.datums === r.date && j.brigade === r.name).forEach(j => {
-      j.brigade = ''; if (j.statuss === 'piešķirts') j.statuss = 'jauns'; writeJob_(js, j);
+    readJobs_().filter(j => j.datums === r.date && brigs_(j.brigade).indexOf(r.name) !== -1).forEach(j => {
+      j.brigade = brigs_(j.brigade).filter(b => b !== r.name).join(' | ');
+      if (!j.brigade && j.statuss === 'piešķirts') j.statuss = 'jauns';
+      writeJob_(js, j);
     });
     return { units: units_(r.date), crews: crews_(r.date), jobs: visibleJobs_(u, r.date) };
   }),
@@ -226,8 +230,10 @@ const ACTIONS = {
     requireAdmin_(u);
     const job = findJob_(r.id);
     if (!job) throw new Error('Darbs nav atrasts');
-    if (job.brigade !== (r.brigade || '')) {
-      job.brigade = r.brigade || '';
+    const list = Array.isArray(r.brigades) ? r.brigades : (r.brigade ? [r.brigade] : []);
+    const val = list.map(x => String(x).trim()).filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' | ');
+    if (job.brigade !== val) {
+      job.brigade = val;
       if (job.statuss !== 'izpildīts') job.statuss = job.brigade ? 'piešķirts' : 'jauns';
       writeJob_(sheet_(SH_JOBS), job);
     }
@@ -390,7 +396,7 @@ function visibleJobs_(u, date) {
 function whatsapp_(date) {
   const jobs = readJobs_().filter(j => j.datums === date && j.brigade);
   const byBrig = {};
-  jobs.forEach(j => (byBrig[j.brigade] = byBrig[j.brigade] || []).push(j));
+  jobs.forEach(j => brigs_(j.brigade).forEach(b => (byBrig[b] = byBrig[b] || []).push(j)));
   const crews = crews_(date);
   const lines = ['*Plāns ' + lvDate_(date) + '*'];
   const order = units_(date).map(x => x.name);
@@ -669,6 +675,9 @@ function objects_() {
 }
 
 /** Vārdu salīdzināšanai: bez garumzīmēm, mazie burti */
+/** Vienības, kurām piešķirts darbs (var būt vairākas, atdalītas ar „|”) */
+function brigs_(s) { return String(s || '').split('|').map(x => x.trim()).filter(Boolean); }
+
 function normName_(s) { return String(s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
 
 /** {normalizēta adrese: vadītāja vārds kā lapā Lietotaji} */
