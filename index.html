@@ -1004,6 +1004,7 @@ document.addEventListener('click', async (e) => {
   if (btn.dataset.kind === 'cant') { const chip = document.querySelector('#rReasons .sc.on'); if (chip) req.text = (chip.dataset.r + '. ' + req.text).trim(); }
   if (!req.text && btn.dataset.kind === 'cant') return toast('Izvēlieties iemeslu vai uzrakstiet dažus vārdus');
   if (!req.adrese && btn.dataset.kind === 'note' && !req.text) return toast('Vispirms izvēlieties adresi');
+  if (btn.dataset.kind === 'note' && !req.text && !ctx.piekluve) return toast('Šai adresei nav piekļuves informācijas — uzrakstiet dažus vārdus, un AI tos noformēs');
   btn.disabled = true; btn.textContent = '✨ Raksta…';
   try {
     const text = await aiCall('note', req);

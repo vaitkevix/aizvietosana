@@ -416,7 +416,7 @@ function seriesDates_(start, lidz, brivdienas) {
 const AI_SYSTEM = 'Tu palīdzi apsaimniekošanas uzņēmuma darbiniekiem uzrakstīt īsas darba piezīmes latviešu valodā. ' +
   'Pārraksti lietotāja tekstu skaidrā, pieklājīgā, lietišķā latviešu valodā ar pareizu gramatiku un garumzīmēm. ' +
   'Saglabā visus faktus (vārdus, laikus, numurus, vietas), neko neizdomā un nepievieno jaunas detaļas. ' +
-  'Ja teksts ir tukšs, sagatavo īsu piezīmi brigādei no dotās informācijas (darbs, adrese, piekļuve). ' +
+  'Ja teksts ir tukšs, sagatavo piezīmi TIKAI no piekļuves informācijas (kodi, iezvani, vārti) — bez vispārīgiem norādījumiem un bez izdomātām detaļām. ' +
   'Piekļuves kodus, tālruņu numurus un simbolus (#, *) pārraksti precīzi, neko nemainot. Neizdomā informāciju, kuras nav. ' +
   'Pārbaudi locījumus (piem. „pie dežuranta”, nevis „pie dežurantā”). ' +
   'Neatkārto adresi un darba nosaukumu — tie jau redzami blakus piezīmei. ' +
@@ -436,6 +436,10 @@ function aiPrompt_(r) {
 }
 
 function aiWrite_(u, r) {
+  if (!String(r.text || '').trim() && r.kind === 'note') {
+    const o = objects_().find(x => normName_(x.adrese) === normName_(r.adrese));
+    if (!o || !o.piekluve) throw new Error('Šai adresei nav piekļuves informācijas — uzrakstiet dažus vārdus, un AI tos noformēs');
+  }
   const text = aiCall_(AI_SYSTEM, aiPrompt_(r), 2000);
   return String(text || '').trim().replace(/^["„“]|["”“]$/g, '');
 }
