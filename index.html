@@ -529,6 +529,20 @@
   .copy{margin:26px 0 8px;text-align:center;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-3);opacity:.85}
   .tour-tip .copy{margin:10px 0 0;font-size:10.5px}
   @media (max-width:420px){ .app.team .brand-row .logo{display:none} .app.team .brand-text h1{font-size:15.5px} }
+  /* ===== Pievienot sākuma ekrānam ===== */
+  .a2hs{position:fixed;left:10px;right:10px;bottom:calc(var(--safe-b) + 92px);z-index:80;max-width:460px;margin:0 auto;padding:14px 14px 12px;
+    border-radius:14px;background:#fff;border:1px solid var(--g-brd);box-shadow:0 18px 40px -14px rgba(0,0,0,.4);animation:viewIn .3s ease-out}
+  :root[data-theme="dark"] .a2hs{background:#1b2321}
+  .app.team ~ .a2hs,.a2hs.low{bottom:calc(var(--safe-b) + 14px)}
+  .a2hs .top{display:flex;gap:12px;align-items:center}
+  .a2hs img{width:46px;height:46px;border-radius:11px;flex:none;box-shadow:0 4px 10px -4px rgba(0,0,0,.3)}
+  .a2hs b{display:block;font-size:15.5px;font-weight:800}
+  .a2hs small{display:block;font-size:13px;color:var(--ink-3);font-weight:600;margin-top:1px}
+  .a2hs .x{margin-left:auto;align-self:flex-start;width:30px;height:30px;border:0;border-radius:50%;background:var(--surface-2);color:var(--ink-3);font-size:17px;cursor:pointer;flex:none}
+  .a2hs ol{margin:12px 0 4px;padding:0 0 0 20px;font-size:14px;line-height:1.55;color:var(--ink-2)}
+  .a2hs ol svg{width:17px;height:17px;vertical-align:-3px;color:var(--blue)}
+  .a2hs .btn-row{margin-top:12px}
+  .a2hs .btn{min-height:44px}
 </style>
 </head>
 <body>
@@ -1730,8 +1744,8 @@ async function openMonthReport(month) {
 
 /* ---------- Palīdzība un iestatījumi ---------- */
 $('helpBtn').onclick = () => {
-  if (UV && LANG === 'ru') { openSheet(`<h3>Работы бригад</h3><div class="help"><p>Вверху выберите день и нажмите на свои имена — увидите работы своей бригады с кодами доступа и фото. Выбор запоминается.</p><p>Когда работа сделана, нажмите на объект → <b>Отметить как выполнено</b> (можно добавить фото и комментарий). Если сделать нельзя — <b>Невозможно выполнить</b> с причиной.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Маршрут</b> открывает Google Maps со всеми невыполненными адресами. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Проблема</b> — сообщить руководителю о поломке на объекте.</p><p>План сохраняется в телефоне — его видно и без интернета.</p></div><button class="btn btn-primary btn-block" id="mTourT" style="margin-top:14px">Инструкция — шаг за шагом</button><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`); $('mTourT').onclick = startTour; return; }
-  if (UV) { openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta.</p><p>Kad darbs paveikts, uzspiediet uz objekta → <b>Atzīmēt kā izpildītu</b> (var pievienot bildes un komentāru). Ja nevar izdarīt — <b>Nevar izpildīt</b> ar iemeslu.</p><p>Darbu vadītāji: spiediet <b>Ienākt</b> augšā un ievadiet PIN, lai pieteiktu darbus. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Maršruts</b> atver Google Maps ar visām neizpildītajām adresēm. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Problēma</b> — ziņot vadītājam par bojājumu objektā.</p><p>Plāns saglabājas telefonā — to var redzēt arī bez interneta. Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><button class="btn btn-primary btn-block" id="mTourT" style="margin-top:14px">Pamācība — soli pa solim</button><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`); $('mTourT').onclick = startTour; return; }
+  if (UV && LANG === 'ru') { openSheet(`<h3>Работы бригад</h3><div class="help"><p>Вверху выберите день и нажмите на свои имена — увидите работы своей бригады с кодами доступа и фото. Выбор запоминается.</p><p>Когда работа сделана, нажмите на объект → <b>Отметить как выполнено</b> (можно добавить фото и комментарий). Если сделать нельзя — <b>Невозможно выполнить</b> с причиной.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Маршрут</b> открывает Google Maps со всеми невыполненными адресами. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Проблема</b> — сообщить руководителю о поломке на объекте.</p><p>План сохраняется в телефоне — его видно и без интернета.</p></div><button class="btn btn-primary btn-block" id="mTourT" style="margin-top:14px">Инструкция — шаг за шагом</button><button class="btn btn-glass btn-block" id="mA2hsT" style="margin-top:8px">Добавить на главный экран</button><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`); $('mTourT').onclick = startTour; $('mA2hsT').onclick = () => { closeSheet(); setTimeout(() => maybeA2HS(true), 350); }; return; }
+  if (UV) { openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta.</p><p>Kad darbs paveikts, uzspiediet uz objekta → <b>Atzīmēt kā izpildītu</b> (var pievienot bildes un komentāru). Ja nevar izdarīt — <b>Nevar izpildīt</b> ar iemeslu.</p><p>Darbu vadītāji: spiediet <b>Ienākt</b> augšā un ievadiet PIN, lai pieteiktu darbus. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Maršruts</b> atver Google Maps ar visām neizpildītajām adresēm. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Problēma</b> — ziņot vadītājam par bojājumu objektā.</p><p>Plāns saglabājas telefonā — to var redzēt arī bez interneta. Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><button class="btn btn-primary btn-block" id="mTourT" style="margin-top:14px">Pamācība — soli pa solim</button><button class="btn btn-glass btn-block" id="mA2hsT" style="margin-top:8px">Pievienot sākuma ekrānam</button><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`); $('mTourT').onclick = startTour; $('mA2hsT').onclick = () => { closeSheet(); setTimeout(() => maybeA2HS(true), 350); }; return; }
   if (!S.user) return openSheet(`<h3>Kā lietot?</h3><div class="help"><p>Ievadiet PIN kodu, ko jums iedeva admins.</p></div>`);
   const role = S.user.role, perm = ('Notification' in window) ? Notification.permission : 'nav';
   const help = {
@@ -1745,6 +1759,7 @@ $('helpBtn').onclick = () => {
       ${perm === 'granted' ? '<button id="mTest"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/></svg> Sūtīt testa paziņojumu<span>›</span></button>' : ''}` : ''}
       <!--DEMO_MENU-->
       <button id="mTour">Pamācība — soli pa solim<span>›</span></button>
+      <button id="mA2hs">Pievienot sākuma ekrānam<span>›</span></button>
       <button id="mOut" class="red">Iziet<span>›</span></button>
     </div>
     ${isIOS && !standalone ? '<p class="lead" style="margin-top:12px">Paziņojumiem iPhone: Safari → Kopīgot → „Pievienot sākuma ekrānam”, tad atveriet lietotni no ikonas.</p>' : ''}
@@ -1752,6 +1767,7 @@ $('helpBtn').onclick = () => {
   if ($('mPush')) $('mPush').onclick = self.DEMO_API ? () => toast('Demo: paziņojumi parādās ekrāna augšā') : enablePush;
   if ($('mTest')) $('mTest').onclick = async () => { try { const r = await api('testPush'); toast(r.sent ? 'Nosūtīts' : 'Neizdevās — pārbaudiet Firebase', r.sent ? 'ok' : 'err'); } catch (e) { toast(e.message, 'err'); } };
   $('mTour').onclick = startTour;
+  $('mA2hs').onclick = () => { closeSheet(); setTimeout(() => maybeA2HS(true), 350); };
   $('mOut').onclick = () => { ls.del('darbi_pin'); location.reload(); };
   if ($('mReset')) $('mReset').onclick = () => self.DEMO_RESET();
 };
@@ -2005,7 +2021,45 @@ const TOURS = {
 let TOUR = null;
 const tourRole = () => UV ? 'brigade' : S.user && S.user.role;
 const tourT = (v) => Array.isArray(v) ? tr(v[0], v[1]) : v;
-function maybeTour() { const r = tourRole(); if (r && TOURS[r] && !ls.get('darbi_tour_' + r)) setTimeout(() => { if (!TOUR && tourRole() === r && !$('sheet').classList.contains('open')) startTour(); }, 900); }
+
+/* ---------- Pievienot sākuma ekrānam (iPhone / Android) ---------- */
+let A2HS = null;
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOSd = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isMobile = () => isIOSd() || /android/i.test(navigator.userAgent);
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); A2HS = e; setTimeout(() => maybeA2HS(), 2500); });
+addEventListener('appinstalled', () => { ls.set('darbi_a2hs', 'done'); hideA2HS(); toast(tr('Lietotne pievienota sākuma ekrānam', 'Приложение добавлено на главный экран'), 'ok'); });
+function hideA2HS() { const b = document.getElementById('a2hs'); if (b) b.remove(); }
+function maybeA2HS(force) {
+  if (isStandalone()) { if (force) toast(tr('Lietotne jau ir sākuma ekrānā', 'Приложение уже на главном экране'), 'ok'); return; }
+  if (!force) {
+    if (!isMobile() || ls.get('darbi_a2hs') === 'done' || Date.now() - (+ls.get('darbi_a2hs_later') || 0) < 5 * 864e5) return;
+    if (!isIOSd() && !A2HS) return;
+    if (TOUR || $('sheet').classList.contains('open') || document.getElementById('a2hs')) return void setTimeout(() => maybeA2HS(), 5000);
+  }
+  hideA2HS();
+  const share = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5"/><path d="M8 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2"/></svg>';
+  const plus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+  const dots = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+  let body;
+  if (A2HS) body = `<div class="btn-row"><button class="btn btn-glass" data-a="later">${tr('Vēlāk', 'Позже')}</button><button class="btn btn-primary" data-a="add">${tr('Pievienot', 'Добавить')}</button></div>`;
+  else if (isIOSd()) body = `<ol><li>${tr('Apakšā (vai augšā) spiediet', 'Внизу (или вверху) нажмите')} ${share} <b style="display:inline">${tr('Kopīgot', 'Поделиться')}</b></li>
+      <li>${tr('Izvēlieties', 'Выберите')} ${plus} <b style="display:inline">${tr('Pievienot sākuma ekrānam', 'На экран «Домой»')}</b></li><li>${tr('Spiediet', 'Нажмите')} <b style="display:inline">${tr('Pievienot', 'Добавить')}</b></li></ol>
+      <div class="btn-row"><button class="btn btn-glass btn-block" data-a="later">${tr('Sapratu', 'Понятно')}</button></div>`;
+  else body = `<ol><li>${tr('Pārlūkā spiediet izvēlni', 'Нажмите меню браузера')} ${dots}</li><li>${tr('Izvēlieties', 'Выберите')} <b style="display:inline">${tr('Pievienot sākuma ekrānam', 'Добавить на главный экран')}</b> ${tr('vai', 'или')} <b style="display:inline">${tr('Instalēt lietotni', 'Установить приложение')}</b></li></ol>
+      <div class="btn-row"><button class="btn btn-glass btn-block" data-a="later">${tr('Sapratu', 'Понятно')}</button></div>`;
+  const el = document.createElement('div'); el.className = 'a2hs' + (UV ? ' low' : ''); el.id = 'a2hs';
+  el.innerHTML = `<div class="top"><img src="icon.png" alt=""><div><b>${tr('Ielieciet lietotni sākuma ekrānā', 'Добавьте приложение на экран')}</b><small>${tr('Atvērsiet ar vienu pieskārienu, kā parastu lietotni', 'Открывается одним нажатием, как обычное приложение')}</small></div>
+    <button class="x" data-a="later" aria-label="${tr('Aizvērt', 'Закрыть')}">×</button></div>${body}`;
+  document.body.appendChild(el);
+  el.onclick = async (e) => {
+    const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
+    if (a === 'later') { ls.set('darbi_a2hs_later', String(Date.now())); return hideA2HS(); }
+    if (a === 'add' && A2HS) { const ev = A2HS; A2HS = null; hideA2HS(); ev.prompt(); const r = await ev.userChoice.catch(() => ({})); ls.set(r.outcome === 'accepted' ? 'darbi_a2hs' : 'darbi_a2hs_later', r.outcome === 'accepted' ? 'done' : String(Date.now())); }
+  };
+}
+
+function maybeTour() { const r = tourRole(); if (r && TOURS[r] && ls.get('darbi_tour_' + r)) setTimeout(() => maybeA2HS(), 3000); if (r && TOURS[r] && !ls.get('darbi_tour_' + r)) setTimeout(() => { if (!TOUR && tourRole() === r && !$('sheet').classList.contains('open')) startTour(); }, 900); }
 function startTour() {
   const role = tourRole(); if (!TOURS[role]) return;
   closeSheet(); endTour(true);
@@ -2061,6 +2115,7 @@ function endTour(silent) {
   ls.set('darbi_tour_' + TOUR.role, '1');
   const back = TOUR.back; TOUR = null;
   if (!silent && !UV && back && S.view !== back) switchView(back);
+  setTimeout(() => maybeA2HS(), 1500);
 }
 addEventListener('resize', () => { if (TOUR) tourGo(TOUR.i); });
 addEventListener('keydown', (e) => { if (!TOUR) return; if (e.key === 'Escape') endTour(); if (e.key === 'ArrowRight') tourGo(TOUR.i + 1); if (e.key === 'ArrowLeft') tourGo(TOUR.i - 1, -1); });
