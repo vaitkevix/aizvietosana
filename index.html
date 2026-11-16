@@ -521,7 +521,8 @@
 
     <!-- BRIGĀDE: mani objekti -->
     <section id="v-today" class="view">
-      <div class="view-head"><h2>Mani objekti</h2><p id="todaySub">Uzspiediet „Atzīmēt”, kad darbs ir paveikts.</p></div>
+      <div class="view-head"><h2>Mani objekti</h2><p id="todaySub">Izvēlieties savu vienību.</p></div>
+      <div class="shortcuts" id="unitSeg" style="margin-bottom:14px"></div>
       <div id="todayList"></div>
     </section>
 
@@ -703,6 +704,7 @@ $('daySeg').addEventListener('click', (e) => { const b = e.target.closest('butto
 $('daySeg').addEventListener('change', (e) => { if (e.target.value) { S.date = e.target.value; load(); } });
 
 async function load() {
+  if (UV) return loadTeam();
   if (!S.user || S.view === 'new' || S.view === 'stats') { if (S.user) drawHero(); return; }
   drawDaySeg();
   const date = S.date;
@@ -712,7 +714,7 @@ async function load() {
   try {
     const r = await api('jobs', { date });
     if (date !== S.date) return;
-    S.jobs = r.jobs; S.crews = r.crews || {}; S.units = r.units || []; S.links = r.links || {}; if (r.staff) S.staff = r.staff;
+    S.jobs = r.jobs; S.crews = r.crews || {}; S.units = r.units || []; S.teamLink = r.teamLink || ''; if (r.staff) S.staff = r.staff;
     render();
   } catch (err) { toast(err.message, 'err'); }
   finally { $('refreshBtn').classList.remove('spin'); }
@@ -721,7 +723,7 @@ async function load() {
 async function refreshMeta() {
   try { const r = await api('login'); S.meta = r.meta; if (S.view === 'new') { drawMgr(); mgrHints(); } } catch (e) {}
 }
-$('refreshBtn').onclick = () => { if (UV) return startUnitView(); refreshMeta(); S.view === 'stats' ? loadStats() : load(); };
+$('refreshBtn').onclick = () => { if (UV) return loadTeam(); refreshMeta(); S.view === 'stats' ? loadStats() : load(); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && (S.user || UV)) $('refreshBtn').onclick(); });
 
 function render() {
@@ -851,29 +853,29 @@ function renderToday() {
 /* ---------- Vienības ---------- */
 function renderCrews() {
   const day = relDay(S.date) || shortDate(S.date);
-  let h = `<div class="btn-row" style="margin-bottom:12px"><button class="btn btn-primary" data-unit="">${IC.plus.replace('<svg', '<svg width="18" height="18"')}Jauna vienība</button>
+  let h = `<button class="more-btn" id="teamLinkBtn" style="margin:0 0 12px">🔗 Brigāžu saite — visi redz savus darbus bez PIN</button>
+    <div class="btn-row" style="margin-bottom:12px"><button class="btn btn-primary" data-unit="">${IC.plus.replace('<svg', '<svg width="18" height="18"')}Jauna vienība</button>
     <button class="btn btn-glass" id="copyUnits">Kopēt no ${({ 'Šodien': 'šodienas', 'Vakar': 'vakardienas', 'Rīt': 'rītdienas' })[relDay(addDays(S.date, -1))] || shortDate(addDays(S.date, -1))}</button></div>`;
   h += S.units.map(u => {
     const n = S.jobs.filter(j => j.brigade === u.name).length;
-    return `<div class="card crew-card"><h4>${esc(u.name)}<span><button class="link-btn" data-link="${esc(u.name)}">🔗 Saite</button> <button class="link-btn" data-unit="${esc(u.name)}">Mainīt</button></span></h4>
+    return `<div class="card crew-card"><h4>${esc(u.name)}<button class="link-btn" data-unit="${esc(u.name)}">Mainīt</button></h4>
       <div class="sub">${n} ${plural(n, 'objekts', 'objekti')} · ${day}</div>
       <div class="shortcuts" style="margin:0">${u.persons.length ? u.persons.map(p => `<span class="sc on">${esc(p)}</span>`).join('') : '<span style="color:var(--ink-3);font-size:13.5px;font-weight:600">Cilvēki nav norādīti</span>'}</div></div>`;
   }).join('') || emptyBox('Vienību vēl nav', `Izveidojiet vienības ${day.toLowerCase()} — vai nokopējiet no iepriekšējās dienas.`, IC.crew);
   $('crewList').innerHTML = h;
+  $('teamLinkBtn').onclick = showLink;
   $('copyUnits').onclick = async () => {
     try { const r = await api('copyUnits', { date: S.date, from: addDays(S.date, -1) }); S.units = r.units; S.crews = r.crews; render(); toast(`Nokopētas ${r.copied} vienības`, 'ok'); }
     catch (err) { toast(err.message, 'err'); }
   };
 }
 $('crewList').addEventListener('click', (e) => {
-  const l = e.target.closest('[data-link]');
-  if (l) return showLink(l.dataset.link);
   const b = e.target.closest('[data-unit]'); if (b) openCrew(b.dataset.unit);
 });
-function showLink(name) {
-  const url = (S.links || {})[name];
+function showLink() {
+  const url = S.teamLink;
   if (!url) return toast('Saite vēl nav pieejama — atjaunojiet lapu', 'err');
-  openSheet(`<h3>🔗 ${esc(name)}</h3><p class="lead">${esc(longDate(S.date))} · brigāde ar šo saiti bez PIN redz tikai savus darbus. Saite ir arī WhatsApp plānā.</p>
+  openSheet(`<h3>🔗 Brigāžu saite</h3><p class="lead">Viena pastāvīga saite visām brigādēm. Augšā katrs izvēlas savu vienību (piem. „Denis + Natālija”) un redz savus darbus — bez PIN. Saite ir arī WhatsApp plāna beigās.</p>
     <div class="field"><textarea class="textarea" id="linkText" readonly style="min-height:90px;font-size:13px">${esc(url)}</textarea></div>
     <div class="btn-row"><a class="btn btn-glass" href="${esc(url)}" target="_blank" rel="noopener">Atvērt</a><button class="btn btn-primary" id="linkCopy">Kopēt</button></div>`);
   $('linkCopy').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Saite nokopēta', 'ok'); closeSheet(); } catch (e) { $('linkText').select(); } };
@@ -1336,7 +1338,7 @@ async function loadStats() {
 
 /* ---------- Palīdzība un iestatījumi ---------- */
 $('helpBtn').onclick = () => {
-  if (UV) return openSheet(`<h3>${esc(UV.unit)}</h3><div class="help"><p>Šeit redzami jūsu vienības darbi izvēlētajā dienā ar piekļuves kodiem un bildēm. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p>Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
+  if (UV) return openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p>Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
   if (!S.user) return openSheet(`<h3>Kā lietot?</h3><div class="help"><p>Ievadiet PIN kodu, ko jums iedeva admins.</p></div>`);
   const role = S.user.role, perm = ('Notification' in window) ? Notification.permission : 'nav';
   const help = {
@@ -1385,41 +1387,81 @@ function closeSheet() { $('sheet').classList.remove('open'); $('backdrop').class
 $('backdrop').onclick = closeSheet;
 bindCombo($('sheetBody'));
 
-/* ---------- Brigādes skats bez PIN (?d=&u=&k=) ---------- */
-const UV = (() => { const q = new URLSearchParams(location.search); return q.get('k') ? { date: q.get('d'), unit: q.get('u'), key: q.get('k') } : null; })();
-async function startUnitView() {
-  S.user = { name: UV.unit, role: 'brigade' };
-  S.date = UV.date; S.view = 'today';
+/* ---------- Brigāžu skats bez PIN (?k=) ---------- */
+const UV = (() => { const k = new URLSearchParams(location.search).get('k'); return k ? { key: k } : null; })();
+const unitLabel = (u) => u.persons.length ? u.persons.join(' + ') : u.name;
+function startTeamView() {
+  S.user = { name: 'Brigāde', role: 'brigade' };
+  const h = new Date().getHours();
+  S.date = h >= 18 ? addDays(today(), 1) : today();   // vakarā rāda rītdienas plānu
+  S.view = 'today';
   $('login').hidden = true; $('login').classList.remove('active'); $('appViews').hidden = false;
   $('tabs').hidden = true; $('app').classList.add('no-tabs');
-  $('brandSub').textContent = UV.unit + ' · ' + (relDay(UV.date) || shortDate(UV.date));
+  $('brandSub').textContent = 'Brigāžu darbi';
   document.querySelectorAll('#appViews > .view').forEach(s => s.classList.toggle('active', s.id === 'v-today'));
-  $('daySeg').hidden = true;
+  $('daySeg').hidden = false;
+  loadTeam();
+}
+async function loadTeam() {
+  drawDaySeg();
+  const date = S.date;
   $('todayList').innerHTML = '<div class="skel"></div><div class="skel"></div>';
   $('refreshBtn').classList.add('spin');
   try {
-    const r = await api('unitView', { date: UV.date, unit: UV.unit, key: UV.key });
-    S.jobs = r.jobs; S.meta = Object.assign(S.meta, r.meta); S.crews = { [UV.unit]: r.persons };
-    renderUnitView();
+    const r = await api('teamView', { key: UV.key, date });
+    if (date !== S.date) return;
+    S.units = r.units; S.allJobs = r.jobs; S.meta = Object.assign(S.meta, r.meta);
+    // Atceras izvēlēto vienību pēc cilvēkiem (vienības nosaukums katru dienu var mainīties)
+    let saved = []; try { saved = JSON.parse(ls.get('darbi_team') || '[]'); } catch (e) {}
+    const score = (u) => u.persons.filter(p => saved.includes(p)).length * 10 + (u.name === ls.get('darbi_team_name') ? 1 : 0);
+    const best = S.units.slice().sort((a, b) => score(b) - score(a))[0];
+    S.teamUnit = S.units.some(u => u.name === S.teamUnit) && S.teamUnitDate === date ? S.teamUnit : (best && score(best) > 0 ? best.name : '');
+    S.teamUnitDate = date;
+    renderTeam();
   } catch (err) {
-    $('todayList').innerHTML = emptyBox('Saite nav derīga', err.message + '. Palūdziet adminam jaunu saiti.', IC.plan);
+    $('unitSeg').innerHTML = '';
+    $('todayList').innerHTML = emptyBox('Saite nav derīga', err.message + '. Palūdziet adminam jauno saiti.', IC.plan);
   } finally { $('refreshBtn').classList.remove('spin'); }
 }
-function renderUnitView() {
-  const n = S.jobs.length, persons = S.crews[UV.unit] || [];
-  $('heroDate').textContent = longDate(UV.date) + (relDay(UV.date) ? ' · ' + relDay(UV.date).toLowerCase() : '');
+function renderTeam() {
+  const day = relDay(S.date) || shortDate(S.date);
+  $('unitSeg').innerHTML = S.units.length ? S.units.map(u => `<button type="button" class="sc ${u.name === S.teamUnit ? 'on' : ''}" data-tu="${esc(u.name)}">${esc(unitLabel(u))}</button>`).join('')
+    : '';
+  const u = S.units.find(x => x.name === S.teamUnit);
+  $('heroDate').textContent = longDate(S.date);
   $('heroGreeting').textContent = greeting();
-  $('heroPending').className = 'pending-line' + (n ? '' : ' ok');
-  $('heroPending').innerHTML = `<i></i><span>${esc(UV.unit)} · ${n} ${plural(n, 'objekts', 'objekti')}</span>`;
-  $('todaySub').textContent = persons.length ? '👷 ' + persons.join(', ') : 'Jūsu vienības darbi';
-  $('todayList').innerHTML = n ? `<div class="list">${S.jobs.map(j => card(j, { links: true, noPill: true })).join('')}</div>`
-    : emptyBox('Darbu nav', 'Šai vienībai šajā dienā darbi vēl nav piešķirti.', IC.plan);
+  if (!S.units.length) {
+    $('heroPending').className = 'pending-line'; $('heroPending').innerHTML = `<i></i><span>${esc(day)} plāns vēl nav gatavs</span>`;
+    $('todaySub').textContent = 'Vienības vēl nav izveidotas.';
+    $('todayList').innerHTML = emptyBox('Plāns vēl nav gatavs', `${day} vienības vēl nav saliktas. Pamēģiniet vēlāk vai izvēlieties citu dienu.`, IC.plan);
+    return;
+  }
+  if (!u) {
+    $('heroPending').className = 'pending-line'; $('heroPending').innerHTML = `<i></i><span>Izvēlieties savu vienību</span>`;
+    $('todaySub').textContent = 'Uzspiediet uz saviem vārdiem augšā.';
+    $('todayList').innerHTML = '';
+    return;
+  }
+  const js = S.allJobs.filter(j => j.brigade === u.name);
+  $('heroPending').className = 'pending-line' + (js.length ? '' : ' ok');
+  $('heroPending').innerHTML = `<i></i><span>${esc(unitLabel(u))} · ${js.length} ${plural(js.length, 'objekts', 'objekti')}</span>`;
+  $('todaySub').textContent = u.name + ' · ' + day;
+  S.jobs = js;
+  $('todayList').innerHTML = js.length ? `<div class="list">${js.map(j => card(j, { links: true, noPill: true })).join('')}</div>`
+    : emptyBox('Darbu nav', 'Jūsu vienībai šajā dienā darbi nav piešķirti.', IC.plan);
 }
+$('unitSeg').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tu]'); if (!b) return;
+  S.teamUnit = b.dataset.tu;
+  const u = S.units.find(x => x.name === S.teamUnit);
+  ls.set('darbi_team', JSON.stringify(u ? u.persons : [])); ls.set('darbi_team_name', S.teamUnit);
+  renderTeam();
+});
 
 /* ---------- Starts ---------- */
 if (!self.DEMO_API && 'serviceWorker' in navigator) navigator.serviceWorker.register('./firebase-messaging-sw.js').catch(() => {});
 window.addEventListener('DOMContentLoaded', () => {
-  if (UV) return startUnitView();
+  if (UV) return startTeamView();
   const saved = ls.get('darbi_pin'); if (saved) tryLogin(saved); else $('pinInput').focus();
 });
 </script>

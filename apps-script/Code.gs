@@ -31,7 +31,7 @@ function doPost(e) {
     return json_({ ok: false, error: 'Nederīgs pieprasījums' });
   }
   try {
-    if (req.action === 'unitView') return json_(Object.assign({ ok: true }, unitView_(req)));
+    if (req.action === 'teamView') return json_(Object.assign({ ok: true }, teamView_(req)));
     const user = auth_(req.pin);
     if (!user) return json_({ ok: false, error: 'Nepareizs PIN' });
     const fn = ACTIONS[req.action];
@@ -47,9 +47,7 @@ const ACTIONS = {
 
   jobs: (u, r) => {
     const units = units_(r.date);
-    const links = {};
-    if (u.role === 'admin') units.forEach(x => links[x.name] = unitLink_(r.date, x.name));
-    return { jobs: visibleJobs_(u, r.date), units: units, crews: crews_(r.date), staff: staff_(), links: links };
+    return { jobs: visibleJobs_(u, r.date), units: units, crews: crews_(r.date), staff: staff_(), teamLink: u.role === 'admin' ? teamLink_() : '' };
   },
 
   /** Vienība dienai: izveidot, pārsaukt (oldName) vai mainīt cilvēkus */
@@ -397,8 +395,6 @@ function whatsapp_(date) {
   Object.keys(byBrig).sort((a, b) => (order.indexOf(a) + 1 || 999) - (order.indexOf(b) + 1 || 999) || a.localeCompare(b)).forEach(b => {
     lines.push('', '*' + b + '*');
     if (crews[b] && crews[b].length) lines.push(crews[b].join(', '));
-    const link = unitLink_(date, b);
-    if (link) lines.push('🔗 ' + link);
     byBrig[b].forEach(j => {
       const extra = groupOf_(j.tips) === 'Papilddarbs';
       let what = extra ? (j.tips === 'Papilddarbs' || j.tips === 'Cits papilddarbs' ? (j.apraksts || 'papilddarbs') : j.tips) : j.tips.toLowerCase();
@@ -407,6 +403,8 @@ function whatsapp_(date) {
       lines.push(j.adrese + ' - ' + what);
     });
   });
+  const link = teamLink_();
+  if (link) lines.push('', '🔗 Savi darbi: ' + link);
   return lines.join('\n');
 }
 
@@ -419,31 +417,31 @@ function linkSecret_() {
   return s;
 }
 
-/** Neuzminama atslēga konkrētai dienai un vienībai */
-function unitKey_(date, unit) {
-  const sig = Utilities.computeHmacSha256Signature(date + '|' + unit, linkSecret_());
+/** Kopīgā brigāžu saites atslēga (pastāvīga, neuzminama) */
+function teamKey_() {
+  const sig = Utilities.computeHmacSha256Signature('brigades', linkSecret_());
   return Utilities.base64EncodeWebSafe(sig).replace(/=+$/, '').slice(0, 16);
 }
 
-function unitLink_(date, unit) {
+function teamLink_() {
   const app = PropertiesService.getScriptProperties().getProperty('APP_URL');
-  if (!app) return '';
-  return app + '?d=' + encodeURIComponent(date) + '&u=' + encodeURIComponent(unit) + '&k=' + unitKey_(date, unit);
+  return app ? app + '?k=' + teamKey_() : '';
 }
 
-/** Brigādes skats (bez PIN): tikai šīs vienības darbi šajā dienā */
-function unitView_(r) {
-  const date = String(r.date || ''), unit = String(r.unit || '');
-  if (!date || !unit || String(r.key || '') !== unitKey_(date, unit)) throw new Error('Saite nav derīga');
-  const u = units_(date).find(x => x.name === unit);
-  const jobs = readJobs_().filter(j => j.datums === date && j.brigade === unit).map(j => ({
+/** Brigāžu skats (bez PIN): visas dienas vienības ar cilvēkiem un darbiem */
+function teamView_(r) {
+  if (String(r.key || '') !== teamKey_()) throw new Error('Saite nav derīga');
+  const date = String(r.date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Nav datuma');
+  const units = units_(date);
+  const jobs = readJobs_().filter(j => j.datums === date && j.brigade).map(j => ({
     id: j.id, datums: j.datums, adrese: j.adrese, tips: j.tips, apraksts: j.apraksts, vaditajs: j.vaditajs,
-    brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, foto: j.foto, komentars: j.komentars, iemesls: j.iemesls, izpildits: j.izpildits
+    brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, foto: j.foto
   }));
   const addrs = jobs.map(j => normName_(j.adrese));
   const objects = objects_().filter(o => addrs.indexOf(normName_(o.adrese)) !== -1);
   const managers = users_().filter(x => x.role === 'vaditajs').map(x => ({ name: x.name, color: x.color }));
-  return { date: date, unit: unit, persons: u ? u.persons : [], jobs: jobs, meta: { objects: objects, managers: managers, jobTypes: jobTypes_() } };
+  return { date: date, units: units, jobs: jobs, meta: { objects: objects, managers: managers, jobTypes: jobTypes_() } };
 }
 
 /* ---------------- Atvaļinājuma sērija ---------------- */
