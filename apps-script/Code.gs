@@ -419,6 +419,7 @@ const AI_SYSTEM = 'Tu palīdzi apsaimniekošanas uzņēmuma darbiniekiem uzrakst
   'Ja teksts ir tukšs, sagatavo īsu piezīmi brigādei no dotās informācijas (darbs, adrese, piekļuve). ' +
   'Piekļuves kodus, tālruņu numurus un simbolus (#, *) pārraksti precīzi, neko nemainot. Neizdomā informāciju, kuras nav. ' +
   'Pārbaudi locījumus (piem. „pie dežuranta”, nevis „pie dežurantā”). ' +
+  'Neatkārto adresi un darba nosaukumu — tie jau redzami blakus piezīmei. ' +
   'Garums: 1–3 teikumi, ne vairāk kā 300 rakstzīmes. Atbildē raksti TIKAI gatavo piezīmi, bez pēdiņām un paskaidrojumiem.';
 
 function aiPrompt_(r) {
