@@ -978,29 +978,39 @@ function bindCombo(root) {
 
 /* ---------- AI teksta uzlabošana ---------- */
 function aiField(fieldHtml, kind) {
-  return `<div class="aiwrap">${fieldHtml}<div class="ai-bar"><button type="button" class="ai-mini undo" hidden>↶ Atsaukt</button><button type="button" class="ai-mini go" data-kind="${kind}">✨ Uzlabot ar AI</button></div></div>`;
+  const empty = !/>[^<]+<\/textarea>/.test(fieldHtml);
+  return `<div class="aiwrap">${fieldHtml}<div class="ai-bar"><button type="button" class="ai-mini undo" hidden>↶ Atsaukt</button><button type="button" class="ai-mini go" data-kind="${kind}">${empty && kind !== 'cant' ? '✨ Sagatavot ar AI' : '✨ Uzlabot ar AI'}</button></div></div>`;
 }
+/** Tukšam laukam — „Sagatavot”, ar tekstu — „Uzlabot” */
+function aiLabel(wrap) {
+  const b = wrap.querySelector('.ai-mini.go'); if (!b) return;
+  const empty = !wrap.querySelector('textarea, input').value.trim();
+  b.textContent = empty && b.dataset.kind !== 'cant' ? '✨ Sagatavot ar AI' : '✨ Uzlabot ar AI';
+}
+document.addEventListener('input', (e) => { const w = e.target.closest('.aiwrap'); if (w) aiLabel(w); });
 async function aiCall(kind, req) {
   if (kind === 'parse') return self.DEMO_AI_PARSE ? self.DEMO_AI_PARSE(req) : api('aiParse', req);
   return self.DEMO_AI ? self.DEMO_AI(req) : (await api('aiNote', req)).text;
 }
 document.addEventListener('click', async (e) => {
   const u = e.target.closest('.ai-mini.undo');
-  if (u) { const w = u.closest('.aiwrap'); w.querySelector('textarea, input').value = w.dataset.orig || ''; u.hidden = true; return; }
+  if (u) { const w = u.closest('.aiwrap'); w.querySelector('textarea, input').value = w.dataset.orig || ''; u.hidden = true; aiLabel(w); return; }
   const btn = e.target.closest('.ai-mini.go'); if (!btn) return;
   const wrap = btn.closest('.aiwrap'), field = wrap.querySelector('textarea, input'), row = btn.closest('.jrow');
   const ctx = row ? { adrese: row.querySelector('.fAddr').value, tips: row.querySelector('.fType').value }
     : { adrese: $('sheetBody').dataset.adrese || '', tips: $('sheetBody').dataset.tips || '' };
+  ctx.piekluve = (objOf(ctx.adrese) || {}).piekluve || '';
   const req = Object.assign({ kind: btn.dataset.kind, text: field.value.trim() }, ctx);
   if (btn.dataset.kind === 'cant') { const chip = document.querySelector('#rReasons .sc.on'); if (chip) req.text = (chip.dataset.r + '. ' + req.text).trim(); }
-  if (!req.text && btn.dataset.kind !== 'done') return toast('Uzrakstiet dažus vārdus — AI tos noformēs');
-  const label = btn.textContent; btn.disabled = true; btn.textContent = '✨ Raksta…';
+  if (!req.text && btn.dataset.kind === 'cant') return toast('Izvēlieties iemeslu vai uzrakstiet dažus vārdus');
+  if (!req.adrese && btn.dataset.kind === 'note' && !req.text) return toast('Vispirms izvēlieties adresi');
+  btn.disabled = true; btn.textContent = '✨ Raksta…';
   try {
     const text = await aiCall('note', req);
     if (!text) throw new Error('AI neatgrieza tekstu');
     wrap.dataset.orig = field.value; field.value = text; wrap.querySelector('.undo').hidden = false;
   } catch (err) { toast(err.message, 'err'); }
-  finally { btn.disabled = false; btn.textContent = label; }
+  finally { btn.disabled = false; aiLabel(wrap); }
 });
 
 /* ---------- Jauns pieteikums ---------- */
@@ -1102,7 +1112,7 @@ bindCombo($('jRows'));
 $('jRows').addEventListener('click', (e) => {
   if (e.target.closest('.jdel')) { e.target.closest('.jrow').remove(); numberRows(); mgrHints(); return; }
   const sc = e.target.closest('[data-sc]');
-  if (sc) { const t = sc.closest('.field').querySelector('.fNote'); t.value = (t.value.trim() ? t.value.trim().replace(/[.]?$/, '. ') : '') + sc.dataset.sc + '.'; }
+  if (sc) { const t = sc.closest('.field').querySelector('.fNote'); t.value = (t.value.trim() ? t.value.trim().replace(/[.]?$/, '. ') : '') + sc.dataset.sc + '.'; aiLabel(t.closest('.aiwrap')); }
 });
 $('jRows').addEventListener('change', (e) => {
   const row = e.target.closest('.jrow'); if (!row) return;

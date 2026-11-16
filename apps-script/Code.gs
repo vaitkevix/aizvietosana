@@ -416,14 +416,22 @@ function seriesDates_(start, lidz, brivdienas) {
 const AI_SYSTEM = 'Tu palīdzi apsaimniekošanas uzņēmuma darbiniekiem uzrakstīt īsas darba piezīmes latviešu valodā. ' +
   'Pārraksti lietotāja tekstu skaidrā, pieklājīgā, lietišķā latviešu valodā ar pareizu gramatiku un garumzīmēm. ' +
   'Saglabā visus faktus (vārdus, laikus, numurus, vietas), neko neizdomā un nepievieno jaunas detaļas. ' +
-  'Ja teksts ir tukšs, uzraksti vienu īsu vispārīgu teikumu, kas atbilst situācijai, bez izdomātām detaļām. ' +
-  'Garums: 1–2 teikumi, ne vairāk kā 200 rakstzīmes. Atbildē raksti TIKAI gatavo piezīmi, bez pēdiņām un paskaidrojumiem.';
+  'Ja teksts ir tukšs, sagatavo īsu piezīmi brigādei no dotās informācijas (darbs, adrese, piekļuve). ' +
+  'Piekļuves kodus, tālruņu numurus un simbolus (#, *) pārraksti precīzi, neko nemainot. Neizdomā informāciju, kuras nav. ' +
+  'Pārbaudi locījumus (piem. „pie dežuranta”, nevis „pie dežurantā”). ' +
+  'Garums: 1–3 teikumi, ne vairāk kā 300 rakstzīmes. Atbildē raksti TIKAI gatavo piezīmi, bez pēdiņām un paskaidrojumiem.';
 
 function aiPrompt_(r) {
   const kind = { note: 'Darbu vadītāja piezīme brigādei pie pieteiktā darba', done: 'Brigādes komentārs pēc darba izpildes',
     cant: 'Brigādes paskaidrojums, kāpēc darbu nevar izpildīt' }[r.kind] || 'Darba piezīme';
+  let piekluve = String(r.piekluve || '');
+  if (!piekluve && r.adrese) {
+    const o = objects_().find(x => normName_(x.adrese) === normName_(r.adrese));
+    if (o) piekluve = o.piekluve;
+  }
   return 'Situācija: ' + kind + '\nAdrese: ' + (r.adrese || '—') + '\nDarbs: ' + (r.tips || '—') +
-    '\n\nLietotāja teksts:\n' + String(r.text || '').slice(0, 1000);
+    (piekluve ? '\nPiekļuve: ' + piekluve : '') +
+    '\n\nLietotāja teksts:\n' + (String(r.text || '').trim() ? String(r.text).slice(0, 1000) : '(tukšs — sagatavo piezīmi)');
 }
 
 function aiWrite_(u, r) {
