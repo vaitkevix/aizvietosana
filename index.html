@@ -657,7 +657,7 @@ function switchView(v) {
   document.querySelectorAll('#tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === v));
   moveInd();
   $('daySeg').hidden = !['plan', 'mine', 'crews'].includes(v);
-  if (v === 'new') initForm();
+  if (v === 'new') { initForm(); refreshMeta(); }
   if (v === 'stats') loadStats(); else load();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -717,7 +717,11 @@ async function load() {
   } catch (err) { toast(err.message, 'err'); }
   finally { $('refreshBtn').classList.remove('spin'); }
 }
-$('refreshBtn').onclick = () => S.view === 'stats' ? loadStats() : load();
+/** Atjauno adreses, vadītājus un darbu veidus no tabulas (ja tie mainīti pēc ienākšanas) */
+async function refreshMeta() {
+  try { const r = await api('login'); S.meta = r.meta; if (S.view === 'new') { drawMgr(); mgrHints(); } } catch (e) {}
+}
+$('refreshBtn').onclick = () => { refreshMeta(); S.view === 'stats' ? loadStats() : load(); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && S.user) $('refreshBtn').onclick(); });
 
 function render() {
