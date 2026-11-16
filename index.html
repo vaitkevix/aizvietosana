@@ -96,7 +96,8 @@
   .icon-btn{width:42px;height:42px;border-radius:50%;border:1px solid var(--g-brd);background:var(--g-sheen),var(--g-fill);box-shadow:var(--g-shadow-sm);
     display:grid;place-items:center;cursor:pointer;color:var(--ink-2);font-weight:800;font-size:16px;transition:transform .15s}
   .icon-btn:active{transform:scale(.93)}
-  .login-btn{width:auto;padding:0 14px 0 12px;border-radius:999px;gap:6px;display:inline-flex;align-items:center;color:var(--brand);font-size:14px}
+  .team .theme-btn{display:none}
+  .login-btn{width:auto;padding:0 13px 0 11px;border-radius:999px;gap:6px;display:inline-flex;align-items:center;color:var(--brand);font-size:14px}
   .login-btn::after{content:'Ienākt';font-weight:800}
   .icon-btn.spin svg{animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -644,7 +645,7 @@ const ROLE_TABS = {
   vaditajs: [['new', 'Jauns', IC.plus], ['mine', 'Mani darbi', IC.list], ['stats', 'Statistika', IC.stats]]
 };
 function startApp() {
-  UV = null; $('loginBtnTop').hidden = true;
+  UV = null; $('loginBtnTop').hidden = true; $('app').classList.remove('team');
   $('login').classList.remove('active'); $('login').hidden = true; $('appViews').hidden = false;
   const role = S.user.role;
   $('brandSub').textContent = S.user.name + (role === 'admin' ? ' · admins' : ' · darbu vadītājs');
@@ -1400,7 +1401,7 @@ const unitLabel = (u) => u.persons.length ? u.persons.join(' + ') : u.name;
 function startTeamView() {
   UV = { key: new URLSearchParams(location.search).get('k') || '' };
   S.user = { name: 'Brigāde', role: 'brigade' };
-  $('loginBtnTop').hidden = false;
+  $('loginBtnTop').hidden = false; $('app').classList.add('team');
   const h = new Date().getHours();
   S.date = h >= 18 ? addDays(today(), 1) : today();   // vakarā rāda rītdienas plānu
   S.view = 'today';
