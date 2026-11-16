@@ -844,7 +844,7 @@ function renderToday() {
 function renderCrews() {
   const day = relDay(S.date) || shortDate(S.date);
   let h = `<div class="btn-row" style="margin-bottom:12px"><button class="btn btn-primary" data-unit="">${IC.plus.replace('<svg', '<svg width="18" height="18"')}Jauna vienība</button>
-    <button class="btn btn-glass" id="copyUnits">Kopēt no ${relDay(addDays(S.date, -1)) ? relDay(addDays(S.date, -1)).toLowerCase() + 'nas' : shortDate(addDays(S.date, -1))}</button></div>`;
+    <button class="btn btn-glass" id="copyUnits">Kopēt no ${({ 'Šodien': 'šodienas', 'Vakar': 'vakardienas', 'Rīt': 'rītdienas' })[relDay(addDays(S.date, -1))] || shortDate(addDays(S.date, -1))}</button></div>`;
   h += S.units.map(u => {
     const n = S.jobs.filter(j => j.brigade === u.name).length;
     return `<div class="card crew-card"><h4>${esc(u.name)}<button class="link-btn" data-unit="${esc(u.name)}">Mainīt</button></h4>
