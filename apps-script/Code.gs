@@ -44,37 +44,85 @@ function doPost(e) {
 const ACTIONS = {
   login: (u) => ({ user: publicUser_(u), meta: meta_() }),
 
-  jobs: (u, r) => {
-    let crews = crews_(r.date);
-    if (u.role === 'brigade') { const c = {}; c[u.name] = crews[u.name] || []; crews = c; }
-    return { jobs: visibleJobs_(u, r.date), crews: crews, staff: u.role === 'admin' ? staff_() : undefined };
-  },
+  jobs: (u, r) => ({ jobs: visibleJobs_(u, r.date), units: units_(r.date), crews: crews_(r.date), staff: staff_() }),
 
-  setCrew: (u, r) => withLock_(() => {
+  /** Vienība dienai: izveidot, pārsaukt (oldName) vai mainīt cilvēkus */
+  setUnit: (u, r) => withLock_(() => {
     requireAdmin_(u);
-    if (!r.date || !r.brigade) throw new Error('Trūkst datuma vai brigādes');
+    const name = String(r.name || '').trim();
+    const old = String(r.oldName || '').trim();
+    if (!r.date || !name) throw new Error('Norādi vienības nosaukumu');
     const persons = (r.persons || []).map(p => String(p).trim()).filter(Boolean);
-    // Cilvēks vienā dienā var būt tikai vienā brigādē
     const sh = crewSheet_();
     const data = sh.getDataRange().getValues();
-    let found = 0;
-    for (let i = data.length - 1; i >= 1; i--) {
+    let row = 0;
+    for (let i = 1; i < data.length; i++) {
       if (dateStr_(data[i][0]) !== r.date) continue;
-      if (String(data[i][1]) === r.brigade) {
-        if (!found) { sh.getRange(i + 1, 3).setValue(persons.join(', ')); found = i + 1; }
-        else sh.deleteRow(i + 1);
-      } else if (persons.length) {
-        const other = splitNames_(data[i][2]);
-        const left = other.filter(p => persons.indexOf(p) === -1);
-        if (left.length !== other.length) sh.getRange(i + 1, 3).setValue(left.join(', '));
-      }
+      const n = String(data[i][1]);
+      if (n === (old || name)) row = i + 1;
+      else if (n === name) throw new Error('Vienība „' + name + '” jau ir');
     }
-    if (!found) sh.appendRow([r.date, r.brigade, persons.join(', ')]);
-    // Iepriekš nezināmus vārdus pievieno darbinieku sarakstam
+    // Cilvēks vienā dienā var būt tikai vienā vienībā
+    for (let i = 1; i < data.length; i++) {
+      if (dateStr_(data[i][0]) !== r.date || i + 1 === row) continue;
+      const other = splitNames_(data[i][2]);
+      const left = other.filter(p => persons.indexOf(p) === -1);
+      if (left.length !== other.length) sh.getRange(i + 1, 3).setValue(left.join(', '));
+    }
+    if (row) sh.getRange(row, 2, 1, 2).setValues([[name, persons.join(', ')]]);
+    else sh.appendRow([r.date, name, persons.join(', ')]);
+    if (old && old !== name) {
+      const js = sheet_(SH_JOBS);
+      readJobs_().filter(j => j.datums === r.date && j.brigade === old).forEach(j => { j.brigade = name; writeJob_(js, j); });
+    }
     const known = staff_().map(s => s.name);
     const st = staffSheet_();
     persons.filter(p => known.indexOf(p) === -1).forEach(p => st.appendRow([p, '']));
-    return { crews: crews_(r.date), staff: staff_() };
+    return { units: units_(r.date), crews: crews_(r.date), staff: staff_(), jobs: visibleJobs_(u, r.date) };
+  }),
+
+  deleteUnit: (u, r) => withLock_(() => {
+    requireAdmin_(u);
+    const sh = crewSheet_();
+    const data = sh.getDataRange().getValues();
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (dateStr_(data[i][0]) === r.date && String(data[i][1]) === r.name) sh.deleteRow(i + 1);
+    }
+    const js = sheet_(SH_JOBS);
+    readJobs_().filter(j => j.datums === r.date && j.brigade === r.name).forEach(j => {
+      j.brigade = ''; if (j.statuss === 'piešķirts') j.statuss = 'jauns'; writeJob_(js, j);
+    });
+    return { units: units_(r.date), crews: crews_(r.date), jobs: visibleJobs_(u, r.date) };
+  }),
+
+  /** Objektu saraksta ielāde: rows = [[adrese, vaditajs, grupa, piekluve]]; esošās adreses atjauno */
+  importObjects: (u, r) => withLock_(() => {
+    requireAdmin_(u);
+    const sh = objSheet_();
+    const last = sh.getLastRow();
+    const cur = last > 1 ? sh.getRange(2, 1, last - 1, 4).getValues() : [];
+    const idx = {};
+    cur.forEach((x, i) => idx[String(x[0]).trim().toLowerCase()] = i);
+    let added = 0, updated = 0;
+    (r.rows || []).forEach(x => {
+      const a = String(x[0] || '').trim(); if (!a) return;
+      const k = a.toLowerCase();
+      if (idx[k] !== undefined) { const c = cur[idx[k]]; c[2] = x[2] || c[2]; c[3] = x[3] || c[3]; if (x[1]) c[1] = x[1]; updated++; }
+      else { idx[k] = cur.length; cur.push([a, x[1] || '', x[2] || 'SH objekti', x[3] || '']); added++; }
+    });
+    if (cur.length) sh.getRange(2, 1, cur.length, 4).setValues(cur);
+    return { added: added, updated: updated, objects: objects_() };
+  }),
+
+  /** Kopē vienības (nosaukumus un cilvēkus) no citas dienas */
+  copyUnits: (u, r) => withLock_(() => {
+    requireAdmin_(u);
+    const have = units_(r.date).map(x => x.name);
+    const src = units_(r.from).filter(x => have.indexOf(x.name) === -1);
+    if (!src.length) throw new Error('Nav ko kopēt');
+    const sh = crewSheet_();
+    sh.getRange(sh.getLastRow() + 1, 1, src.length, 3).setValues(src.map(x => [r.date, x.name, x.persons.join(', ')]));
+    return { units: units_(r.date), crews: crews_(r.date), copied: src.length };
   }),
 
   saveJob: (u, r) => withLock_(() => {
@@ -86,17 +134,17 @@ const ACTIONS = {
     if (j.id) {
       const job = findJob_(j.id);
       if (!job) throw new Error('Darbs nav atrasts');
-      if (u.role !== 'admin' && (job.vaditajs !== u.name || job.publicets)) throw new Error('Publicētu darbu var labot tikai admins');
+      if (u.role !== 'admin' && (job.vaditajs !== u.name || job.brigade)) throw new Error('Darbu, kas jau piešķirts vienībai, var mainīt tikai admins');
       job.datums = j.datums; job.adrese = String(j.adrese).trim(); job.tips = j.tips || job.tips; job.apraksts = j.apraksts || '';
+      if (j.vaditajs && u.role === 'admin') job.vaditajs = String(j.vaditajs);
       addObjects_([job.adrese], job.vaditajs);
-      if (job.publicets) job.publicets = ''; // izmaiņas jāpublicē no jauna
       writeJob_(sh, job);
       return { job: clean_(job) };
     }
     const job = {
       id: Utilities.getUuid().slice(0, 8), datums: j.datums, adrese: String(j.adrese).trim(), tips: j.tips || 'Sētnieks',
-      apraksts: j.apraksts || '', vaditajs: u.name, brigade: u.role === 'admin' ? (j.brigade || '') : '',
-      statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_()
+      apraksts: j.apraksts || '', vaditajs: j.vaditajs || u.name, brigade: j.brigade || '',
+      statuss: j.brigade ? 'piešķirts' : 'jauns', publicets: '', izpildits: '', izveidots: now_()
     };
     sh.appendRow(toRow_(job));
     if (u.role !== 'admin') {
@@ -118,13 +166,13 @@ const ACTIONS = {
       const serija = dates.length > 1 ? Utilities.getUuid().slice(0, 8) : '';
       dates.forEach(d => rows.push(toRow_({
         id: Utilities.getUuid().slice(0, 8), datums: d, adrese: String(j.adrese).trim(), tips: j.tips,
-        apraksts: String(j.apraksts || '').trim(), vaditajs: u.name, brigade: u.role === 'admin' ? (j.brigade || '') : '',
+        apraksts: String(j.apraksts || '').trim(), vaditajs: u.role === 'admin' ? String(j.vaditajs || r.vaditajs || u.name) : u.name, brigade: '',
         statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija: serija
       })));
     });
     const sh = sheet_(SH_JOBS);
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, JOB_COLS.length).setValues(rows);
-    addObjects_(list.map(j => String(j.adrese).trim()), u.name);
+    addObjects_(list.map(j => String(j.adrese).trim()), u.role === 'admin' ? String(r.vaditajs || '') : u.name);
     if (u.role !== 'admin') {
       notify_(namesByRole_('admin'), 'Jauni darbi · ' + lvDate_(r.date) + ' · ' + u.name,
         list.length === 1 ? list[0].adrese + ' — ' + list[0].tips + (list[0].lidz ? ' (atvaļinājums līdz ' + lvDate_(list[0].lidz) + ')' : '')
@@ -144,13 +192,13 @@ const ACTIONS = {
     if (u.role === 'brigade') throw new Error('Nav atļauts');
     let list = readJobs_().filter(j => j.datums >= r.from && j.datums <= r.to);
     if (u.role === 'vaditajs') list = list.filter(j => j.vaditajs === u.name);
-    return { jobs: list.map(j => ({ datums: j.datums, tips: j.tips, vaditajs: j.vaditajs, brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, foto: j.foto ? 1 : 0 })) };
+    return { jobs: list.map(j => ({ datums: j.datums, adrese: j.adrese, tips: j.tips, vaditajs: j.vaditajs, brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, foto: j.foto ? 1 : 0 })) };
   },
 
   deleteJob: (u, r) => withLock_(() => {
     const job = findJob_(r.id);
     if (!job) throw new Error('Darbs nav atrasts');
-    const allowed = (j) => u.role === 'admin' || (u.role === 'vaditajs' && j.vaditajs === u.name && !j.publicets);
+    const allowed = (j) => u.role === 'admin' || (u.role === 'vaditajs' && j.vaditajs === u.name && !j.brigade);
     let targets = [job];
     if (r.series && job.serija) targets = readJobs_().filter(j => j.serija === job.serija && j.datums >= job.datums);
     targets = targets.filter(allowed);
@@ -166,7 +214,6 @@ const ACTIONS = {
     if (!job) throw new Error('Darbs nav atrasts');
     if (job.brigade !== (r.brigade || '')) {
       job.brigade = r.brigade || '';
-      job.publicets = '';
       if (job.statuss !== 'izpildīts') job.statuss = job.brigade ? 'piešķirts' : 'jauns';
       writeJob_(sheet_(SH_JOBS), job);
     }
@@ -277,7 +324,7 @@ function users_() {
 function auth_(pin) {
   if (!pin) return null;
   pin = String(pin).trim();
-  return users_().find(u => u.pin === pin) || null;
+  return users_().find(x => x.pin === pin && (x.role === 'admin' || x.role === 'vaditajs')) || null;
 }
 
 function publicUser_(u) { return { name: u.name, role: u.role, color: u.color }; }
@@ -285,8 +332,7 @@ function publicUser_(u) { return { name: u.name, role: u.role, color: u.color };
 function meta_() {
   const us = users_();
   return {
-    brigades: us.filter(u => u.role === 'brigade').map(u => u.name),
-    managers: us.filter(u => u.role !== 'brigade').map(u => ({ name: u.name, color: u.color })),
+    managers: us.filter(u => u.role === 'vaditajs').map(u => ({ name: u.name, color: u.color })),
     objects: objects_(),
     jobTypes: jobTypes_()
   };
@@ -333,7 +379,8 @@ function whatsapp_(date) {
   jobs.forEach(j => (byBrig[j.brigade] = byBrig[j.brigade] || []).push(j));
   const crews = crews_(date);
   const lines = ['*Plāns ' + lvDate_(date) + '*'];
-  Object.keys(byBrig).sort().forEach(b => {
+  const order = units_(date).map(x => x.name);
+  Object.keys(byBrig).sort((a, b) => (order.indexOf(a) + 1 || 999) - (order.indexOf(b) + 1 || 999) || a.localeCompare(b)).forEach(b => {
     lines.push('', '*' + b + '*');
     if (crews[b] && crews[b].length) lines.push(crews[b].join(', '));
     byBrig[b].forEach(j => {
@@ -391,11 +438,13 @@ function aiParse_(u, r) {
   const mine = objs.filter(o => o.vaditajs === u.name).concat(objs.filter(o => o.vaditajs !== u.name)).slice(0, 400).map(o => o.adrese);
   const types = jobTypes_();
   const system = 'Tu no apsaimniekošanas darbu vadītāja ziņas izveido darbu pieteikumus. Atbildi TIKAI ar JSON, bez paskaidrojumiem.';
+  const mgrs = users_().filter(x => x.role === 'vaditajs').map(x => x.name);
   const prompt = 'Šodien: ' + r.today + ' (' + r.weekday + ').\n' +
+    (u.role === 'admin' ? 'Darbu vadītāji: ' + mgrs.join(', ') + '. Ja ziņā minēts, kurš vadītājs piesaka, norādi "vaditajs".\n' : '') +
     'Darbu veidi (tips jāizvēlas TIKAI no šiem): ' + types.map(t => t.name + ' [' + t.group + ']').join('; ') + '\n' +
     'Zināmās adreses (ja ziņā minēta līdzīga, izmanto precīzi šo rakstību): ' + mine.join('; ') + '\n\n' +
     'Ziņa:\n' + msg.slice(0, 3000) + '\n\n' +
-    'Atgriez JSON: {"datums":"YYYY-MM-DD vai null","rindas":[{"adrese":"...","tips":"...","apraksts":"īsa piezīme latviski vai tukšs","lidz":"YYYY-MM-DD vai null"}]}. ' +
+    'Atgriez JSON: {"datums":"YYYY-MM-DD vai null","vaditajs":"vārds vai null","rindas":[{"adrese":"...","tips":"...","apraksts":"īsa piezīme latviski vai tukšs","lidz":"YYYY-MM-DD vai null"}]}. ' +
     '"datums" = diena, uz kuru attiecas darbi (piem. "rīt" → rītdienas datums); ja nav minēts, null. ' +
     '"lidz" aizpildi tikai, ja aizvietojamais ir atvaļinājumā/prombūtnē līdz konkrētam datumam. ' +
     '"aizvietot sētnieku" → tips "Sētnieks"; "abus"/"sētnieku un apkopēju" → "Abi". Neizdomā adreses.';
@@ -408,7 +457,7 @@ function aiParse_(u, r) {
     adrese: String(x.adrese).trim(), tips: names.indexOf(x.tips) !== -1 ? x.tips : '',
     apraksts: String(x.apraksts || '').trim(), lidz: /^\d{4}-\d{2}-\d{2}$/.test(x.lidz || '') ? x.lidz : ''
   }));
-  return { datums: /^\d{4}-\d{2}-\d{2}$/.test(data.datums || '') ? data.datums : '', rows: rows };
+  return { datums: /^\d{4}-\d{2}-\d{2}$/.test(data.datums || '') ? data.datums : '', vaditajs: mgrs.indexOf(data.vaditajs) !== -1 ? data.vaditajs : '', rows: rows };
 }
 
 function aiCall_(system, prompt, maxTokens) {
@@ -482,8 +531,10 @@ function objSheet_() {
   let sh = sheet_(SH_OBJ);
   if (!sh) {
     sh = ss_().insertSheet(SH_OBJ);
-    sh.getRange(1, 1, 1, 2).setValues([['Adrese', 'Vaditajs']]).setFontWeight('bold');
+    sh.getRange(1, 1, 1, 4).setValues([['Adrese', 'Vaditajs', 'Grupa', 'Piekluve']]).setFontWeight('bold');
     sh.setFrozenRows(1);
+  } else if (sh.getRange(1, 3).getValue() !== 'Grupa') {
+    sh.getRange(1, 3, 1, 2).setValues([['Grupa', 'Piekluve']]).setFontWeight('bold');
   }
   return sh;
 }
@@ -503,12 +554,14 @@ function typesSheet_() {
   return sh;
 }
 
-/** [{adrese, vaditajs}] — vaditajs tukšs = kopīgs objekts */
+/** [{adrese, vaditajs, grupa, piekluve}] — vaditajs tukšs = kopīgs objekts */
 function objects_() {
-  const data = objSheet_().getDataRange().getValues();
+  const sh = objSheet_();
+  const data = sh.getRange(1, 1, Math.max(sh.getLastRow(), 1), 4).getValues();
   const out = [];
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0]) out.push({ adrese: String(data[i][0]).trim(), vaditajs: String(data[i][1] || '').trim() });
+    if (data[i][0]) out.push({ adrese: String(data[i][0]).trim(), vaditajs: String(data[i][1] || '').trim(),
+      grupa: String(data[i][2] || 'SH objekti').trim(), piekluve: String(data[i][3] || '').trim() });
   }
   return out;
 }
@@ -519,7 +572,7 @@ function addObjects_(addrs, vaditajs) {
   const seen = {};
   addrs.forEach(a => {
     const k = a.toLowerCase();
-    if (known.indexOf(k) === -1 && !seen[k]) { seen[k] = 1; sh.appendRow([a, vaditajs || '']); }
+    if (known.indexOf(k) === -1 && !seen[k]) { seen[k] = 1; sh.appendRow([a, vaditajs || '', 'SH objekti', '']); }
   });
 }
 
@@ -575,26 +628,21 @@ function staff_() {
 }
 
 /** Sastāvs datumam: {brigāde: [vārdi]}. Ja dienai nav ievadīts, ņem pamatbrigādes. */
-function crews_(date) {
-  const out = {};
+/** Dienas vienības secībā: [{name, persons}] */
+function units_(date) {
+  const out = [];
   const data = crewSheet_().getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (dateStr_(data[i][0]) === date) out[String(data[i][1])] = splitNames_(data[i][2]);
+    if (dateStr_(data[i][0]) === date && data[i][1]) out.push({ name: String(data[i][1]), persons: splitNames_(data[i][2]) });
   }
-  staff_().forEach(s => {
-    if (!s.brigade) return;
-    const taken = Object.keys(out).some(b => out[b].indexOf(s.name) !== -1);
-    if (out[s.brigade] === undefined) out[s.brigade] = [];
-    if (!taken && !crewSet_(data, date, s.brigade)) out[s.brigade].push(s.name);
-  });
   return out;
 }
 
-function crewSet_(data, date, brigade) {
-  for (let i = 1; i < data.length; i++) {
-    if (dateStr_(data[i][0]) === date && String(data[i][1]) === brigade) return true;
-  }
-  return false;
+/** {vienība: [vārdi]} */
+function crews_(date) {
+  const out = {};
+  units_(date).forEach(x => out[x.name] = x.persons);
+  return out;
 }
 
 /* ---------------- Push (Firebase Cloud Messaging) ---------------- */
@@ -685,17 +733,14 @@ function setup() {
     u = ss.insertSheet(SH_USERS);
     u.getRange('C:C').setNumberFormat('@');
     u.getRange(1, 1, 1, 4).setValues([['Vards', 'Loma', 'PIN', 'Krasa']]).setFontWeight('bold');
-    u.getRange(2, 1, 10, 4).setValues([
+    u.getRange(2, 1, 7, 4).setValues([
       ['Admins', 'admin', '1000', '#1C1C1E'],
       ['Rostislavs', 'vaditajs', '2001', '#2E9E5B'],
       ['Silvestrs', 'vaditajs', '2002', '#8E5BD6'],
       ['Nikita', 'vaditajs', '2003', '#E6B800'],
       ['Kaspars', 'vaditajs', '2004', '#D0D0D5'],
       ['Lelde', 'vaditajs', '2005', '#E04848'],
-      ['Raimonds', 'vaditajs', '2006', '#3478F6'],
-      ['Brigāde 1', 'brigade', '3001', ''],
-      ['Brigāde 2', 'brigade', '3002', ''],
-      ['Brigāde 3', 'brigade', '3003', '']
+      ['Raimonds', 'vaditajs', '2006', '#3478F6']
     ]);
     u.setFrozenRows(1);
   }
@@ -717,9 +762,7 @@ function setup() {
     t.setFrozenRows(1);
   }
   if (!ss.getSheetByName(SH_STAFF)) {
-    staffSheet_().getRange(2, 1, 4, 2).setValues([
-      ['Jānis', 'Brigāde 1'], ['Pēteris', 'Brigāde 1'], ['Andris', 'Brigāde 2'], ['Ivars', 'Brigāde 3']
-    ]);
+    staffSheet_().getRange(2, 1, 4, 2).setValues([['Jānis', ''], ['Pēteris', ''], ['Andris', ''], ['Ivars', '']]);
   }
   crewSheet_();
   objSheet_();
