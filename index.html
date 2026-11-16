@@ -454,6 +454,39 @@
   .rtable th{font-size:11.5px;color:var(--ink-3);font-weight:800}
   .rtable tr.tot td{font-weight:800}
   .rwrap{overflow-x:auto;margin:0 -4px}
+  .i{width:1em;height:1em;flex:none;vertical-align:-.14em;display:inline-block}
+  h3 .i{width:.95em;height:.95em;margin-right:4px;vertical-align:-.1em}
+  .chip .i,.chip-link .i{width:15px;height:15px}
+  .btn .i,.more-btn .i{width:18px;height:18px}
+  .ai-spark{width:40px;height:40px;flex:none;border-radius:12px;display:grid;place-items:center;color:#7c3aed;background:rgba(124,58,237,.12)}
+  .ai-spark .i{width:22px;height:22px}
+  .ptiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .ptile{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 6px 12px;border-radius:20px;border:1px solid var(--g-brd);
+    background:var(--g-sheen),var(--surface-solid);box-shadow:var(--g-shadow-sm);cursor:pointer;text-align:center;font:inherit;color:var(--ink);transition:transform .15s,box-shadow .2s,border-color .2s}
+  .ptile:active{transform:scale(.97)}
+  .ptile .pi{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;margin-bottom:3px}
+  .ptile .pi .i{width:22px;height:22px}
+  .pi.amber{background:var(--amber-soft);color:var(--amber)} .pi.red{background:var(--red-soft);color:var(--red)} .pi.blue{background:var(--blue-soft);color:var(--blue)}
+  .ptile b{font-size:14.5px;font-weight:800}
+  .ptile small{font-size:11.5px;color:var(--ink-3);font-weight:600;line-height:1.25}
+  .ptile.on{border-color:var(--brand);background:var(--brand-soft);box-shadow:0 0 0 1px var(--brand) inset,var(--g-shadow-sm)}
+  .ptile.on::after{content:'✓';position:absolute;top:7px;right:8px;width:20px;height:20px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;font-weight:900;display:grid;place-items:center}
+  .vacinfo .i{color:var(--brand)}
+  .offline{display:flex;align-items:center;gap:8px}
+  .hist .st{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;margin-right:4px;vertical-align:-4px}
+  .hist .st svg{width:12px;height:12px}
+  .st.ok{background:var(--green-soft);color:var(--green)} .st.bad{background:var(--red-soft);color:var(--red)} .st.wait{background:var(--surface-2);color:var(--ink-3)}
+  /* Datorā cilnes augšā zem virsraksta — kā Izvešanas pieteikumos */
+  @media (min-width:760px){
+    .topbar .tabs{position:relative;left:auto;right:auto;bottom:auto;max-width:none;margin:10px 0 2px;border-radius:999px;background:var(--surface-2);
+      box-shadow:var(--g-well);border:1px solid var(--g-brd-2);-webkit-backdrop-filter:none;backdrop-filter:none}
+    .topbar .tab{flex-direction:row;justify-content:center;gap:8px;padding:11px 8px;font-size:14px}
+    .topbar .tab svg{width:17px;height:17px}
+    .topbar .tab-ind{border-radius:999px}
+    .topbar .tab .count{position:static;margin-left:2px}
+    .app:has(.topbar .tabs) main{padding-bottom:calc(40px + var(--safe-b))}
+    .app .topbar .tabs{transform:none!important;opacity:1!important;pointer-events:auto!important}
+  }
 </style>
 </head>
 <body>
@@ -529,7 +562,7 @@
     <section id="v-new" class="view">
       <div class="view-head"><h2>Jauns pieteikums</h2><p>Norādiet adreses un darbus.</p></div>
       <form class="card panel" id="jobForm" novalidate>
-        <button type="button" class="ai-btn" id="aiFormBtn"><span class="ai-spark">✨</span><span><b>Pieteikt ar mākslīgo intelektu jeb AI</b><small>Ielīmējiet vai nodiktējiet ziņu — forma aizpildīsies pati</small></span></button>
+        <button type="button" class="ai-btn" id="aiFormBtn"><span class="ai-spark"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg></span><span><b>Pieteikt ar mākslīgo intelektu jeb AI</b><small>Ielīmējiet vai nodiktējiet ziņu — forma aizpildīsies pati</small></span></button>
         <div class="ai-note ok" id="aiFormNote" hidden></div>
         <div class="field" id="mgrField" hidden>
           <span class="label">Darbu vadītājs <span class="opt" id="mgrNote">· tiek ņemts no adreses</span></span>
@@ -634,6 +667,8 @@ const IC = {
   cam: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   wa: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19.1L4 20Z"/></svg>',
   send: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg>',
+  alert: '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg>',
+  undo: '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
   addr: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V21H3z"/></svg>'
 };
 
@@ -661,7 +696,7 @@ function toast(msg, type) {
 self.showPush = function (to, title, body) {
   const el = document.createElement('div');
   el.className = 'push';
-  el.innerHTML = `<small>📲 Paziņojums → ${esc(to)}</small><b>${esc(title)}</b><span>${esc(body)}</span>`;
+  el.innerHTML = `<small><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/></svg> Paziņojums → ${esc(to)}</small><b>${esc(title)}</b><span>${esc(body)}</span>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
   setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 500); }, 4200);
@@ -709,6 +744,7 @@ function startApp() {
   $('tabs').hidden = !tabs.length;
   $('app').classList.toggle('no-tabs', !tabs.length);
   $('tabs').onclick = (e) => { const b = e.target.closest('.tab'); if (b) switchView(b.dataset.tab); };
+  placeTabs();
   S.date = addDays(today(), 1);
   switchView(tabs[0][0]);
   silentToken();
@@ -730,7 +766,14 @@ function moveInd() {
   ind.style.width = a.offsetWidth + 'px';
   ind.style.transform = `translateX(${a.offsetLeft}px)`;
 }
-addEventListener('resize', moveInd);
+/** Datorā cilnes augšā (kā Izvešanas pieteikumos), telefonā — apakšā */
+function placeTabs() {
+  const t = $('tabs'), wide = matchMedia('(min-width:760px)').matches;
+  if (wide && t.parentNode !== document.querySelector('.topbar-inner')) document.querySelector('.topbar-inner').appendChild(t);
+  if (!wide && t.parentNode !== $('app')) $('app').insertBefore(t, document.querySelector('main'));
+  moveInd();
+}
+addEventListener('resize', () => { placeTabs(); });
 
 function greeting() { const h = new Date().getHours(); return h < 11 ? tr('Labrīt!', 'Доброе утро!') : h < 18 ? tr('Labdien!', 'Добрый день!') : tr('Labvakar!', 'Добрый вечер!'); }
 function longDate(s) { const d = new Date(s + 'T12:00'); const w = tr(WD[d.getDay()], RU.wd[d.getDay()]); return w[0].toUpperCase() + w.slice(1) + ', ' + d.getDate() + tr('. ' + MON[d.getMonth()], ' ' + RU.mon[d.getMonth()]); }
@@ -818,9 +861,9 @@ const thumb = (id) => (self.DEMO_PHOTOS && self.DEMO_PHOTOS[id]) || 'https://dri
 const photoLink = (id) => (self.DEMO_PHOTOS && self.DEMO_PHOTOS[id]) || 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view';
 function reportHtml(j) {
   let h = '';
-  if (j.parbaude === 'atgriezts' && j.statuss !== 'izpildīts' && j.parbKom) h += `<div class="note bad"><b>↩ ${tr('Atgriezts — jāizlabo', 'Возвращено — исправить')}:</b> ${esc(j.parbKom)}</div>`;
-  if (j.statuss === 'nevar izpildīt' && j.iemesls) h += `<div class="note bad"><b>⚠ ${tr('Nevar izpildīt', 'Невозможно выполнить')}:</b> ${esc(j.iemesls)}</div>`;
-  if (j.statuss === 'izpildīts' && j.komentars) h += `<div class="note ok">💬 ${esc(j.komentars)}</div>`;
+  if (j.parbaude === 'atgriezts' && j.statuss !== 'izpildīts' && j.parbKom) h += `<div class="note bad"><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> ${tr('Atgriezts — jāizlabo', 'Возвращено — исправить')}:</b> ${esc(j.parbKom)}</div>`;
+  if (j.statuss === 'nevar izpildīt' && j.iemesls) h += `<div class="note bad"><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> ${tr('Nevar izpildīt', 'Невозможно выполнить')}:</b> ${esc(j.iemesls)}</div>`;
+  if (j.statuss === 'izpildīts' && j.komentars) h += `<div class="note ok"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20.5l1.5-5.2A8.5 8.5 0 1 1 21 11.5Z"/></svg> ${esc(j.komentars)}</div>`;
   const ph = photoIds(j);
   if (ph.length) h += `<div class="thumbs">${ph.map(id => `<a href="${photoLink(id)}" target="_blank" rel="noopener"><img src="${thumb(id)}" alt="Foto" loading="lazy"></a>`).join('')}</div>`;
   if (j.izpildits && (j.statuss === 'izpildīts' || j.statuss === 'nevar izpildīt')) h += `<div class="when">${j.statuss === 'izpildīts' ? tr('Atzīmēts', 'Отмечено') : tr('Ziņots', 'Сообщено')} ${esc(j.izpildits.slice(11))}</div>`;
@@ -829,23 +872,23 @@ function reportHtml(j) {
 function card(j, o = {}) {
   const mc = managerColor(j.vaditajs);
   const chips = [];
-  if (j.steidzami) chips.push(`<span class="chip urg">🔥 ${tr('Steidzami', 'Срочно')}</span>`);
-  if (j.laiks) chips.push(`<span class="chip tm">⏰ ${tr('līdz plkst.', 'до')} ${esc(j.laiks)}</span>`);
-  if (o.shared) { const oth = brigs(j).filter(b => b !== o.shared); if (oth.length) chips.push(`<span class="chip crew">🤝 ${tr('Kopā ar', 'Вместе с')}: ${esc(oth.map(b => { const u = S.units.find(x => x.name === b); return u && u.persons.length ? u.persons.join(' + ') : b; }).join(', '))}</span>`); }
+  if (j.steidzami) chips.push(`<span class="chip urg"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c.8 3 4.8 5.3 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.1.9-3.6 2-4.6.1 1.8.9 2.8 2 3.1-.3-3.2-.4-5.6.8-8.5Z"/></svg> ${tr('Steidzami', 'Срочно')}</span>`);
+  if (j.laiks) chips.push(`<span class="chip tm"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ${tr('līdz plkst.', 'до')} ${esc(j.laiks)}</span>`);
+  if (o.shared) { const oth = brigs(j).filter(b => b !== o.shared); if (oth.length) chips.push(`<span class="chip crew"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20v-.8A5.2 5.2 0 0 1 8.2 14h1.6a5.2 5.2 0 0 1 5.2 5.2v.8"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a4.5 4.5 0 0 1 4.5 4.5v.5"/></svg> ${tr('Kopā ar', 'Вместе с')}: ${esc(oth.map(b => { const u = S.units.find(x => x.name === b); return u && u.persons.length ? u.persons.join(' + ') : b; }).join(', '))}</span>`); }
   if (j.prombutne) chips.push(`<span class="chip vac">${prombIcon(j.prombutne)} ${esc(trPromb(j.prombutne))}${j.lidz ? tr(' līdz ', ' до ') + esc(shortDate(j.lidz)) : isStanding(j) ? tr(' · līdz atslēgšanai', ' · до отмены') : ''}</span>`);
-  else if (j.lidz) chips.push(`<span class="chip vac">📅 ${tr('Līdz', 'До')} ${esc(shortDate(j.lidz))}</span>`);
+  else if (j.lidz) chips.push(`<span class="chip vac"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg> ${tr('Līdz', 'До')} ${esc(shortDate(j.lidz))}</span>`);
   const obj = (S.meta.objects || []).find(o => o.adrese.toLowerCase() === String(j.adrese).toLowerCase());
   if (obj && obj.grupa && obj.grupa !== 'SH objekti') chips.push(`<span class="chip grp">${esc(obj.grupa)}</span>`);
-  if (obj && obj.piekluve) chips.push(`<span class="chip key">🔑 ${esc(obj.piekluve)}</span>`);
+  if (obj && obj.piekluve) chips.push(`<span class="chip key"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg> ${esc(obj.piekluve)}</span>`);
   if (o.showBrig) brigs(j).forEach(b => chips.push(`<span class="chip crew">${IC.crew.replace('<svg', '<svg width="13" height="13"')} ${esc(b)}${S.crews[b]?.length ? ' · ' + esc(S.crews[b].join(', ')) : ''}</span>`));
   const mapUrl = 'https://maps.apple.com/?q=' + encodeURIComponent(j.adrese);
   const cls = (j.statuss === 'izpildīts' ? ' is-done' : '') + (j.steidzami && j.statuss !== 'izpildīts' ? ' urgent' : '');
   const tools = [];
-  if (o.edit) tools.push(`<button class="chip-link" data-act="edit">✏️ Labot</button>`);
-  if (o.review && j.statuss === 'izpildīts' && !j.parbaude) tools.push(`<button class="chip-link ok" data-act="accept">👍 Pieņemt</button><button class="chip-link bad" data-act="return">↩ Atgriezt</button>`);
+  if (o.edit) tools.push(`<button class="chip-link" data-act="edit"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg> Labot</button>`);
+  if (o.review && j.statuss === 'izpildīts' && !j.parbaude) tools.push(`<button class="chip-link ok" data-act="accept"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11"/><path d="M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3l4-8a3 3 0 0 1 4 3.9Z"/></svg> Pieņemt</button><button class="chip-link bad" data-act="return"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> Atgriezt</button>`);
   if (o.review && j.parbaude === 'pieņemts') tools.push(`<button class="chip-link soft" data-act="unaccept">Atcelt pieņemšanu</button>`);
-  if (o.tools && isStanding(j) && (S.user.role === 'admin' || j.vaditajs === S.user.name)) tools.push(`<button class="chip-link bad" data-act="stop">⏹ Beigt</button>`);
-  if (o.tools) tools.push(`<button class="chip-link soft" data-act="repeat">🔁 Atkārtot</button><button class="chip-link soft" data-act="hist">🕘 Vēsture</button>`);
+  if (o.tools && isStanding(j) && (S.user.role === 'admin' || j.vaditajs === S.user.name)) tools.push(`<button class="chip-link bad" data-act="stop"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg> Beigt</button>`);
+  if (o.tools) tools.push(`<button class="chip-link soft" data-act="repeat"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Atkārtot</button><button class="chip-link soft" data-act="hist"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> Vēsture</button>`);
   return `<article class="card task${cls}" data-id="${esc(j.id)}" style="${mc ? '--mc:' + esc(mc) : ''}">
     <div class="task-top"><div>
       <h3 class="addr">${esc(j.adrese)}</h3>
@@ -876,15 +919,15 @@ const isOpen = (j) => j.brigade && j.statuss !== 'izpildīts' && j.statuss !== '
 function problemsBtn() {
   const n = (S.problems || []).length;
   const k = (S.standing || []).length;
-  return (n ? `<button class="more-btn" id="probBtn" style="margin:0 0 12px;color:var(--red)">⚠ Problēmas objektos: ${n}</button>` : '')
-    + (k ? `<button class="more-btn" id="standBtn" style="margin:0 0 12px">🔁 Aktīvās aizvietošanas (DNL / vakance): ${k}</button>` : '');
+  return (n ? `<button class="more-btn" id="probBtn" style="margin:0 0 12px;color:var(--red)"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Problēmas objektos: ${n}</button>` : '')
+    + (k ? `<button class="more-btn" id="standBtn" style="margin:0 0 12px"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Aktīvās aizvietošanas: ${k}</button>` : '');
 }
 function bindTopBtns() { if ($('probBtn')) $('probBtn').onclick = openProblems; if ($('standBtn')) $('standBtn').onclick = openStanding; }
 function openStanding() {
   const ls_ = S.standing || [];
-  openSheet(`<h3>🔁 Aktīvās aizvietošanas</h3><p class="lead">DNL un vakances bez beigu datuma — tās katru darba dienu tiek ieliktas plānā, kamēr tās atslēgsiet.</p>
+  openSheet(`<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Aktīvās aizvietošanas</h3><p class="lead">DNL un vakances bez beigu datuma — tās katru darba dienu tiek ieliktas plānā, kamēr tās atslēgsiet.</p>
     ${ls_.length ? ls_.map(x => `<div class="prob"><b>${esc(x.adrese)}</b><small>${prombIcon(x.prombutne)} ${esc(x.prombutne)} · ${esc(x.tips.toLowerCase())} · no ${esc(shortDate(x.no))}${x.beigas ? ' · līdz ' + esc(shortDate(x.beigas)) : ''}${S.user.role === 'admin' ? ' · ' + esc(x.vaditajs) : ''}</small>
-      <div class="btn-row"><button class="btn btn-glass" data-sh="${esc(x.adrese)}">🕘 Vēsture</button><button class="btn btn-ghost-red" data-ss="${esc(x.id)}" data-sa="${esc(x.adrese)}">⏹ Beigt</button></div></div>`).join('') : '<p class="lead">Nav aktīvu aizvietošanu.</p>'}`);
+      <div class="btn-row"><button class="btn btn-glass" data-sh="${esc(x.adrese)}"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> Vēsture</button><button class="btn btn-ghost-red" data-ss="${esc(x.id)}" data-sa="${esc(x.adrese)}"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg> Beigt</button></div></div>`).join('') : '<p class="lead">Nav aktīvu aizvietošanu.</p>'}`);
   $('sheetBody').onclick = (e) => {
     const h = e.target.closest('[data-sh]'); if (h) return openHistory(h.dataset.sh);
     const b = e.target.closest('[data-ss]'); if (b) stopStanding(b.dataset.ss, b.dataset.sa);
@@ -892,7 +935,7 @@ function openStanding() {
 }
 function stopStanding(id, adrese, from) {
   const t = today(), def = from && from > t ? addDays(from, -1) : t;
-  openSheet(`<h3>⏹ Beigt aizvietošanu</h3><p class="lead">${esc(adrese)}<br>Pēc šīs dienas aizvietošana vairs netiks likta plānā. Neizpildītie nākamo dienu darbi tiks izdzēsti.</p>
+  openSheet(`<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg> Beigt aizvietošanu</h3><p class="lead">${esc(adrese)}<br>Pēc šīs dienas aizvietošana vairs netiks likta plānā. Neizpildītie nākamo dienu darbi tiks izdzēsti.</p>
     <div class="field"><span class="label">Pēdējā diena, kad vēl jāaizvieto</span><input type="date" class="input" id="stLast" value="${def}"></div>
     <div class="shortcuts" style="margin:0 0 14px"><button type="button" class="sc" data-d="${addDays(t, -1)}">Vakar</button><button type="button" class="sc" data-d="${t}">Šodien</button><button type="button" class="sc" data-d="${addDays(t, 1)}">Rīt</button></div>
     <button class="btn btn-danger btn-block" id="stGo">Beigt aizvietošanu</button>`);
@@ -949,7 +992,7 @@ async function showWhatsApp() {
 /* ---------- Vadītājs: mani darbi ---------- */
 function renderMine() {
   const toCheck = S.jobs.filter(j => j.statuss === 'izpildīts' && !j.parbaude).length;
-  $('mineList').innerHTML = problemsBtn() + (toCheck ? `<div class="card panel" style="margin-bottom:12px;padding:12px 16px;font-weight:700;font-size:14px">👍 ${toCheck} ${plural(toCheck, 'izpildīts darbs gaida', 'izpildīti darbi gaida')} jūsu pārbaudi</div>` : '') +
+  $('mineList').innerHTML = problemsBtn() + (toCheck ? `<div class="card panel" style="margin-bottom:12px;padding:12px 16px;font-weight:700;font-size:14px"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11"/><path d="M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3l4-8a3 3 0 0 1 4 3.9Z"/></svg> ${toCheck} ${plural(toCheck, 'izpildīts darbs gaida', 'izpildīti darbi gaida')} jūsu pārbaudi</div>` : '') +
     (S.jobs.length ? `<div class="list">${S.jobs.slice().sort(urgSort).map(j => card(j, { showBrig: true, hideMgr: true, edit: !j.brigade, review: true, tools: true })).join('')}</div>`
     : emptyBox('Nav pieteikumu', 'Šai dienai neesat pieteicis darbus. Piesakiet cilnē „Jauns”.', IC.plus));
   bindTopBtns();
@@ -959,7 +1002,7 @@ function renderMine() {
 function renderToday() {
   const n = S.jobs.length, done = S.jobs.filter(j => j.statuss === 'izpildīts' || j.statuss === 'nevar izpildīt').length;
   const crew = S.crews[S.user.name] || [];
-  $('todaySub').textContent = crew.length ? '👷 ' + crew.join(', ') : 'Uzspiediet „Atzīmēt”, kad darbs ir paveikts.';
+  $('todaySub').innerHTML = crew.length ? '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20v-.8A5.2 5.2 0 0 1 8.2 14h1.6a5.2 5.2 0 0 1 5.2 5.2v.8"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a4.5 4.5 0 0 1 4.5 4.5v.5"/></svg> ' + esc(crew.join(', ')) : 'Uzspiediet „Atzīmēt”, kad darbs ir paveikts.';
   $('todayList').innerHTML = n
     ? `<div class="card panel" style="margin-bottom:12px;padding:14px 16px"><div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px"><span>Paveikts</span><span>${done} / ${n}</span></div>
        <div class="progress"><span style="width:${Math.round(done / n * 100)}%"></span></div></div>
@@ -970,7 +1013,7 @@ function renderToday() {
 /* ---------- Vienības ---------- */
 function renderCrews() {
   const day = relDay(S.date) || shortDate(S.date);
-  let h = `<button class="more-btn" id="teamLinkBtn" style="margin:0 0 12px">🔗 Brigāžu saite — visi redz savus darbus</button>
+  let h = `<button class="more-btn" id="teamLinkBtn" style="margin:0 0 12px"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5a4 4 0 0 0 5.7.4l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10.5a4 4 0 0 0-5.7-.4l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/></svg> Brigāžu saite — visi redz savus darbus</button>
     <div class="btn-row" style="margin-bottom:12px"><button class="btn btn-primary" data-unit="">${IC.plus.replace('<svg', '<svg width="18" height="18"')}Jauna vienība</button>
     <button class="btn btn-glass" id="copyUnits">Kopēt no ${({ 'Šodien': 'šodienas', 'Vakar': 'vakardienas', 'Rīt': 'rītdienas' })[relDay(addDays(S.date, -1))] || shortDate(addDays(S.date, -1))}</button></div>`;
   h += S.units.map(u => {
@@ -992,7 +1035,7 @@ $('crewList').addEventListener('click', (e) => {
 function showLink() {
   const url = S.teamLink;
   if (!url) return toast('Saite vēl nav pieejama — atjaunojiet lapu', 'err');
-  openSheet(`<h3>🔗 Brigāžu saite</h3><p class="lead">Viena adrese visiem. Brigādes augšā izvēlas savu vienību (piem. „Denis + Natālija”) un redz savus darbus bez PIN. Vadītāji spiež „Ienākt”, lai pieteiktu darbus. Saite ir arī WhatsApp plāna beigās.</p>
+  openSheet(`<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5a4 4 0 0 0 5.7.4l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10.5a4 4 0 0 0-5.7-.4l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/></svg> Brigāžu saite</h3><p class="lead">Viena adrese visiem. Brigādes augšā izvēlas savu vienību (piem. „Denis + Natālija”) un redz savus darbus bez PIN. Vadītāji spiež „Ienākt”, lai pieteiktu darbus. Saite ir arī WhatsApp plāna beigās.</p>
     <div class="field"><textarea class="textarea" id="linkText" readonly style="min-height:90px;font-size:13px">${esc(url)}</textarea></div>
     <div class="btn-row"><a class="btn btn-glass" href="${esc(url)}" target="_blank" rel="noopener">Atvērt</a><button class="btn btn-primary" id="linkCopy">Kopēt</button></div>`);
   $('linkCopy').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Saite nokopēta', 'ok'); closeSheet(); } catch (e) { $('linkText').select(); } };
@@ -1098,7 +1141,7 @@ function comboShow(inp) {
   if (!list.length) { box.hidden = true; return; }
   const hl = (s) => { if (!q) return esc(s); const i = s.toLowerCase().indexOf(q); return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length)); };
   const mine = isMgr ? list.filter(o => o.vaditajs === me).length : 0;
-  box.innerHTML = (isMgr ? `<div class="combo-sec">Mani objekti · ${mine}</div>` : '') + list.map((o, i) => (isMgr && i === mine && i > 0 ? '<div class="combo-sec">Citi objekti</div>' : '') + `<button type="button" class="combo-opt" data-a="${esc(o.adrese)}">${IC.addr}<span>${hl(o.adrese)}</span>${o.grupa && o.grupa !== 'SH objekti' ? `<small>${esc(o.grupa)}</small>` : o.piekluve ? '<small>🔑</small>' : ''}</button>`).join('');
+  box.innerHTML = (isMgr ? `<div class="combo-sec">Mani objekti · ${mine}</div>` : '') + list.map((o, i) => (isMgr && i === mine && i > 0 ? '<div class="combo-sec">Citi objekti</div>' : '') + `<button type="button" class="combo-opt" data-a="${esc(o.adrese)}">${IC.addr}<span>${hl(o.adrese)}</span>${o.grupa && o.grupa !== 'SH objekti' ? `<small>${esc(o.grupa)}</small>` : o.piekluve ? '<small><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg></small>' : ''}</button>`).join('');
   box.hidden = false;
 }
 function bindCombo(root) {
@@ -1122,13 +1165,13 @@ function bindCombo(root) {
 /* ---------- AI teksta uzlabošana ---------- */
 function aiField(fieldHtml, kind) {
   const empty = !/>[^<]+<\/textarea>/.test(fieldHtml);
-  return `<div class="aiwrap">${fieldHtml}<div class="ai-bar"><button type="button" class="ai-mini undo" hidden>↶ Atsaukt</button><button type="button" class="ai-mini go" data-kind="${kind}">${empty && kind !== 'cant' ? '✨ Sagatavot ar AI' : '✨ Uzlabot ar AI'}</button></div></div>`;
+  return `<div class="aiwrap">${fieldHtml}<div class="ai-bar"><button type="button" class="ai-mini undo" hidden><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> Atsaukt</button><button type="button" class="ai-mini go" data-kind="${kind}">${empty && kind !== 'cant' ? '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> Sagatavot ar AI' : '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> Uzlabot ar AI'}</button></div></div>`;
 }
 /** Tukšam laukam — „Sagatavot”, ar tekstu — „Uzlabot” */
 function aiLabel(wrap) {
   const b = wrap.querySelector('.ai-mini.go'); if (!b) return;
   const empty = !wrap.querySelector('textarea, input').value.trim();
-  b.textContent = empty && b.dataset.kind !== 'cant' ? '✨ Sagatavot ar AI' : '✨ Uzlabot ar AI';
+  b.innerHTML = empty && b.dataset.kind !== 'cant' ? '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> Sagatavot ar AI' : '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> Uzlabot ar AI';
 }
 document.addEventListener('input', (e) => { const w = e.target.closest('.aiwrap'); if (w) aiLabel(w); });
 async function aiCall(kind, req) {
@@ -1148,7 +1191,7 @@ document.addEventListener('click', async (e) => {
   if (!req.text && btn.dataset.kind === 'cant') return toast('Izvēlieties iemeslu vai uzrakstiet dažus vārdus');
   if (!req.adrese && btn.dataset.kind === 'note' && !req.text) return toast('Vispirms izvēlieties adresi');
   if (btn.dataset.kind === 'note' && !req.text && !ctx.piekluve) return toast('Šai adresei nav piekļuves informācijas — uzrakstiet dažus vārdus, un AI tos noformēs');
-  btn.disabled = true; btn.textContent = '✨ Raksta…';
+  btn.disabled = true; btn.innerHTML = '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> Raksta…';
   try {
     const text = await aiCall('note', req);
     if (!text) throw new Error('AI neatgrieza tekstu');
@@ -1173,23 +1216,23 @@ function typeSelect(val) {
 }
 /** Nedēļas beigas (piektdiena; ja izvēlēta brīvdiena — svētdiena) */
 function weekEnd(d) { const wd = new Date(d + 'T12:00').getDay(); return addDays(d, wd >= 1 && wd <= 5 ? 5 - wd : wd === 6 ? 1 : 0); }
-const PROMB = [['Atvaļinājums', '🏖'], ['DNL', '🤒'], ['Vakance', '📋']];
+const PROMB = [['Atvaļinājums', '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', 'ar datumu līdz', 'amber'], ['DNL', '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V4.5a2 2 0 0 0-4 0v10.3a4 4 0 1 0 4 0Z"/><path d="M12 17.5v-6"/></svg>', 'slimības lapa', 'red'], ['Vakance', '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20.5v-.5A5.5 5.5 0 0 1 8 14.5h2a5.5 5.5 0 0 1 5.5 5.5v.5"/><path d="M19 8v6M16 11h6"/></svg>', 'brīva vieta', 'blue']];
 const STAND_PROMB = ['DNL', 'Vakance'];
 const isStanding = (j) => !!(j.serija && !j.lidz && STAND_PROMB.includes(j.prombutne));
-const prombIcon = (v) => (PROMB.find(p => p[0] === v) || [, '🏖'])[1];
+const prombIcon = (v) => (PROMB.find(p => p[0] === v) || [, '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'])[1];
 function rowHtml(j = {}, single) {
   return `<div class="jrow">
     ${single ? '' : '<div class="jrow-h"><b><i class="jnum"></i><span>Objekts</span></b><button type="button" class="jdel">Noņemt</button></div>'}
     <div class="field"><span class="label">Adrese</span>${comboHtml(j.adrese)}</div>
     <div class="field"><span class="label">Darbs</span>${typeSelect(j.tips)}</div>
-    ${single ? '' : `<div class="field"><label class="switch-row"><span><b>📅 Visu šo nedēļu</b><small class="weekinfo">Katru darba dienu līdz piektdienai</small></span>
+    ${single ? '' : `<div class="field"><label class="switch-row"><span><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg> Visu šo nedēļu</b><small class="weekinfo">Katru darba dienu līdz piektdienai</small></span>
       <span class="sw"><input type="checkbox" class="fWeekAll"><i></i></span></label></div>`}
     <div class="field"><span class="label">Steidzamība <span class="opt">· nav obligāti</span></span>
-      <div class="urgline"><button type="button" class="sc fUrg ${j.steidzami ? 'on' : 'plus'}" data-urg>🔥 Steidzami</button>
-      <label class="time-lbl">⏰ līdz plkst. <input type="time" class="input fTime" value="${esc(j.laiks || '')}"></label></div></div>
+      <div class="urgline"><button type="button" class="sc fUrg ${j.steidzami ? 'on' : 'plus'}" data-urg><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c.8 3 4.8 5.3 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.1.9-3.6 2-4.6.1 1.8.9 2.8 2 3.1-.3-3.2-.4-5.6.8-8.5Z"/></svg> Steidzami</button>
+      <label class="time-lbl"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> līdz plkst. <input type="time" class="input fTime" value="${esc(j.laiks || '')}"></label></div></div>
     <div class="field vacwrap" hidden data-prom="${esc(j.prombutne || '')}">
       <span class="label">Kāpēc jāaizvieto?</span>
-      <div class="shortcuts" style="margin:0">${PROMB.map(([v, ic]) => `<button type="button" class="sc ${j.prombutne === v ? 'on' : ''}" data-prom="${v}">${ic} ${v}</button>`).join('')}</div>
+      <div class="ptiles">${PROMB.map(([v, ic, sub, col]) => `<button type="button" class="ptile ${j.prombutne === v ? 'on' : ''}" data-prom="${v}"><span class="pi ${col}">${ic.replace('width="1em"', 'width="22"').replace('height="1em"', 'height="22"')}</span><b>${v}</b><small>${sub}</small></button>`).join('')}</div>
       ${single ? '' : `<div class="vacbox" hidden>
         <span class="label">Aizvietot līdz (ieskaitot) <span class="opt lidz-opt">· nav obligāti</span></span>
         <input type="date" class="input fLidz" value="${esc(j.lidz || '')}">
@@ -1239,7 +1282,7 @@ function updateVac(row) {
   const once = row.querySelector('.fOnce'), onceW = row.querySelector('.fOnceWrap');
   if (onceW) onceW.hidden = !(on && stand && !lidz && !(wk && wk.checked));
   info.classList.remove('bad');
-  if (on && stand && !lidz && !(wk && wk.checked)) info.textContent = once && once.checked ? 'Tikai ' + shortDate(formDate) : '🔁 Būs plānā katru darba dienu, kamēr pats atslēgsiet ar „⏹ Beigt”';
+  if (on && stand && !lidz && !(wk && wk.checked)) info.innerHTML = once && once.checked ? 'Tikai ' + shortDate(formDate) : '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Būs plānā katru darba dienu, kamēr pats atslēgsiet ar „<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg> Beigt”';
   else if (!on || !lidz || (wk && wk.checked)) { info.textContent = ''; }
   else if (lidz <= formDate) { info.textContent = 'Datumam jābūt pēc ' + shortDate(formDate); info.classList.add('bad'); }
   else { const n = seriesDates(formDate, lidz, row.querySelector('.fWeek').checked).length; info.classList.remove('bad');
@@ -1364,9 +1407,9 @@ $('jobForm').onsubmit = async (e) => {
 
 /* AI pieteikums no ziņas */
 $('aiFormBtn').onclick = () => {
-  openSheet(`<h3>✨ Pieteikt ar AI</h3><p class="lead">Ielīmējiet WhatsApp ziņu vai uzrakstiet brīvi — AI atradīs adreses, darbus un datumu.</p>
+  openSheet(`<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> Pieteikt ar AI</h3><p class="lead">Ielīmējiet WhatsApp ziņu vai uzrakstiet brīvi — AI atradīs adreses, darbus un datumu.</p>
     <div class="field"><textarea class="textarea" id="aiMsg" style="min-height:150px" placeholder="Piem.: Rīt Brīvības 102 aizvietot sētnieku, Ganību 5 savākt lapas pagalmā. Barona 58 sētnieks atvaļinājumā līdz 22.11."></textarea></div>
-    <button class="btn btn-primary btn-block" id="aiGo">✨ Aizpildīt formu</button>`);
+    <button class="btn btn-primary btn-block" id="aiGo"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> Aizpildīt formu</button>`);
   setTimeout(() => $('aiMsg').focus(), 300);
   $('aiGo').onclick = async () => {
     const text = $('aiMsg').value.trim(); if (!text) return toast('Ielīmējiet ziņu', 'err');
@@ -1380,7 +1423,7 @@ $('aiFormBtn').onclick = () => {
       const miss = r.rows.filter(x => !x.tips).length;
       $('aiFormNote').hidden = false;
       $('aiFormNote').textContent = `✓ Aizpildītas ${r.rows.length} ${plural(r.rows.length, 'adrese', 'adreses')}${r.datums ? ' · ' + (relDay(r.datums) || shortDate(r.datums)) : ''}. Pārbaudiet${miss ? ' un izvēlieties darbu, kur tas trūkst' : ''} un spiediet „Pieteikt”.`;
-    } catch (err) { toast(err.message, 'err'); b.disabled = false; b.textContent = '✨ Aizpildīt formu'; }
+    } catch (err) { toast(err.message, 'err'); b.disabled = false; b.innerHTML = '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> Aizpildīt formu'; }
   };
 };
 
@@ -1438,7 +1481,7 @@ async function reviewJob(job, data) {
   catch (err) { toast(err.message, 'err'); }
 }
 function returnJob(job) {
-  openSheet(`<h3>↩ Atgriezt darbu</h3><p class="lead">${esc(job.adrese)} · ${esc(brigs(job).join(', '))}<br>Brigāde redzēs jūsu komentāru, un darbs atkal būs jāatzīmē.</p>
+  openSheet(`<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> Atgriezt darbu</h3><p class="lead">${esc(job.adrese)} · ${esc(brigs(job).join(', '))}<br>Brigāde redzēs jūsu komentāru, un darbs atkal būs jāatzīmē.</p>
     ${reportHtml(job)}
     <div class="field"><span class="label">Kas jāizlabo?</span><textarea class="textarea" id="retNote" placeholder="Piem. nav iztīrīts pagalms pie konteineriem"></textarea></div>
     <button class="btn btn-danger btn-block" id="retGo">Atgriezt brigādei</button>`);
@@ -1449,34 +1492,34 @@ function repeatJob(job) {
   switchView('new');
   initForm({ datums: addDays(today(), 1), vaditajs: S.user.role === 'admin' ? job.vaditajs : '',
     rows: [{ adrese: job.adrese, tips: job.tips, apraksts: job.apraksts, prombutne: job.prombutne, steidzami: job.steidzami, laiks: job.laiks }] });
-  $('aiFormNote').hidden = false; $('aiFormNote').textContent = '🔁 Nokopēts no ' + shortDate(job.datums) + '. Izvēlieties datumu un spiediet „Pieteikt”.';
+  $('aiFormNote').hidden = false; $('aiFormNote').innerHTML = '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Nokopēts no ' + shortDate(job.datums) + '. Izvēlieties datumu un spiediet „Pieteikt”.';
 }
 async function openHistory(adrese) {
-  openSheet(`<h3>🕘 ${esc(adrese)}</h3><p class="lead">Objekta vēsture</p><div class="skel"></div>`);
+  openSheet(`<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> ${esc(adrese)}</h3><p class="lead">Objekta vēsture</p><div class="skel"></div>`);
   try {
     const r = await api('history', { adrese });
     const obj = objOf(adrese);
-    const st = (j) => j.statuss === 'izpildīts' ? (j.parbaude === 'pieņemts' ? '✅' : '✓') : j.statuss === 'nevar izpildīt' ? '⚠' : j.parbaude === 'atgriezts' ? '↩' : '·';
-    const probs = (r.problems || []).map(p => `<div class="prob"><b>⚠ ${esc(p.apraksts)}</b><small>${esc(p.laiks)} · ${esc(p.vieniba || 'brigāde')} · ${p.statuss === 'atrisināts' ? 'atrisināts' : 'neatrisināts'}</small>
+    const st = (j) => j.statuss === 'izpildīts' ? `<span class="st ok">${IC.check}</span>` : j.statuss === 'nevar izpildīt' ? `<span class="st bad">${IC.alert}</span>` : j.parbaude === 'atgriezts' ? `<span class="st bad">${IC.undo}</span>` : `<span class="st wait">${IC.clock}</span>`;
+    const probs = (r.problems || []).map(p => `<div class="prob"><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> ${esc(p.apraksts)}</b><small>${esc(p.laiks)} · ${esc(p.vieniba || 'brigāde')} · ${p.statuss === 'atrisināts' ? 'atrisināts' : 'neatrisināts'}</small>
       ${photoIds(p).length ? `<div class="thumbs">${photoIds(p).map(id => `<a href="${photoLink(id)}" target="_blank" rel="noopener"><img src="${thumb(id)}" alt="Foto" loading="lazy"></a>`).join('')}</div>` : ''}</div>`).join('');
     const rows = r.jobs.map(j => `<div class="hist"><span class="d">${esc(shortDate(j.datums))}<br><small>${j.datums.slice(0, 4)}</small></span><div class="b">
       <b>${st(j)} ${esc(typeText(j))}</b>${j.prombutne ? ' · ' + esc(j.prombutne) : ''}
       <small>${esc([brigs(j).join(', ') || 'nepiešķirts', j.vaditajs].filter(Boolean).join(' · '))}</small>
-      ${j.apraksts ? `<small>📝 ${esc(j.apraksts)}</small>` : ''}${j.komentars ? `<small>💬 ${esc(j.komentars)}</small>` : ''}${j.iemesls && j.statuss === 'nevar izpildīt' ? `<small style="color:var(--red)">⚠ ${esc(j.iemesls)}</small>` : ''}
+      ${j.apraksts ? `<small><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5h14a1.5 1.5 0 0 1 1.5 1.5v10l-5.5 5.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5Z"/><path d="M15 20.5V15h5.5M8 9h8M8 12.5h5"/></svg> ${esc(j.apraksts)}</small>` : ''}${j.komentars ? `<small><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20.5l1.5-5.2A8.5 8.5 0 1 1 21 11.5Z"/></svg> ${esc(j.komentars)}</small>` : ''}${j.iemesls && j.statuss === 'nevar izpildīt' ? `<small style="color:var(--red)"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> ${esc(j.iemesls)}</small>` : ''}
       ${photoIds(j).length ? `<div class="thumbs">${photoIds(j).map(id => `<a href="${photoLink(id)}" target="_blank" rel="noopener"><img src="${thumb(id)}" alt="Foto" loading="lazy"></a>`).join('')}</div>` : ''}</div></div>`).join('');
     const done = r.jobs.filter(j => j.statuss === 'izpildīts').length;
-    $('sheetBody').innerHTML = `<h3>🕘 ${esc(adrese)}</h3><p class="lead">${obj && obj.vaditajs ? esc(obj.vaditajs) + ' · ' : ''}${r.total} ${plural(r.total, 'darbs', 'darbi')} · ${done} izpildīti${r.total > r.jobs.length ? ' · rāda pēdējos ' + r.jobs.length : ''}</p>
-      ${obj && obj.piekluve ? `<div class="chips" style="padding:0 0 12px"><span class="chip key">🔑 ${esc(obj.piekluve)}</span></div>` : ''}
+    $('sheetBody').innerHTML = `<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> ${esc(adrese)}</h3><p class="lead">${obj && obj.vaditajs ? esc(obj.vaditajs) + ' · ' : ''}${r.total} ${plural(r.total, 'darbs', 'darbi')} · ${done} izpildīti${r.total > r.jobs.length ? ' · rāda pēdējos ' + r.jobs.length : ''}</p>
+      ${obj && obj.piekluve ? `<div class="chips" style="padding:0 0 12px"><span class="chip key"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg> ${esc(obj.piekluve)}</span></div>` : ''}
       ${probs}${rows || '<p class="lead">Šajā adresē darbu vēl nav bijis.</p>'}`;
   } catch (err) { closeSheet(); toast(err.message, 'err'); }
 }
 function openProblems() {
   const draw = () => {
     const ps = S.problems || [];
-    $('sheetBody').innerHTML = `<h3>⚠ Problēmas objektos</h3><p class="lead">Brigāžu ziņojumi${S.user.role === 'vaditajs' ? ' par jūsu objektiem' : ''}. Kad problēma atrisināta, atzīmējiet to.</p>` +
+    $('sheetBody').innerHTML = `<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Problēmas objektos</h3><p class="lead">Brigāžu ziņojumi${S.user.role === 'vaditajs' ? ' par jūsu objektiem' : ''}. Kad problēma atrisināta, atzīmējiet to.</p>` +
       (ps.length ? ps.map(p => `<div class="prob"><b>${esc(p.adrese)}</b><small>${esc(p.laiks)} · ${esc(p.vieniba || 'brigāde')}${S.user.role === 'admin' && p.vaditajs ? ' · ' + esc(p.vaditajs) : ''}</small><p>${esc(p.apraksts)}</p>
         ${photoIds(p).length ? `<div class="thumbs">${photoIds(p).map(id => `<a href="${photoLink(id)}" target="_blank" rel="noopener"><img src="${thumb(id)}" alt="Foto" loading="lazy"></a>`).join('')}</div>` : ''}
-        <div class="btn-row"><button class="btn btn-glass" data-ph="${esc(p.adrese)}">🕘 Vēsture</button><button class="btn btn-primary" data-pd="${esc(p.id)}">✓ Atrisināts</button></div></div>`).join('')
+        <div class="btn-row"><button class="btn btn-glass" data-ph="${esc(p.adrese)}"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> Vēsture</button><button class="btn btn-primary" data-pd="${esc(p.id)}">✓ Atrisināts</button></div></div>`).join('')
       : '<p class="lead">Nav neatrisinātu problēmu ✓</p>');
   };
   openSheet(''); draw();
@@ -1506,12 +1549,12 @@ function updateJob(j) {
 }
 function openReport(job) {
   const marked = job.statuss === 'izpildīts' || job.statuss === 'nevar izpildīt';
-  const head = `<h3>${esc(job.adrese)}</h3><p class="lead">${esc(typeText(job))} · ${esc(job.vaditajs)}${job.steidzami ? ' · 🔥 ' + tr('Steidzami', 'Срочно') : ''}${job.laiks ? ' · ⏰ ' + tr('līdz plkst. ', 'до ') + esc(job.laiks) : ''}${job.apraksts ? '<br>' + esc(job.apraksts) : ''}</p>`
-    + (job.parbaude === 'atgriezts' && job.statuss !== 'izpildīts' && job.parbKom ? `<div class="note bad" style="margin:0 0 14px">↩ ${esc(job.parbKom)}</div>` : '');
+  const head = `<h3>${esc(job.adrese)}</h3><p class="lead">${esc(typeText(job))} · ${esc(job.vaditajs)}${job.steidzami ? ' · <svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c.8 3 4.8 5.3 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.1.9-3.6 2-4.6.1 1.8.9 2.8 2 3.1-.3-3.2-.4-5.6.8-8.5Z"/></svg> ' + tr('Steidzami', 'Срочно') : ''}${job.laiks ? ' · <svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ' + tr('līdz plkst. ', 'до ') + esc(job.laiks) : ''}${job.apraksts ? '<br>' + esc(job.apraksts) : ''}</p>`
+    + (job.parbaude === 'atgriezts' && job.statuss !== 'izpildīts' && job.parbKom ? `<div class="note bad" style="margin:0 0 14px"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> ${esc(job.parbKom)}</div>` : '');
   $('sheetBody').dataset.adrese = job.adrese; $('sheetBody').dataset.tips = job.tips;
   if (marked) {
     openSheet(head + `<div class="card task${job.statuss === 'izpildīts' ? ' is-done' : ''}" style="--mc:${job.statuss === 'izpildīts' ? 'var(--green)' : 'var(--red)'};margin-bottom:14px;animation:none">
-      <div class="task-top"><div><h3 class="addr" style="text-decoration:none">${job.statuss === 'izpildīts' ? '✓ ' + tr('Izpildīts', 'Выполнено') : '⚠ ' + tr('Nevar izpildīt', 'Невозможно выполнить')}</h3></div></div>${reportHtml(job)}</div>
+      <div class="task-top"><div><h3 class="addr" style="text-decoration:none">${job.statuss === 'izpildīts' ? '✓ ' + tr('Izpildīts', 'Выполнено') : '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> ' + tr('Nevar izpildīt', 'Невозможно выполнить')}</h3></div></div>${reportHtml(job)}</div>
       ${job.parbaude === 'pieņemts' && UV ? `<p class="lead" style="text-align:center">${tr('Vadītājs darbu pieņēma ✓', 'Руководитель принял работу ✓')}</p>` : `<button class="btn btn-glass btn-block" id="rUndo">${tr('Atcelt atzīmi', 'Отменить отметку')}</button>`}`);
     if (!$('rUndo')) return;
     $('rUndo').onclick = async () => {
@@ -1583,9 +1626,9 @@ async function loadStats() {
         <span class="bar"><span style="width:${Math.round(v / max * 100)}%"></span></span><span class="m">${v}</span></div>`).join('')}</div>` : '';
     };
     const count = (f) => js.reduce((m, j) => { const k = f(j); m[k] = (m[k] || 0) + 1; return m; }, {});
-    $('statsBody').innerHTML = `<button class="more-btn" id="monthBtn" style="margin:0 0 12px">📄 Mēneša atskaite</button>` + (!n ? emptyBox('Nav datu', 'Izvēlētajā periodā darbu nav.', IC.stats) :
+    $('statsBody').innerHTML = `<button class="more-btn" id="monthBtn" style="margin:0 0 12px"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8l-5.5-5.5Z"/><path d="M14 2.5V8h5.5M8.5 13h7M8.5 17h4.5"/></svg> Mēneša atskaite</button>` + (!n ? emptyBox('Nav datu', 'Izvēlētajā periodā darbu nav.', IC.stats) :
       `<div class="stats">${tile('b-all', 'Darbi', n, IC.list.replace('<svg', '<svg width="18" height="18"'))}${tile('b-done', 'Aizvietošanas', repl, IC.crew.replace('<svg', '<svg width="18" height="18"'))}
-        ${tile('b-pend', 'Papilddarbi', n - repl, IC.plus.replace('<svg', '<svg width="18" height="18"'))}${tile('b-bad', 'Atvaļinājumi', js.filter(j => j.lidz).length, '🏖')}</div>
+        ${tile('b-pend', 'Papilddarbi', n - repl, IC.plus.replace('<svg', '<svg width="18" height="18"'))}${tile('b-bad', 'Atvaļinājumi', js.filter(j => j.lidz).length, '<svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>')}</div>
        ${S.user.role === 'admin' ? bars('Pa vadītājiem', count(j => j.vaditajs), managerColor) : ''}
        ${bars('Pa vienībām', js.reduce((m, j) => { (brigs(j).length ? brigs(j) : ['Nepiešķirti']).forEach(b => m[b] = (m[b] || 0) + 1); return m; }, {}))}
        ${bars('Pa objektu grupām', count(j => ((S.meta.objects || []).find(o => o.adrese.toLowerCase() === String(j.adrese || '').toLowerCase()) || {}).grupa || 'SH objekti'))}
@@ -1600,7 +1643,7 @@ async function openMonthReport(month) {
   const from = month + '-01', d = new Date(from + 'T12:00'); d.setMonth(d.getMonth() + 1); d.setDate(0);
   const to = iso(d), title = LV_MON[+month.slice(5) - 1] + ' ' + month.slice(0, 4);
   const prev = addDays(from, -1).slice(0, 7), next = addDays(to, 1).slice(0, 7);
-  openSheet(`<h3>📄 Mēneša atskaite</h3><p class="lead">${title}</p><div class="skel"></div>`);
+  openSheet(`<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8l-5.5-5.5Z"/><path d="M14 2.5V8h5.5M8.5 13h7M8.5 17h4.5"/></svg> Mēneša atskaite</h3><p class="lead">${title}</p><div class="skel"></div>`);
   try {
     const r = await api('stats', { from, to }), js = r.jobs, t = today();
     const row = () => ({ n: 0, repl: 0, extra: 0, done: 0, acc: 0, cant: 0, open: 0 });
@@ -1618,13 +1661,13 @@ async function openMonthReport(month) {
       js.slice().sort((a, b) => a.datums.localeCompare(b.datums)).forEach(j => lines.push([shortDate(j.datums) + j.datums.slice(0, 4), j.adrese, j.tips, j.prombutne || '', j.vaditajs, j.brigade, j.statuss, j.parbaude || '', j.statuss === 'nevar izpildīt' ? j.iemesls || '' : ''].map(q).join(';')));
       return '\ufeff' + lines.join('\r\n');
     };
-    $('sheetBody').innerHTML = `<h3>📄 Mēneša atskaite</h3>
+    $('sheetBody').innerHTML = `<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8l-5.5-5.5Z"/><path d="M14 2.5V8h5.5M8.5 13h7M8.5 17h4.5"/></svg> Mēneša atskaite</h3>
       <div class="seg" style="margin:4px 0 14px"><button data-m="${prev}">‹</button><button class="on" style="flex:3">${title}</button><button data-m="${next}" ${next > t.slice(0, 7) ? 'disabled style="opacity:.35"' : ''}>›</button></div>
       ${!js.length ? '<p class="lead">Šajā mēnesī darbu nav.</p>' : `
       ${S.user.role === 'admin' ? `<span class="label">Pa vadītājiem</span>${table('Vadītājs', byMgr)}` : ''}
       <span class="label">Pa objektiem</span>${table('Objekts', byObj)}
       <p class="lead" style="font-size:12px">Aizv. — aizvietošanas · Papild. — papilddarbi · Pieņ. — vadītājs pieņēma · Neatz. — pagājušas dienas darbi bez atzīmes.</p>
-      <button class="btn btn-primary btn-block" id="csvBtn">⬇ Lejupielādēt Excel (CSV)</button>`}`;
+      <button class="btn btn-primary btn-block" id="csvBtn"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg> Lejupielādēt Excel (CSV)</button>`}`;
     $('sheetBody').onclick = (e) => { const b = e.target.closest('[data-m]'); if (b && !b.disabled) openMonthReport(b.dataset.m); };
     if ($('csvBtn')) $('csvBtn').onclick = () => {
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv()], { type: 'text/csv;charset=utf-8' }));
@@ -1635,19 +1678,19 @@ async function openMonthReport(month) {
 
 /* ---------- Palīdzība un iestatījumi ---------- */
 $('helpBtn').onclick = () => {
-  if (UV && LANG === 'ru') return openSheet(`<h3>Работы бригад</h3><div class="help"><p>Вверху выберите день и нажмите на свои имена — увидите работы своей бригады с кодами доступа и фото. Выбор запоминается.</p><p>Когда работа сделана, нажмите на объект → <b>Отметить как выполнено</b> (можно добавить фото и комментарий). Если сделать нельзя — <b>Невозможно выполнить</b> с причиной.</p><p><b>🧭 Маршрут</b> открывает Google Maps со всеми невыполненными адресами. <b>⚠ Проблема</b> — сообщить руководителю о поломке на объекте.</p><p>План сохраняется в телефоне — его видно и без интернета.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
-  if (UV) return openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta.</p><p>Kad darbs paveikts, uzspiediet uz objekta → <b>Atzīmēt kā izpildītu</b> (var pievienot bildes un komentāru). Ja nevar izdarīt — <b>Nevar izpildīt</b> ar iemeslu.</p><p>Darbu vadītāji: spiediet <b>Ienākt</b> augšā un ievadiet PIN, lai pieteiktu darbus. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p><b>🧭 Maršruts</b> atver Google Maps ar visām neizpildītajām adresēm. <b>⚠ Problēma</b> — ziņot vadītājam par bojājumu objektā.</p><p>Plāns saglabājas telefonā — to var redzēt arī bez interneta. Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
+  if (UV && LANG === 'ru') return openSheet(`<h3>Работы бригад</h3><div class="help"><p>Вверху выберите день и нажмите на свои имена — увидите работы своей бригады с кодами доступа и фото. Выбор запоминается.</p><p>Когда работа сделана, нажмите на объект → <b>Отметить как выполнено</b> (можно добавить фото и комментарий). Если сделать нельзя — <b>Невозможно выполнить</b> с причиной.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Маршрут</b> открывает Google Maps со всеми невыполненными адресами. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Проблема</b> — сообщить руководителю о поломке на объекте.</p><p>План сохраняется в телефоне — его видно и без интернета.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
+  if (UV) return openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta.</p><p>Kad darbs paveikts, uzspiediet uz objekta → <b>Atzīmēt kā izpildītu</b> (var pievienot bildes un komentāru). Ja nevar izdarīt — <b>Nevar izpildīt</b> ar iemeslu.</p><p>Darbu vadītāji: spiediet <b>Ienākt</b> augšā un ievadiet PIN, lai pieteiktu darbus. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Maršruts</b> atver Google Maps ar visām neizpildītajām adresēm. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Problēma</b> — ziņot vadītājam par bojājumu objektā.</p><p>Plāns saglabājas telefonā — to var redzēt arī bez interneta. Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
   if (!S.user) return openSheet(`<h3>Kā lietot?</h3><div class="help"><p>Ievadiet PIN kodu, ko jums iedeva admins.</p></div>`);
   const role = S.user.role, perm = ('Notification' in window) ? Notification.permission : 'nav';
   const help = {
-    admin: '<p><b>Vienības</b> — katrai dienai salieciet vienības no cilvēkiem (vai nokopējiet no vakardienas).</p><p><b>Plāns</b> — piešķiriet katram darbam vienību un spiediet <b>WhatsApp plāns</b>, lai nokopētu tekstu grupai.</p><p><b>Jauns</b> — ievadiet darbus pats, izvēloties vadītāju, vai ielīmējiet ziņu <b>✨ AI</b>. Atzīmējiet <b>🔥 Steidzami</b> un laiku „līdz plkst.”.</p><p>Izpildītus darbus var <b>👍 Pieņemt</b> vai <b>↩ Atgriezt</b> brigādei. Filtrs <b>Neatzīmēti</b> rāda, kas vēl nav izdarīts. <b>🔁 Atkārtot</b> nokopē darbu, <b>🕘 Vēsture</b> rāda visus darbus adresē.</p><p><b>Statistika → Mēneša atskaite</b> — kopsavilkums pa vadītājiem un objektiem.</p>',
-    vaditajs: '<p><b>Jauns</b> — izvēlieties adresi un darbu. Vienā reizē var pieteikt vairākas adreses. Ar <b>✨ AI</b> var ielīmēt ziņu, un forma aizpildīsies pati.</p><p>Ja aizvietojamais ir atvaļinājumā, ieslēdziet 🏖 un norādiet datumu „līdz”.</p><p><b>Mani darbi</b> — redzat, kurai vienībai darbs piešķirts. Izpildītus darbus apskatiet un <b>👍 Pieņemiet</b> vai <b>↩ Atgrieziet</b> ar komentāru.</p><p><b>DNL / Vakance</b> bez datuma „līdz” katru darba dienu automātiski parādās plānā, kamēr to atslēgsiet ar <b>⏹ Beigt</b>.</p><p><b>🔁 Atkārtot</b> — tas pats darbs citā dienā. <b>🕘 Vēsture</b> — visi darbi un bildes šajā adresē. <b>⚠ Problēmas</b> — brigāžu ziņojumi par jūsu objektiem.</p>'
+    admin: '<p><b>Vienības</b> — katrai dienai salieciet vienības no cilvēkiem (vai nokopējiet no vakardienas).</p><p><b>Plāns</b> — piešķiriet katram darbam vienību un spiediet <b>WhatsApp plāns</b>, lai nokopētu tekstu grupai.</p><p><b>Jauns</b> — ievadiet darbus pats, izvēloties vadītāju, vai ielīmējiet ziņu <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> AI</b>. Atzīmējiet <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c.8 3 4.8 5.3 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.1.9-3.6 2-4.6.1 1.8.9 2.8 2 3.1-.3-3.2-.4-5.6.8-8.5Z"/></svg> Steidzami</b> un laiku „līdz plkst.”.</p><p>Izpildītus darbus var <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11"/><path d="M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3l4-8a3 3 0 0 1 4 3.9Z"/></svg> Pieņemt</b> vai <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> Atgriezt</b> brigādei. Filtrs <b>Neatzīmēti</b> rāda, kas vēl nav izdarīts. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Atkārtot</b> nokopē darbu, <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> Vēsture</b> rāda visus darbus adresē.</p><p><b>Statistika → Mēneša atskaite</b> — kopsavilkums pa vadītājiem un objektiem.</p>',
+    vaditajs: '<p><b>Jauns</b> — izvēlieties adresi un darbu. Vienā reizē var pieteikt vairākas adreses. Ar <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> AI</b> var ielīmēt ziņu, un forma aizpildīsies pati.</p><p>Ja aizvietojamais ir atvaļinājumā, ieslēdziet <svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg> un norādiet datumu „līdz”.</p><p><b>Mani darbi</b> — redzat, kurai vienībai darbs piešķirts. Izpildītus darbus apskatiet un <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11"/><path d="M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3l4-8a3 3 0 0 1 4 3.9Z"/></svg> Pieņemiet</b> vai <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> Atgrieziet</b> ar komentāru.</p><p><b>DNL / Vakance</b> bez datuma „līdz” katru darba dienu automātiski parādās plānā, kamēr to atslēgsiet ar <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg> Beigt</b>.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Atkārtot</b> — tas pats darbs citā dienā. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> Vēsture</b> — visi darbi un bildes šajā adresē. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Problēmas</b> — brigāžu ziņojumi par jūsu objektiem.</p>'
   }[role];
   openSheet(`<h3>${esc(S.user.name)}</h3><p class="lead">${role === 'admin' ? 'Admins' : 'Darbu vadītājs'}</p>
     <div class="help">${help}</div>
     <div class="menu">
-      ${pushOn() ? `<button id="mPush">🔔 ${perm === 'granted' ? 'Paziņojumi ieslēgti' : 'Ieslēgt paziņojumus'}<span>${perm === 'granted' ? '✓' : '›'}</span></button>
-      ${perm === 'granted' ? '<button id="mTest">📲 Sūtīt testa paziņojumu<span>›</span></button>' : ''}` : ''}
+      ${pushOn() ? `<button id="mPush"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8.5a6 6 0 0 1 12 0c0 6.5 3 8 3 8H3s3-1.5 3-8"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg> ${perm === 'granted' ? 'Paziņojumi ieslēgti' : 'Ieslēgt paziņojumus'}<span>${perm === 'granted' ? '✓' : '›'}</span></button>
+      ${perm === 'granted' ? '<button id="mTest"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/></svg> Sūtīt testa paziņojumu<span>›</span></button>' : ''}` : ''}
       <!--DEMO_MENU-->
       <button id="mOut" class="red">Iziet<span>›</span></button>
     </div>
@@ -1718,7 +1761,7 @@ async function loadTeam() {
     if (!c) { $('refreshBtn').classList.remove('spin'); $('unitSeg').innerHTML = '';
       $('todayList').innerHTML = emptyBox(tr('Neizdevās ielādēt', 'Не удалось загрузить'), netMsg(err), IC.plan); return; }
     r = c.r; const d = new Date(c.t);
-    offline = tr('📴 Nav interneta — rāda saglabāto plānu (', '📴 Нет интернета — показан сохранённый план (') + shortDate(iso(d)) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ')';
+    offline = tr('Nav interneta — rāda saglabāto plānu (', 'Нет интернета — показан сохранённый план (') + shortDate(iso(d)) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ')';
   }
   try {
     if (!UV) return;
@@ -1765,7 +1808,7 @@ function routeUrl(js) {
 function openProblem(js, unit) {
   let photos = [], addr = js.length === 1 ? js[0].adrese : '';
   const addrs = [...new Set(js.map(j => j.adrese))];
-  openSheet(`<h3>⚠ ${tr('Ziņot par problēmu', 'Сообщить о проблеме')}</h3><p class="lead">${tr('Piem. salauzta slēdzene, plūst ūdens, nav apgaismojuma. Ziņojumu saņems objekta vadītājs un admins.', 'Напр. сломан замок, течёт вода, нет освещения. Сообщение получат руководитель объекта и админ.')}</p>
+  openSheet(`<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> ${tr('Ziņot par problēmu', 'Сообщить о проблеме')}</h3><p class="lead">${tr('Piem. salauzta slēdzene, plūst ūdens, nav apgaismojuma. Ziņojumu saņems objekta vadītājs un admins.', 'Напр. сломан замок, течёт вода, нет освещения. Сообщение получат руководитель объекта и админ.')}</p>
     <div class="field"><span class="label">${tr('Adrese', 'Адрес')}</span>
       ${addrs.length ? `<div class="shortcuts" id="pAddrs" style="margin:0 0 8px">${addrs.map(a => `<button type="button" class="sc ${a === addr ? 'on' : ''}" data-a="${esc(a)}">${esc(a)}</button>`).join('')}</div>` : ''}
       <input class="input" id="pAddr" value="${esc(addr)}" placeholder="${tr('Vai ierakstiet citu adresi', 'Или впишите другой адрес')}" autocomplete="off"></div>
@@ -1819,7 +1862,7 @@ $('loginBtnTop').onclick = () => {
 function renderTeam() {
   const day = relDay(S.date) || shortDate(S.date);
   $('todayH').textContent = tr('Mani objekti', 'Мои объекты');
-  const off = S.offline ? `<div class="offline">${esc(S.offline)}</div>` : '';
+  const off = S.offline ? `<div class="offline"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 2 20 20"/><path d="M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5-2.7M19 12.9a10 10 0 0 0-2-1.4M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8a15 15 0 0 0-11-3.7M12 20h.01"/></svg> ${esc(S.offline)}</div>` : '';
   $('unitSeg').innerHTML = S.units.length ? S.units.map(u => `<button type="button" class="sc ${u.name === S.teamUnit ? 'on' : ''}" data-tu="${esc(u.name)}">${esc(unitLabel(u))}</button>`).join('')
     : '';
   const u = S.units.find(x => x.name === S.teamUnit);
@@ -1848,11 +1891,11 @@ function renderTeam() {
   const left = js.filter(j => j.statuss !== 'izpildīts' && j.statuss !== 'nevar izpildīt'), route = routeUrl(left);
   $('todayList').innerHTML = off + (js.length ? `<div class="card panel" style="margin-bottom:12px;padding:14px 16px"><div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px"><span>${tr('Paveikts', 'Сделано')}</span><span>${done} / ${js.length}</span></div>
        <div class="progress"><span style="width:${Math.round(done / js.length * 100)}%"></span></div>
-       <div class="btn-row" style="margin-top:12px">${route ? `<a class="btn btn-primary" href="${esc(route)}" target="_blank" rel="noopener">🧭 ${tr('Maršruts', 'Маршрут')} (${Math.min(left.length, 10)})</a>` : ''}
-       <button type="button" class="btn btn-glass" id="probTeam">⚠ ${tr('Problēma', 'Проблема')}</button></div></div>
+       <div class="btn-row" style="margin-top:12px">${route ? `<a class="btn btn-primary" href="${esc(route)}" target="_blank" rel="noopener"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> ${tr('Maršruts', 'Маршрут')} (${Math.min(left.length, 10)})</a>` : ''}
+       <button type="button" class="btn btn-glass" id="probTeam"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> ${tr('Problēma', 'Проблема')}</button></div></div>
      <div class="list">${js.map(j => card(j, { links: true, mark: true, donePill: true, shared: u.name })).join('')}</div>`
     : emptyBox(tr('Darbu nav', 'Работ нет'), tr('Jūsu vienībai šajā dienā darbi nav piešķirti.', 'На этот день вашей бригаде работ не назначено.'), IC.plan)
-      + `<button type="button" class="more-btn" id="probTeam">⚠ ${tr('Ziņot par problēmu objektā', 'Сообщить о проблеме на объекте')}</button>`);
+      + `<button type="button" class="more-btn" id="probTeam"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> ${tr('Ziņot par problēmu objektā', 'Сообщить о проблеме на объекте')}</button>`);
   $('probTeam').onclick = () => openProblem(js, u);
 }
 $('unitSeg').addEventListener('click', (e) => {
