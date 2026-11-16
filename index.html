@@ -774,7 +774,8 @@ function card(j, o = {}) {
   const mc = managerColor(j.vaditajs);
   const chips = [];
   if (o.shared) { const oth = brigs(j).filter(b => b !== o.shared); if (oth.length) chips.push(`<span class="chip crew">🤝 Kopā ar: ${esc(oth.map(b => { const u = S.units.find(x => x.name === b); return u && u.persons.length ? u.persons.join(' + ') : b; }).join(', '))}</span>`); }
-  if (j.prombutne || j.lidz) chips.push(`<span class="chip vac">${prombIcon(j.prombutne)} ${esc(j.prombutne || 'Atvaļinājums')}${j.lidz ? ' līdz ' + esc(shortDate(j.lidz)) : ''}</span>`);
+  if (j.prombutne) chips.push(`<span class="chip vac">${prombIcon(j.prombutne)} ${esc(j.prombutne)}${j.lidz ? ' līdz ' + esc(shortDate(j.lidz)) : ''}</span>`);
+  else if (j.lidz) chips.push(`<span class="chip vac">📅 Līdz ${esc(shortDate(j.lidz))}</span>`);
   const obj = (S.meta.objects || []).find(o => o.adrese.toLowerCase() === String(j.adrese).toLowerCase());
   if (obj && obj.grupa && obj.grupa !== 'SH objekti') chips.push(`<span class="chip grp">${esc(obj.grupa)}</span>`);
   if (obj && obj.piekluve) chips.push(`<span class="chip key">🔑 ${esc(obj.piekluve)}</span>`);
@@ -1059,6 +1060,8 @@ function typeSelect(val) {
   return `<select class="select fType"><option value="">Izvēlieties darbu…</option>${Object.keys(groups).map(g =>
     `<optgroup label="${esc(g)}">${groups[g].map(n => `<option ${n === val ? 'selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('')}</select>`;
 }
+/** Nedēļas beigas (piektdiena; ja izvēlēta brīvdiena — svētdiena) */
+function weekEnd(d) { const wd = new Date(d + 'T12:00').getDay(); return addDays(d, wd >= 1 && wd <= 5 ? 5 - wd : wd === 6 ? 1 : 0); }
 const PROMB = [['Atvaļinājums', '🏖'], ['DNL', '🤒'], ['Vakance', '📋']];
 const prombIcon = (v) => (PROMB.find(p => p[0] === v) || [, '🏖'])[1];
 function rowHtml(j = {}, single) {
@@ -1066,6 +1069,8 @@ function rowHtml(j = {}, single) {
     ${single ? '' : '<div class="jrow-h"><b><i class="jnum"></i><span>Objekts</span></b><button type="button" class="jdel">Noņemt</button></div>'}
     <div class="field"><span class="label">Adrese</span>${comboHtml(j.adrese)}</div>
     <div class="field"><span class="label">Darbs</span>${typeSelect(j.tips)}</div>
+    ${single ? '' : `<div class="field"><label class="switch-row"><span><b>📅 Visu šo nedēļu</b><small class="weekinfo">Katru darba dienu līdz piektdienai</small></span>
+      <span class="sw"><input type="checkbox" class="fWeekAll"><i></i></span></label></div>`}
     <div class="field vacwrap" hidden data-prom="${esc(j.prombutne || '')}">
       <span class="label">Kāpēc jāaizvieto?</span>
       <div class="shortcuts" style="margin:0">${PROMB.map(([v, ic]) => `<button type="button" class="sc ${j.prombutne === v ? 'on' : ''}" data-prom="${v}">${ic} ${v}</button>`).join('')}</div>
@@ -1091,6 +1096,14 @@ function numberRows() {
   updateSubmit();
 }
 function updateVac(row) {
+  const wk = row.querySelector('.fWeekAll');
+  if (wk) {
+    const end = weekEnd(formDate), n = seriesDates(formDate, end, false).length;
+    row.querySelector('.weekinfo').textContent = wk.checked ? (n > 1 ? `Tiks izveidoti ${n} darbi: ${shortDate(formDate)}–${shortDate(end)}` : 'Šajā nedēļā vairs nav citu darba dienu')
+      : `Katru darba dienu līdz piektdienai (${shortDate(end)})`;
+    const lf = row.querySelector('.fLidz');
+    if (lf) { if (wk.checked) lf.value = end; lf.disabled = wk.checked; }
+  }
   const wrap = row.querySelector('.vacwrap'); if (!wrap) return;
   const t = row.querySelector('.fType').value, isRepl = !!t && groupOfType(t) === 'Aizvietošana';
   wrap.hidden = !isRepl;
@@ -1101,7 +1114,7 @@ function updateVac(row) {
   const opt = box.querySelector('.lidz-opt');
   opt.textContent = must ? '· obligāti' : '· nav obligāti'; opt.style.color = must ? 'var(--red)' : '';
   const info = row.querySelector('.vacinfo'), lidz = row.querySelector('.fLidz').value;
-  if (!on || !lidz) { info.textContent = ''; }
+  if (!on || !lidz || (wk && wk.checked)) { info.textContent = ''; }
   else if (lidz <= formDate) { info.textContent = 'Datumam jābūt pēc ' + shortDate(formDate); info.classList.add('bad'); }
   else { const n = seriesDates(formDate, lidz, row.querySelector('.fWeek').checked).length; info.classList.remove('bad');
     info.textContent = `Tiks izveidoti ${n} darbi: ${shortDate(formDate)}–${shortDate(lidz)}${n === 62 ? ' (maks.)' : ''}`; }
@@ -1111,8 +1124,9 @@ function collectRows() {
   return [...document.querySelectorAll('#jRows .jrow')].map(r => ({
     adrese: r.querySelector('.fAddr').value.trim(), tips: r.querySelector('.fType').value, apraksts: r.querySelector('.fNote').value.trim(),
     prombutne: groupOfType(r.querySelector('.fType').value) === 'Aizvietošana' ? (r.querySelector('.vacwrap')?.dataset.prom || '') : '',
-    lidz: groupOfType(r.querySelector('.fType').value) === 'Aizvietošana' && r.querySelector('.vacwrap')?.dataset.prom ? (r.querySelector('.fLidz')?.value || '') : '',
-    brivdienas: !!r.querySelector('.fWeek')?.checked,
+    lidz: r.querySelector('.fWeekAll')?.checked ? weekEnd(formDate)
+      : groupOfType(r.querySelector('.fType').value) === 'Aizvietošana' && r.querySelector('.vacwrap')?.dataset.prom ? (r.querySelector('.fLidz')?.value || '') : '',
+    brivdienas: r.querySelector('.fWeekAll')?.checked ? false : !!r.querySelector('.fWeek')?.checked,
     photos: r._photos || []
   }));
 }

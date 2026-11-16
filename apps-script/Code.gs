@@ -415,7 +415,8 @@ function whatsapp_(date) {
       const extra = groupOf_(j.tips) === 'Papilddarbs';
       let what = extra ? (j.tips === 'Papilddarbs' || j.tips === 'Cits papilddarbs' ? (j.apraksts || 'papilddarbs') : j.tips) : j.tips.toLowerCase();
       if (j.apraksts && what !== j.apraksts) what += ' (' + j.apraksts + ')';
-      if (j.prombutne || j.lidz) what += ' (' + (j.prombutne || 'atvaļinājums').toLowerCase() + (j.lidz ? ' līdz ' + lvDate_(j.lidz) : '') + ')';
+      if (j.prombutne) what += ' (' + j.prombutne.toLowerCase() + (j.lidz ? ' līdz ' + lvDate_(j.lidz) : '') + ')';
+      else if (j.lidz) what += ' (līdz ' + lvDate_(j.lidz) + ')';
       lines.push(j.adrese + ' - ' + what);
     });
   });
