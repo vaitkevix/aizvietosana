@@ -425,12 +425,11 @@ function teamKey_() {
 
 function teamLink_() {
   const app = PropertiesService.getScriptProperties().getProperty('APP_URL');
-  return app ? app + '?k=' + teamKey_() : '';
+  return app || '';
 }
 
 /** Brigāžu skats (bez PIN): visas dienas vienības ar cilvēkiem un darbiem */
 function teamView_(r) {
-  if (String(r.key || '') !== teamKey_()) throw new Error('Saite nav derīga');
   const date = String(r.date || '');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Nav datuma');
   const units = units_(date);

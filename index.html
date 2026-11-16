@@ -96,6 +96,8 @@
   .icon-btn{width:42px;height:42px;border-radius:50%;border:1px solid var(--g-brd);background:var(--g-sheen),var(--g-fill);box-shadow:var(--g-shadow-sm);
     display:grid;place-items:center;cursor:pointer;color:var(--ink-2);font-weight:800;font-size:16px;transition:transform .15s}
   .icon-btn:active{transform:scale(.93)}
+  .login-btn{width:auto;padding:0 14px 0 12px;border-radius:999px;gap:6px;display:inline-flex;align-items:center;color:var(--brand);font-size:14px}
+  .login-btn::after{content:'Ienākt';font-weight:800}
   .icon-btn.spin svg{animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .theme-btn .sun{display:none}
@@ -432,6 +434,9 @@
         <p id="brandSub">Aizvietošana · papilddarbi</p>
       </div>
       <div class="actions">
+        <button class="icon-btn login-btn" title="Ienākt" aria-label="Ienākt (vadītājiem)" id="loginBtnTop" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h3a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-3"/><path d="M10 17l5-5-5-5M15 12H3"/></svg>
+        </button>
         <button class="icon-btn" title="Palīdzība un iestatījumi" aria-label="Palīdzība un iestatījumi" id="helpBtn">?</button>
         <button class="icon-btn theme-btn" title="Gaišais / tumšais režīms" aria-label="Mainīt tēmu" id="themeBtn">
           <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
@@ -449,7 +454,7 @@
 
 <main>
   <!-- Pieteikšanās -->
-  <section id="login" class="view active">
+  <section id="login" class="view active" hidden>
     <form class="card lock" id="loginForm" autocomplete="off">
       <div class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
       <h3>Ienākt</h3>
@@ -626,6 +631,7 @@ async function tryLogin(pin) {
     startApp();
   } catch (err) {
     ls.del('darbi_pin');
+    S.pin = ''; return startTeamView();
     $('loginErr').textContent = err.message;
     $('loginForm').classList.remove('shake'); void $('loginForm').offsetWidth; $('loginForm').classList.add('shake');
     $('pinInput').value = '';
@@ -638,6 +644,7 @@ const ROLE_TABS = {
   vaditajs: [['new', 'Jauns', IC.plus], ['mine', 'Mani darbi', IC.list], ['stats', 'Statistika', IC.stats]]
 };
 function startApp() {
+  UV = null; $('loginBtnTop').hidden = true;
   $('login').classList.remove('active'); $('login').hidden = true; $('appViews').hidden = false;
   const role = S.user.role;
   $('brandSub').textContent = S.user.name + (role === 'admin' ? ' · admins' : ' · darbu vadītājs');
@@ -853,7 +860,7 @@ function renderToday() {
 /* ---------- Vienības ---------- */
 function renderCrews() {
   const day = relDay(S.date) || shortDate(S.date);
-  let h = `<button class="more-btn" id="teamLinkBtn" style="margin:0 0 12px">🔗 Brigāžu saite — visi redz savus darbus bez PIN</button>
+  let h = `<button class="more-btn" id="teamLinkBtn" style="margin:0 0 12px">🔗 Brigāžu saite — visi redz savus darbus</button>
     <div class="btn-row" style="margin-bottom:12px"><button class="btn btn-primary" data-unit="">${IC.plus.replace('<svg', '<svg width="18" height="18"')}Jauna vienība</button>
     <button class="btn btn-glass" id="copyUnits">Kopēt no ${({ 'Šodien': 'šodienas', 'Vakar': 'vakardienas', 'Rīt': 'rītdienas' })[relDay(addDays(S.date, -1))] || shortDate(addDays(S.date, -1))}</button></div>`;
   h += S.units.map(u => {
@@ -875,7 +882,7 @@ $('crewList').addEventListener('click', (e) => {
 function showLink() {
   const url = S.teamLink;
   if (!url) return toast('Saite vēl nav pieejama — atjaunojiet lapu', 'err');
-  openSheet(`<h3>🔗 Brigāžu saite</h3><p class="lead">Viena pastāvīga saite visām brigādēm. Augšā katrs izvēlas savu vienību (piem. „Denis + Natālija”) un redz savus darbus — bez PIN. Saite ir arī WhatsApp plāna beigās.</p>
+  openSheet(`<h3>🔗 Brigāžu saite</h3><p class="lead">Viena adrese visiem. Brigādes augšā izvēlas savu vienību (piem. „Denis + Natālija”) un redz savus darbus bez PIN. Vadītāji spiež „Ienākt”, lai pieteiktu darbus. Saite ir arī WhatsApp plāna beigās.</p>
     <div class="field"><textarea class="textarea" id="linkText" readonly style="min-height:90px;font-size:13px">${esc(url)}</textarea></div>
     <div class="btn-row"><a class="btn btn-glass" href="${esc(url)}" target="_blank" rel="noopener">Atvērt</a><button class="btn btn-primary" id="linkCopy">Kopēt</button></div>`);
   $('linkCopy').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Saite nokopēta', 'ok'); closeSheet(); } catch (e) { $('linkText').select(); } };
@@ -1338,7 +1345,7 @@ async function loadStats() {
 
 /* ---------- Palīdzība un iestatījumi ---------- */
 $('helpBtn').onclick = () => {
-  if (UV) return openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p>Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
+  if (UV) return openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta.</p><p>Darbu vadītāji: spiediet <b>Ienākt</b> augšā un ievadiet PIN, lai pieteiktu darbus. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p>Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
   if (!S.user) return openSheet(`<h3>Kā lietot?</h3><div class="help"><p>Ievadiet PIN kodu, ko jums iedeva admins.</p></div>`);
   const role = S.user.role, perm = ('Notification' in window) ? Notification.permission : 'nav';
   const help = {
@@ -1388,10 +1395,12 @@ $('backdrop').onclick = closeSheet;
 bindCombo($('sheetBody'));
 
 /* ---------- Brigāžu skats bez PIN (?k=) ---------- */
-const UV = (() => { const k = new URLSearchParams(location.search).get('k'); return k ? { key: k } : null; })();
+let UV = null;   // brigāžu skats (bez PIN) — aktīvs, kamēr neviens nav ienācis
 const unitLabel = (u) => u.persons.length ? u.persons.join(' + ') : u.name;
 function startTeamView() {
+  UV = { key: new URLSearchParams(location.search).get('k') || '' };
   S.user = { name: 'Brigāde', role: 'brigade' };
+  $('loginBtnTop').hidden = false;
   const h = new Date().getHours();
   S.date = h >= 18 ? addDays(today(), 1) : today();   // vakarā rāda rītdienas plānu
   S.view = 'today';
@@ -1409,6 +1418,7 @@ async function loadTeam() {
   $('refreshBtn').classList.add('spin');
   try {
     const r = await api('teamView', { key: UV.key, date });
+    if (!UV) return;
     if (date !== S.date) return;
     S.units = r.units; S.allJobs = r.jobs; S.meta = Object.assign(S.meta, r.meta);
     // Atceras izvēlēto vienību pēc cilvēkiem (vienības nosaukums katru dienu var mainīties)
@@ -1423,6 +1433,29 @@ async function loadTeam() {
     $('todayList').innerHTML = emptyBox('Saite nav derīga', err.message + '. Palūdziet adminam jauno saiti.', IC.plan);
   } finally { $('refreshBtn').classList.remove('spin'); }
 }
+$('loginBtnTop').onclick = () => {
+  openSheet(`<form id="sheetLogin" autocomplete="off" style="text-align:center">
+    <div class="lock" style="padding:6px 0 0;margin:0"><div class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+    <h3>Ienākt</h3><p>Darbu vadītājiem un adminam — lai pieteiktu darbus</p>
+    <input class="input" id="sheetPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••" aria-label="PIN">
+    <button class="btn btn-primary btn-block" type="submit" id="sheetLoginBtn">Ienākt</button>
+    <div class="err" id="sheetErr"></div></div></form>`);
+  setTimeout(() => $('sheetPin').focus(), 300);
+  $('sheetLogin').onsubmit = async (e) => {
+    e.preventDefault();
+    const pin = $('sheetPin').value.trim(); if (!pin) return;
+    const b = $('sheetLoginBtn'); b.disabled = true; b.innerHTML = '<span class="spinner"></span>';
+    S.pin = pin;
+    try {
+      const r = await api('login');
+      UV = null; S.user = r.user; S.meta = r.meta; ls.set('darbi_pin', pin);
+      $('loginBtnTop').hidden = true; closeSheet(); startApp();
+    } catch (err) {
+      S.pin = ''; $('sheetErr').textContent = err.message; b.disabled = false; b.textContent = 'Ienākt';
+      $('sheetLogin').classList.remove('shake'); void $('sheetLogin').offsetWidth; $('sheetLogin').classList.add('shake');
+    }
+  };
+};
 function renderTeam() {
   const day = relDay(S.date) || shortDate(S.date);
   $('unitSeg').innerHTML = S.units.length ? S.units.map(u => `<button type="button" class="sc ${u.name === S.teamUnit ? 'on' : ''}" data-tu="${esc(u.name)}">${esc(unitLabel(u))}</button>`).join('')
@@ -1461,8 +1494,8 @@ $('unitSeg').addEventListener('click', (e) => {
 /* ---------- Starts ---------- */
 if (!self.DEMO_API && 'serviceWorker' in navigator) navigator.serviceWorker.register('./firebase-messaging-sw.js').catch(() => {});
 window.addEventListener('DOMContentLoaded', () => {
-  if (UV) return startTeamView();
-  const saved = ls.get('darbi_pin'); if (saved) tryLogin(saved); else $('pinInput').focus();
+  const saved = ls.get('darbi_pin');
+  if (saved) tryLogin(saved); else startTeamView();
 });
 </script>
 </body>
