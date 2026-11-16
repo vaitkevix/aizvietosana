@@ -16,6 +16,8 @@ const SH_OBJ = 'Objekti';
 const SH_TYPES = 'DarbuVeidi';
 const JOB_COLS = ['ID', 'Datums', 'Adrese', 'Tips', 'Apraksts', 'Vaditajs', 'Brigade', 'Statuss', 'Publicets', 'Izpildits', 'Izveidots', 'Komentars', 'Foto', 'Iemesls', 'Lidz', 'Serija', 'Prombutne', 'Steidzami', 'Laiks', 'Parbaude', 'ParbaudesKomentars'];
 const SH_PROB = 'Problemas';
+const SH_STAND = 'Pastavigie';   // DNL/vakance bez beigu datuma — aktuāla, kamēr vadītājs atslēdz
+const STAND_COLS = ['ID', 'Adrese', 'Tips', 'Apraksts', 'Vaditajs', 'Prombutne', 'No', 'Beigas', 'Brivdienas', 'Steidzami', 'Laiks', 'Foto', 'Izlaistas', 'Izveidots'];
 const PROB_COLS = ['ID', 'Laiks', 'Adrese', 'Vaditajs', 'Vieniba', 'Apraksts', 'Foto', 'Statuss', 'Atrisinats'];
 const TZ = 'Europe/Riga';
 const PROMBUTNE = ['Atvaļinājums', 'DNL', 'Vakance'];   // aizvietošanas iemesls
@@ -52,8 +54,9 @@ const ACTIONS = {
   login: (u) => ({ user: publicUser_(u), meta: meta_() }),
 
   jobs: (u, r) => {
+    ensureStanding_(r.date);
     const units = units_(r.date);
-    return { jobs: visibleJobs_(u, r.date), units: units, crews: crews_(r.date), staff: staff_(), teamLink: u.role === 'admin' ? teamLink_() : '', problems: problems_(u) };
+    return { jobs: visibleJobs_(u, r.date), units: units, crews: crews_(r.date), staff: staff_(), teamLink: u.role === 'admin' ? teamLink_() : '', problems: problems_(u), standing: standingFor_(u) };
   },
 
   /** Vienība dienai: izveidot, pārsaukt (oldName) vai mainīt cilvēkus */
@@ -192,10 +195,16 @@ const ACTIONS = {
     list.forEach(j => {
       if (types.indexOf(j.tips) === -1) throw new Error('Izvēlies darbu adresei ' + j.adrese);
       const dates = seriesDates_(r.date, j.lidz, j.brivdienas);
-      const serija = dates.length > 1 ? Utilities.getUuid().slice(0, 8) : '';
+      let serija = dates.length > 1 ? Utilities.getUuid().slice(0, 8) : '';
+      const mgr = u.role === 'admin' ? String(j.vaditajs || objMgr[normName_(j.adrese)] || r.vaditajs || u.name) : u.name;
+      if (!j.lidz && !j.vienaDiena && STAND_PROMB.indexOf(j.prombutne) !== -1 && groupOf_(j.tips) === 'Aizvietošana') {
+        serija = Utilities.getUuid().slice(0, 8);
+        standSheet_().appendRow([serija, String(j.adrese).trim(), j.tips, String(j.apraksts || '').trim(), mgr, j.prombutne, r.date, '',
+          j.brivdienas ? '1' : '', j.steidzami ? '1' : '', cleanTime_(j.laiks), j.fotoIds || '', '', now_()]);
+      }
       dates.forEach(d => rows.push(toRow_({
         id: Utilities.getUuid().slice(0, 8), datums: d, adrese: String(j.adrese).trim(), tips: j.tips,
-        apraksts: String(j.apraksts || '').trim(), vaditajs: u.role === 'admin' ? String(j.vaditajs || objMgr[normName_(j.adrese)] || r.vaditajs || u.name) : u.name, brigade: '',
+        apraksts: String(j.apraksts || '').trim(), vaditajs: mgr, brigade: '',
         statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija: serija, foto: j.fotoIds || '', prombutne: PROMBUTNE.indexOf(j.prombutne) !== -1 ? j.prombutne : '',
         steidzami: j.steidzami ? '1' : '', laiks: cleanTime_(j.laiks)
       })));
@@ -231,9 +240,15 @@ const ACTIONS = {
     if (!job) throw new Error('Darbs nav atrasts');
     const allowed = (j) => u.role === 'admin' || (u.role === 'vaditajs' && j.vaditajs === u.name && !j.brigade);
     let targets = [job];
+    const st = job.serija ? readStanding_().find(x => x.id === job.serija) : null;
+    if (st && !allowedStand_(u, st)) throw new Error('Nav atļauts');
     if (r.series && job.serija) targets = readJobs_().filter(j => j.serija === job.serija && j.datums >= job.datums);
     targets = targets.filter(allowed);
     if (!targets.length) throw new Error('Nav atļauts');
+    if (st) {   // pastāvīgā aizvietošana: viena diena → neplānot to vairs; sērija → beigt pirms šīs dienas
+      if (r.series) standSheet_().getRange(st._row, 8).setValue(addDays_(job.datums, -1));
+      else standSheet_().getRange(st._row, 13).setValue(st.izlaistas.concat([job.datums]).join(','));
+    }
     const sh = sheet_(SH_JOBS);
     targets.map(j => j._row).sort((a, b) => b - a).forEach(row => sh.deleteRow(row));
     return { deleted: targets.length };
@@ -275,7 +290,7 @@ const ACTIONS = {
     return { published: jobs.length, sent: sent, whatsapp: whatsapp_(r.date) };
   }),
 
-  whatsapp: (u, r) => { requireAdmin_(u); return { whatsapp: whatsapp_(r.date) }; },
+  whatsapp: (u, r) => { requireAdmin_(u); ensureStanding_(r.date); return { whatsapp: whatsapp_(r.date) }; },
 
   done: (u, r) => {
     let job = findJob_(r.id);
@@ -368,6 +383,20 @@ const ACTIONS = {
 
   problems: (u) => ({ problems: problems_(u) }),
 
+  /** Beigt pastāvīgo aizvietošanu: last = pēdējā diena, kad vēl jāaizvieto */
+  stopStanding: (u, r) => withLock_(() => {
+    const st = readStanding_().find(x => x.id === String(r.serija));
+    if (!st) throw new Error('Aizvietošana nav atrasta');
+    if (!allowedStand_(u, st)) throw new Error('Nav atļauts');
+    const last = String(r.last || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(last)) throw new Error('Norādiet pēdējo dienu');
+    standSheet_().getRange(st._row, 8).setValue(last);
+    const sh = sheet_(SH_JOBS);
+    const del = readJobs_().filter(j => j.serija === st.id && j.datums > last && j.statuss !== 'izpildīts' && j.statuss !== 'nevar izpildīt');
+    del.map(j => j._row).sort((a, b) => b - a).forEach(row => sh.deleteRow(row));
+    return { deleted: del.length, standing: standingFor_(u) };
+  }),
+
   problemDone: (u, r) => withLock_(() => {
     const p = readProblems_().find(x => x.id === String(r.id));
     if (!p) throw new Error('Ziņojums nav atrasts');
@@ -455,6 +484,71 @@ function jobsSheet_() {
 /** „10:00” — laiks līdz kuram jāizdara */
 function cleanTime_(v) { const m = String(v || '').trim().match(/^(\d{1,2})[:.](\d{2})$/); return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : ''; }
 function timeStr_(v) { return v instanceof Date ? Utilities.formatDate(v, ss_().getSpreadsheetTimeZone(), 'HH:mm') : cleanTime_(v); }
+
+/* ---------------- Pastāvīgās aizvietošanas (DNL / vakance bez beigām) ---------------- */
+
+const STAND_PROMB = ['DNL', 'Vakance'];
+
+function standSheet_() {
+  let sh = sheet_(SH_STAND);
+  if (!sh) {
+    sh = ss_().insertSheet(SH_STAND);
+    sh.getRange(1, 1, 1, STAND_COLS.length).setValues([STAND_COLS]).setFontWeight('bold');
+    sh.getRange('A:N').setNumberFormat('@');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function readStanding_() {
+  const data = standSheet_().getDataRange().getValues();
+  const out = [];
+  for (let i = 1; i < data.length; i++) {
+    const r = data[i]; if (!r[0]) continue;
+    out.push({ _row: i + 1, id: String(r[0]), adrese: String(r[1]), tips: String(r[2]), apraksts: String(r[3]), vaditajs: String(r[4]), prombutne: String(r[5]),
+      no: dateStr_(r[6]).replace(/^'/, ''), beigas: dateStr_(r[7]).replace(/^'/, ''), brivdienas: String(r[8]) === '1', steidzami: String(r[9]) === '1' ? '1' : '', laiks: timeStr_(r[10]),
+      foto: String(r[11] || ''), izlaistas: splitNames_(r[12]), izveidots: str_(r[13]) });
+  }
+  return out;
+}
+
+function allowedStand_(u, st) { return u.role === 'admin' || st.vaditajs === u.name; }
+
+/** Aktīvās pastāvīgās aizvietošanas: adminam visas, vadītājam savas */
+function standingFor_(u) {
+  const t = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  return readStanding_().filter(s => (!s.beigas || s.beigas >= t) && allowedStand_(u, s))
+    .map(s => ({ id: s.id, adrese: s.adrese, tips: s.tips, prombutne: s.prombutne, vaditajs: s.vaditajs, no: s.no, beigas: s.beigas }));
+}
+
+function addDays_(iso, n) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return Utilities.formatDate(d, TZ, 'yyyy-MM-dd'); }
+
+/** Izveido dienas darbus pastāvīgajām aizvietošanām (tikai šodienai un nākotnei) */
+function ensureStanding_(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return;
+  if (date < Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd')) return;
+  const wd = new Date(date + 'T12:00:00').getDay();
+  const due = () => readStanding_().filter(s => s.no <= date && (!s.beigas || date <= s.beigas) && s.izlaistas.indexOf(date) === -1 && (s.brivdienas || (wd !== 0 && wd !== 6)));
+  if (!due().length) return;
+  const missing = (jobs) => due().filter(s => !jobs.some(j => j.serija === s.id && j.datums === date));
+  if (!missing(readJobs_()).length) return;
+  withLock_(() => {
+    const jobs = readJobs_();
+    const list = missing(jobs);
+    if (!list.length) return;
+    const unitNames = units_(date).map(x => x.name);
+    const prevDay = (s) => jobs.filter(j => j.serija === s.id && j.datums < date).sort((a, b) => b.datums.localeCompare(a.datums))[0];
+    const rows = list.map(s => {
+      const prev = prevDay(s);
+      const br = prev ? brigs_(prev.brigade).filter(b => unitNames.indexOf(b) !== -1).join(' | ') : '';   // tā pati vienība, ja tāda šai dienai ir
+      return toRow_({ id: Utilities.getUuid().slice(0, 8), datums: date, adrese: s.adrese, tips: s.tips, apraksts: s.apraksts, vaditajs: s.vaditajs,
+        brigade: br, statuss: br ? 'piešķirts' : 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: '', serija: s.id, foto: s.foto,
+        prombutne: s.prombutne, steidzami: s.steidzami, laiks: s.laiks });
+    });
+    const sh = jobsSheet_();
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, JOB_COLS.length).setValues(rows);
+  });
+}
 
 /* ---------------- Problēmas objektos (ziņo brigādes) ---------------- */
 
@@ -558,6 +652,7 @@ function teamLink_() {
 function teamView_(r) {
   const date = String(r.date || '');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Nav datuma');
+  ensureStanding_(date);
   const units = units_(date);
   const jobs = readJobs_().filter(j => j.datums === date && j.brigade).map(j => ({
     id: j.id, datums: j.datums, adrese: j.adrese, tips: j.tips, apraksts: j.apraksts, vaditajs: j.vaditajs,

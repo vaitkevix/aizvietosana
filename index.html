@@ -776,7 +776,7 @@ async function load() {
   try {
     const r = await api('jobs', { date });
     if (date !== S.date) return;
-    S.jobs = r.jobs; S.crews = r.crews || {}; S.units = r.units || []; S.teamLink = r.teamLink || ''; if (r.staff) S.staff = r.staff; S.problems = r.problems || [];
+    S.jobs = r.jobs; S.crews = r.crews || {}; S.units = r.units || []; S.teamLink = r.teamLink || ''; if (r.staff) S.staff = r.staff; S.problems = r.problems || []; S.standing = r.standing || [];
     render();
   } catch (err) { toast(err.message, 'err'); }
   finally { $('refreshBtn').classList.remove('spin'); }
@@ -832,7 +832,7 @@ function card(j, o = {}) {
   if (j.steidzami) chips.push(`<span class="chip urg">🔥 ${tr('Steidzami', 'Срочно')}</span>`);
   if (j.laiks) chips.push(`<span class="chip tm">⏰ ${tr('līdz plkst.', 'до')} ${esc(j.laiks)}</span>`);
   if (o.shared) { const oth = brigs(j).filter(b => b !== o.shared); if (oth.length) chips.push(`<span class="chip crew">🤝 ${tr('Kopā ar', 'Вместе с')}: ${esc(oth.map(b => { const u = S.units.find(x => x.name === b); return u && u.persons.length ? u.persons.join(' + ') : b; }).join(', '))}</span>`); }
-  if (j.prombutne) chips.push(`<span class="chip vac">${prombIcon(j.prombutne)} ${esc(trPromb(j.prombutne))}${j.lidz ? tr(' līdz ', ' до ') + esc(shortDate(j.lidz)) : ''}</span>`);
+  if (j.prombutne) chips.push(`<span class="chip vac">${prombIcon(j.prombutne)} ${esc(trPromb(j.prombutne))}${j.lidz ? tr(' līdz ', ' до ') + esc(shortDate(j.lidz)) : isStanding(j) ? tr(' · līdz atslēgšanai', ' · до отмены') : ''}</span>`);
   else if (j.lidz) chips.push(`<span class="chip vac">📅 ${tr('Līdz', 'До')} ${esc(shortDate(j.lidz))}</span>`);
   const obj = (S.meta.objects || []).find(o => o.adrese.toLowerCase() === String(j.adrese).toLowerCase());
   if (obj && obj.grupa && obj.grupa !== 'SH objekti') chips.push(`<span class="chip grp">${esc(obj.grupa)}</span>`);
@@ -844,6 +844,7 @@ function card(j, o = {}) {
   if (o.edit) tools.push(`<button class="chip-link" data-act="edit">✏️ Labot</button>`);
   if (o.review && j.statuss === 'izpildīts' && !j.parbaude) tools.push(`<button class="chip-link ok" data-act="accept">👍 Pieņemt</button><button class="chip-link bad" data-act="return">↩ Atgriezt</button>`);
   if (o.review && j.parbaude === 'pieņemts') tools.push(`<button class="chip-link soft" data-act="unaccept">Atcelt pieņemšanu</button>`);
+  if (o.tools && isStanding(j) && (S.user.role === 'admin' || j.vaditajs === S.user.name)) tools.push(`<button class="chip-link bad" data-act="stop">⏹ Beigt</button>`);
   if (o.tools) tools.push(`<button class="chip-link soft" data-act="repeat">🔁 Atkārtot</button><button class="chip-link soft" data-act="hist">🕘 Vēsture</button>`);
   return `<article class="card task${cls}" data-id="${esc(j.id)}" style="${mc ? '--mc:' + esc(mc) : ''}">
     <div class="task-top"><div>
@@ -874,7 +875,34 @@ function emptyBox(title, text, icon) {
 const isOpen = (j) => j.brigade && j.statuss !== 'izpildīts' && j.statuss !== 'nevar izpildīt';
 function problemsBtn() {
   const n = (S.problems || []).length;
-  return n ? `<button class="more-btn" id="probBtn" style="margin:0 0 12px;color:var(--red)">⚠ Problēmas objektos: ${n}</button>` : '';
+  const k = (S.standing || []).length;
+  return (n ? `<button class="more-btn" id="probBtn" style="margin:0 0 12px;color:var(--red)">⚠ Problēmas objektos: ${n}</button>` : '')
+    + (k ? `<button class="more-btn" id="standBtn" style="margin:0 0 12px">🔁 Aktīvās aizvietošanas (DNL / vakance): ${k}</button>` : '');
+}
+function bindTopBtns() { if ($('probBtn')) $('probBtn').onclick = openProblems; if ($('standBtn')) $('standBtn').onclick = openStanding; }
+function openStanding() {
+  const ls_ = S.standing || [];
+  openSheet(`<h3>🔁 Aktīvās aizvietošanas</h3><p class="lead">DNL un vakances bez beigu datuma — tās katru darba dienu tiek ieliktas plānā, kamēr tās atslēgsiet.</p>
+    ${ls_.length ? ls_.map(x => `<div class="prob"><b>${esc(x.adrese)}</b><small>${prombIcon(x.prombutne)} ${esc(x.prombutne)} · ${esc(x.tips.toLowerCase())} · no ${esc(shortDate(x.no))}${x.beigas ? ' · līdz ' + esc(shortDate(x.beigas)) : ''}${S.user.role === 'admin' ? ' · ' + esc(x.vaditajs) : ''}</small>
+      <div class="btn-row"><button class="btn btn-glass" data-sh="${esc(x.adrese)}">🕘 Vēsture</button><button class="btn btn-ghost-red" data-ss="${esc(x.id)}" data-sa="${esc(x.adrese)}">⏹ Beigt</button></div></div>`).join('') : '<p class="lead">Nav aktīvu aizvietošanu.</p>'}`);
+  $('sheetBody').onclick = (e) => {
+    const h = e.target.closest('[data-sh]'); if (h) return openHistory(h.dataset.sh);
+    const b = e.target.closest('[data-ss]'); if (b) stopStanding(b.dataset.ss, b.dataset.sa);
+  };
+}
+function stopStanding(id, adrese, from) {
+  const t = today(), def = from && from > t ? addDays(from, -1) : t;
+  openSheet(`<h3>⏹ Beigt aizvietošanu</h3><p class="lead">${esc(adrese)}<br>Pēc šīs dienas aizvietošana vairs netiks likta plānā. Neizpildītie nākamo dienu darbi tiks izdzēsti.</p>
+    <div class="field"><span class="label">Pēdējā diena, kad vēl jāaizvieto</span><input type="date" class="input" id="stLast" value="${def}"></div>
+    <div class="shortcuts" style="margin:0 0 14px"><button type="button" class="sc" data-d="${addDays(t, -1)}">Vakar</button><button type="button" class="sc" data-d="${t}">Šodien</button><button type="button" class="sc" data-d="${addDays(t, 1)}">Rīt</button></div>
+    <button class="btn btn-danger btn-block" id="stGo">Beigt aizvietošanu</button>`);
+  $('sheetBody').onclick = (e) => { const d = e.target.closest('[data-d]'); if (d) $('stLast').value = d.dataset.d; };
+  $('stGo').onclick = async () => {
+    const last = $('stLast').value; if (!last) return toast('Norādiet pēdējo dienu', 'err');
+    $('stGo').disabled = true;
+    try { const r = await api('stopStanding', { serija: id, last }); S.standing = r.standing; closeSheet(); toast(`Aizvietošana beigta${r.deleted ? ' · izdzēsti ' + r.deleted + ' nākamie darbi' : ''}`, 'ok'); load(); }
+    catch (err) { toast(err.message, 'err'); $('stGo').disabled = false; }
+  };
 }
 function renderPlan() {
   const unassigned = S.jobs.filter(j => !j.brigade).length, n = S.jobs.length;
@@ -886,7 +914,7 @@ function renderPlan() {
     <div class="btn-row"><button class="btn btn-glass" id="unitsBtn">${IC.crew.replace('<svg', '<svg width="18" height="18"')}Vienības${S.units.length ? ' (' + S.units.length + ')' : ''}</button>
     <button class="btn btn-primary" id="waBtn" ${n ? '' : 'disabled'}>${IC.wa}WhatsApp plāns</button></div>`;
   $('waBtn').onclick = showWhatsApp; $('unitsBtn').onclick = () => switchView('crews');
-  if ($('probBtn')) $('probBtn').onclick = openProblems;
+  bindTopBtns();
   const cnt = { all: n, wait: unassigned, as: n - unassigned, open: open + cant };
   const F = [['all', 'Visi'], ['wait', 'Nepiešķirti'], ['as', 'Piešķirti']].concat(past ? [['open', 'Neatzīmēti']] : []);
   $('planFilter').innerHTML = F.map(([k, l]) => `<button data-f="${k}" class="${S.planFilter === k ? 'on' : ''}">${l}<span class="cnt">${cnt[k]}</span></button>`).join('');
@@ -924,7 +952,7 @@ function renderMine() {
   $('mineList').innerHTML = problemsBtn() + (toCheck ? `<div class="card panel" style="margin-bottom:12px;padding:12px 16px;font-weight:700;font-size:14px">👍 ${toCheck} ${plural(toCheck, 'izpildīts darbs gaida', 'izpildīti darbi gaida')} jūsu pārbaudi</div>` : '') +
     (S.jobs.length ? `<div class="list">${S.jobs.slice().sort(urgSort).map(j => card(j, { showBrig: true, hideMgr: true, edit: !j.brigade, review: true, tools: true })).join('')}</div>`
     : emptyBox('Nav pieteikumu', 'Šai dienai neesat pieteicis darbus. Piesakiet cilnē „Jauns”.', IC.plus));
-  if ($('probBtn')) $('probBtn').onclick = openProblems;
+  bindTopBtns();
 }
 
 /* ---------- Brigāde: objekti ---------- */
@@ -1014,6 +1042,7 @@ document.addEventListener('click', async (e) => {
   if (!UV && act === 'accept') return reviewJob(job, { ok: true });
   if (!UV && act === 'unaccept') return reviewJob(job, { undo: true });
   if (!UV && act === 'return') return returnJob(job);
+  if (!UV && act === 'stop') return stopStanding(job.serija, job.adrese, job.datums);
   if (UV) return openReport(job);
   if (S.user.role === 'vaditajs' && job.brigade) return toast('Darbs jau piešķirts vienībai — mainīt var tikai admins');
   openEdit(job);
@@ -1145,6 +1174,8 @@ function typeSelect(val) {
 /** Nedēļas beigas (piektdiena; ja izvēlēta brīvdiena — svētdiena) */
 function weekEnd(d) { const wd = new Date(d + 'T12:00').getDay(); return addDays(d, wd >= 1 && wd <= 5 ? 5 - wd : wd === 6 ? 1 : 0); }
 const PROMB = [['Atvaļinājums', '🏖'], ['DNL', '🤒'], ['Vakance', '📋']];
+const STAND_PROMB = ['DNL', 'Vakance'];
+const isStanding = (j) => !!(j.serija && !j.lidz && STAND_PROMB.includes(j.prombutne));
 const prombIcon = (v) => (PROMB.find(p => p[0] === v) || [, '🏖'])[1];
 function rowHtml(j = {}, single) {
   return `<div class="jrow">
@@ -1163,6 +1194,7 @@ function rowHtml(j = {}, single) {
         <span class="label">Aizvietot līdz (ieskaitot) <span class="opt lidz-opt">· nav obligāti</span></span>
         <input type="date" class="input fLidz" value="${esc(j.lidz || '')}">
         <label class="chk"><input type="checkbox" class="fWeek"> Arī sestdienās un svētdienās</label>
+        <label class="chk fOnceWrap" hidden><input type="checkbox" class="fOnce"> Tikai šai vienai dienai</label>
         <div class="vacinfo"></div>
       </div>`}</div>
     ${single ? '' : `<div class="field"><span class="label">Bildes <span class="opt">· nav obligāti</span></span>
@@ -1201,9 +1233,14 @@ function updateVac(row) {
   box.hidden = !on;
   const must = wrap.dataset.prom === 'Atvaļinājums';
   const opt = box.querySelector('.lidz-opt');
-  opt.textContent = must ? '· obligāti' : '· nav obligāti'; opt.style.color = must ? 'var(--red)' : '';
+  const stand = STAND_PROMB.includes(wrap.dataset.prom);
+  opt.textContent = must ? '· obligāti' : stand ? '· ja tukšs — kamēr atslēgsiet' : '· nav obligāti'; opt.style.color = must ? 'var(--red)' : '';
   const info = row.querySelector('.vacinfo'), lidz = row.querySelector('.fLidz').value;
-  if (!on || !lidz || (wk && wk.checked)) { info.textContent = ''; }
+  const once = row.querySelector('.fOnce'), onceW = row.querySelector('.fOnceWrap');
+  if (onceW) onceW.hidden = !(on && stand && !lidz && !(wk && wk.checked));
+  info.classList.remove('bad');
+  if (on && stand && !lidz && !(wk && wk.checked)) info.textContent = once && once.checked ? 'Tikai ' + shortDate(formDate) : '🔁 Būs plānā katru darba dienu, kamēr pats atslēgsiet ar „⏹ Beigt”';
+  else if (!on || !lidz || (wk && wk.checked)) { info.textContent = ''; }
   else if (lidz <= formDate) { info.textContent = 'Datumam jābūt pēc ' + shortDate(formDate); info.classList.add('bad'); }
   else { const n = seriesDates(formDate, lidz, row.querySelector('.fWeek').checked).length; info.classList.remove('bad');
     info.textContent = `Tiks izveidoti ${n} darbi: ${shortDate(formDate)}–${shortDate(lidz)}${n === 62 ? ' (maks.)' : ''}`; }
@@ -1216,6 +1253,7 @@ function collectRows() {
     lidz: r.querySelector('.fWeekAll')?.checked ? weekEnd(formDate)
       : groupOfType(r.querySelector('.fType').value) === 'Aizvietošana' && r.querySelector('.vacwrap')?.dataset.prom ? (r.querySelector('.fLidz')?.value || '') : '',
     brivdienas: r.querySelector('.fWeekAll')?.checked ? false : !!r.querySelector('.fWeek')?.checked,
+    vienaDiena: !!r.querySelector('.fOnce')?.checked,
     steidzami: !!r.querySelector('.fUrg')?.classList.contains('on'), laiks: r.querySelector('.fTime')?.value || '',
     photos: r._photos || []
   }));
@@ -1373,6 +1411,13 @@ function openEdit(job) {
       try { const r = await api('deleteJob', { id: job.id, series }); closeSheet(); toast(`Izdzēsts${r.deleted > 1 ? ': ' + r.deleted : ''}`, 'ok'); load(); }
       catch (err) { toast(err.message, 'err'); }
     };
+    if (isStanding(job)) {
+      openSheet(`<h3>Dzēst darbu</h3><p class="lead">${esc(job.prombutne)} — aizvietošana katru dienu, kamēr to atslēgsiet.</p>
+        <div class="menu"><button id="dOne">Dzēst tikai ${shortDate(job.datums)}<span>›</span></button>
+        <button id="dAll" class="red">Beigt aizvietošanu (vairs neplānot)<span>›</span></button></div>`);
+      $('dOne').onclick = () => del(false); $('dAll').onclick = () => stopStanding(job.serija, job.adrese, job.datums);
+      return;
+    }
     if (job.serija) {
       openSheet(`<h3>Dzēst darbu</h3><p class="lead">Šī ir atvaļinājuma aizvietošana līdz ${shortDate(job.lidz)}.</p>
         <div class="menu"><button id="dOne">Dzēst tikai ${shortDate(job.datums)}<span>›</span></button>
@@ -1596,7 +1641,7 @@ $('helpBtn').onclick = () => {
   const role = S.user.role, perm = ('Notification' in window) ? Notification.permission : 'nav';
   const help = {
     admin: '<p><b>Vienības</b> — katrai dienai salieciet vienības no cilvēkiem (vai nokopējiet no vakardienas).</p><p><b>Plāns</b> — piešķiriet katram darbam vienību un spiediet <b>WhatsApp plāns</b>, lai nokopētu tekstu grupai.</p><p><b>Jauns</b> — ievadiet darbus pats, izvēloties vadītāju, vai ielīmējiet ziņu <b>✨ AI</b>. Atzīmējiet <b>🔥 Steidzami</b> un laiku „līdz plkst.”.</p><p>Izpildītus darbus var <b>👍 Pieņemt</b> vai <b>↩ Atgriezt</b> brigādei. Filtrs <b>Neatzīmēti</b> rāda, kas vēl nav izdarīts. <b>🔁 Atkārtot</b> nokopē darbu, <b>🕘 Vēsture</b> rāda visus darbus adresē.</p><p><b>Statistika → Mēneša atskaite</b> — kopsavilkums pa vadītājiem un objektiem.</p>',
-    vaditajs: '<p><b>Jauns</b> — izvēlieties adresi un darbu. Vienā reizē var pieteikt vairākas adreses. Ar <b>✨ AI</b> var ielīmēt ziņu, un forma aizpildīsies pati.</p><p>Ja aizvietojamais ir atvaļinājumā, ieslēdziet 🏖 un norādiet datumu „līdz”.</p><p><b>Mani darbi</b> — redzat, kurai vienībai darbs piešķirts. Izpildītus darbus apskatiet un <b>👍 Pieņemiet</b> vai <b>↩ Atgrieziet</b> ar komentāru.</p><p><b>🔁 Atkārtot</b> — tas pats darbs citā dienā. <b>🕘 Vēsture</b> — visi darbi un bildes šajā adresē. <b>⚠ Problēmas</b> — brigāžu ziņojumi par jūsu objektiem.</p>'
+    vaditajs: '<p><b>Jauns</b> — izvēlieties adresi un darbu. Vienā reizē var pieteikt vairākas adreses. Ar <b>✨ AI</b> var ielīmēt ziņu, un forma aizpildīsies pati.</p><p>Ja aizvietojamais ir atvaļinājumā, ieslēdziet 🏖 un norādiet datumu „līdz”.</p><p><b>Mani darbi</b> — redzat, kurai vienībai darbs piešķirts. Izpildītus darbus apskatiet un <b>👍 Pieņemiet</b> vai <b>↩ Atgrieziet</b> ar komentāru.</p><p><b>DNL / Vakance</b> bez datuma „līdz” katru darba dienu automātiski parādās plānā, kamēr to atslēgsiet ar <b>⏹ Beigt</b>.</p><p><b>🔁 Atkārtot</b> — tas pats darbs citā dienā. <b>🕘 Vēsture</b> — visi darbi un bildes šajā adresē. <b>⚠ Problēmas</b> — brigāžu ziņojumi par jūsu objektiem.</p>'
   }[role];
   openSheet(`<h3>${esc(S.user.name)}</h3><p class="lead">${role === 'admin' ? 'Admins' : 'Darbu vadītājs'}</p>
     <div class="help">${help}</div>
