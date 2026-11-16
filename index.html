@@ -4,12 +4,14 @@
 <meta charset="utf-8">
 <!-- Darbu sadale — aizvietošana un papilddarbi. © VAITKEVIX, SIA. Visas tiesības aizsargātas. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Aizvietošana</title>
+<title>SH | Aizvietošana</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Aizvietošana">
+<meta name="apple-mobile-web-app-title" content="SH | Aizvietošana">
+<meta name="author" content="VAITKEVIX, SIA">
+<meta name="copyright" content="© VAITKEVIX, SIA">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f6b5c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -522,6 +524,9 @@
   .tour-hole{border-radius:10px!important} .tour-tip{border-radius:14px!important}
   .phone,.combo-list{border-radius:12px!important}
   .topbar .tabs{border-radius:12px!important} .topbar .tab-ind{border-radius:9px!important}
+  .copy{margin:26px 0 8px;text-align:center;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-3);opacity:.85}
+  .tour-tip .copy{margin:10px 0 0;font-size:10.5px}
+  @media (max-width:420px){ .app.team .brand-row .logo{display:none} .app.team .brand-text h1{font-size:15.5px} }
 </style>
 </head>
 <body>
@@ -533,7 +538,7 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="7" r="3"/><path d="M2.5 20v-1a5.5 5.5 0 0 1 9.2-4.1"/><path d="M15 12.5h6.5M18.5 9.5l3 3-3 3M21.5 19H15M18 16l-3 3 3 3"/></svg>
       </div>
       <div class="brand-text">
-        <h1>Aizvietošana</h1>
+        <h1>SH | Aizvietošana</h1>
         <p id="brandSub">Aizvietošana · papilddarbi</p>
       </div>
       <div class="actions">
@@ -642,6 +647,7 @@
       <div id="statsBody"></div>
     </section>
   </section>
+  <footer class="copy">© 2026 VAITKEVIX, SIA. Visas tiesības aizsargātas.</footer>
 </main>
 
 <div class="backdrop" id="backdrop"></div>
@@ -1888,7 +1894,7 @@ $('loginBtnTop').onclick = () => {
     <h3>Ienākt</h3><p>Darbu vadītājiem un adminam — lai pieteiktu darbus</p>
     <input class="input" id="sheetPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••" aria-label="PIN">
     <button class="btn btn-primary btn-block" type="submit" id="sheetLoginBtn">Ienākt</button>
-    <div class="err" id="sheetErr"></div></div></form>`);
+    <div class="err" id="sheetErr"></div><p class="copy" style="margin-top:16px">© VAITKEVIX, SIA</p></div></form>`);
   setTimeout(() => $('sheetPin').focus(), 300);
   $('sheetLogin').onsubmit = async (e) => {
     e.preventDefault();
@@ -2033,7 +2039,8 @@ async function tourGo(i, dir = 1) {
     <h4>${esc(tourT(st.title))}</h4><p>${esc(tourT(st.text))}</p>
     <div class="tbtns">${last ? '' : `<button class="skip" data-tx>${tr('Izlaist', 'Пропустить')}</button>`}
       ${i > 0 ? `<button class="btn btn-glass" data-tp>${tr('Atpakaļ', 'Назад')}</button>` : ''}
-      <button class="btn btn-primary" data-tn style="${last ? 'margin-left:auto' : ''}">${last ? tr('Sākt darbu', 'Начать') : tr('Tālāk', 'Далее')}</button></div>`;
+      <button class="btn btn-primary" data-tn style="${last ? 'margin-left:auto' : ''}">${last ? tr('Sākt darbu', 'Начать') : tr('Tālāk', 'Далее')}</button></div>
+    ${last ? '<p class="copy">© VAITKEVIX, SIA</p>' : ''}`;
   const W = innerWidth, H = innerHeight, tw = tip.offsetWidth, th = tip.offsetHeight;
   if (!el) { hole.classList.add('none'); tip.style.left = (W - tw) / 2 + 'px'; tip.style.top = Math.max(12, (H - th) / 2) + 'px'; return; }
   hole.classList.remove('none');

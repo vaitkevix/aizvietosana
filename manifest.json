@@ -1,7 +1,7 @@
 {
-  "name": "Aizvietošana",
-  "short_name": "Aizvietošana",
-  "description": "Aizvietošanas un papilddarbu sadale brigādēm",
+  "name": "SH | Aizvietošana",
+  "short_name": "SH | Aizvietošana",
+  "description": "SH | Aizvietošana — aizvietošanas un papilddarbu sadale brigādēm. © VAITKEVIX, SIA",
   "lang": "lv",
   "start_url": "./",
   "scope": "./",
