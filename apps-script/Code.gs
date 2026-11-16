@@ -14,8 +14,9 @@ const SH_STAFF = 'Darbinieki';
 const SH_CREW = 'Sastavs';
 const SH_OBJ = 'Objekti';
 const SH_TYPES = 'DarbuVeidi';
-const JOB_COLS = ['ID', 'Datums', 'Adrese', 'Tips', 'Apraksts', 'Vaditajs', 'Brigade', 'Statuss', 'Publicets', 'Izpildits', 'Izveidots', 'Komentars', 'Foto', 'Iemesls', 'Lidz', 'Serija'];
+const JOB_COLS = ['ID', 'Datums', 'Adrese', 'Tips', 'Apraksts', 'Vaditajs', 'Brigade', 'Statuss', 'Publicets', 'Izpildits', 'Izveidots', 'Komentars', 'Foto', 'Iemesls', 'Lidz', 'Serija', 'Prombutne'];
 const TZ = 'Europe/Riga';
+const PROMBUTNE = ['Atvaļinājums', 'DNL', 'Vakance'];   // aizvietošanas iemesls
 
 /* ---------------- HTTP ---------------- */
 
@@ -147,6 +148,7 @@ const ACTIONS = {
       if (u.role !== 'admin' && (job.vaditajs !== u.name || job.brigade)) throw new Error('Darbu, kas jau piešķirts vienībai, var mainīt tikai admins');
       job.datums = j.datums; job.adrese = String(j.adrese).trim(); job.tips = j.tips || job.tips; job.apraksts = j.apraksts || '';
       if (j.vaditajs && u.role === 'admin') job.vaditajs = String(j.vaditajs);
+      if (j.prombutne !== undefined) job.prombutne = PROMBUTNE.indexOf(j.prombutne) !== -1 ? j.prombutne : '';
       addObjects_([job.adrese], job.vaditajs);
       writeJob_(sh, job);
       return { job: clean_(job) };
@@ -176,6 +178,11 @@ const ACTIONS = {
     if (!r.date) throw new Error('Norādi datumu');
     const types = jobTypes_().map(t => t.name);
     const objMgr = objectManagers_();
+    const hdr = sheet_(SH_JOBS).getRange(1, JOB_COLS.length);
+    if (hdr.getValue() !== JOB_COLS[JOB_COLS.length - 1]) hdr.setValue(JOB_COLS[JOB_COLS.length - 1]).setFontWeight('bold');
+    list.forEach(j => {
+      if (groupOf_(j.tips) === 'Aizvietošana' && PROMBUTNE.indexOf(j.prombutne) === -1) throw new Error('Norādiet aizvietošanas iemeslu adresei ' + j.adrese + ': atvaļinājums, DNL vai vakance');
+    });
     const rows = [];
     list.forEach(j => {
       if (types.indexOf(j.tips) === -1) throw new Error('Izvēlies darbu adresei ' + j.adrese);
@@ -184,7 +191,7 @@ const ACTIONS = {
       dates.forEach(d => rows.push(toRow_({
         id: Utilities.getUuid().slice(0, 8), datums: d, adrese: String(j.adrese).trim(), tips: j.tips,
         apraksts: String(j.apraksts || '').trim(), vaditajs: u.role === 'admin' ? String(j.vaditajs || objMgr[normName_(j.adrese)] || r.vaditajs || u.name) : u.name, brigade: '',
-        statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija: serija, foto: j.fotoIds || ''
+        statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija: serija, foto: j.fotoIds || '', prombutne: PROMBUTNE.indexOf(j.prombutne) !== -1 ? j.prombutne : ''
       })));
     });
     const sh = sheet_(SH_JOBS);
@@ -210,7 +217,7 @@ const ACTIONS = {
     if (u.role === 'brigade') throw new Error('Nav atļauts');
     let list = readJobs_().filter(j => j.datums >= r.from && j.datums <= r.to);
     if (u.role === 'vaditajs') list = list.filter(j => j.vaditajs === u.name);
-    return { jobs: list.map(j => ({ datums: j.datums, adrese: j.adrese, tips: j.tips, vaditajs: j.vaditajs, brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, foto: j.foto ? 1 : 0 })) };
+    return { jobs: list.map(j => ({ datums: j.datums, adrese: j.adrese, tips: j.tips, vaditajs: j.vaditajs, brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, prombutne: j.prombutne, foto: j.foto ? 1 : 0 })) };
   },
 
   deleteJob: (u, r) => withLock_(() => {
@@ -370,7 +377,7 @@ function readJobs_() {
       _row: i + 1, id: String(r[0]), datums: dateStr_(r[1]), adrese: String(r[2]), tips: String(r[3]), apraksts: String(r[4]),
       vaditajs: String(r[5]), brigade: String(r[6]), statuss: String(r[7]), publicets: str_(r[8]), izpildits: str_(r[9]), izveidots: str_(r[10]),
       komentars: String(r[11] || ''), foto: String(r[12] || ''), iemesls: String(r[13] || ''),
-      lidz: dateStr_(r[14]), serija: String(r[15] || '')
+      lidz: dateStr_(r[14]), serija: String(r[15] || ''), prombutne: String(r[16] || '')
     });
   }
   return out;
@@ -379,7 +386,7 @@ function readJobs_() {
 function findJob_(id) { return readJobs_().find(j => j.id === String(id)) || null; }
 
 function toRow_(j) {
-  return [j.id, j.datums, j.adrese, j.tips, j.apraksts, j.vaditajs, j.brigade, j.statuss, j.publicets, j.izpildits, j.izveidots, j.komentars || '', j.foto || '', j.iemesls || '', j.lidz || '', j.serija || ''];
+  return [j.id, j.datums, j.adrese, j.tips, j.apraksts, j.vaditajs, j.brigade, j.statuss, j.publicets, j.izpildits, j.izveidots, j.komentars || '', j.foto || '', j.iemesls || '', j.lidz || '', j.serija || '', j.prombutne || ''];
 }
 
 function writeJob_(sh, j) { sh.getRange(j._row, 1, 1, JOB_COLS.length).setValues([toRow_(j)]); }
@@ -407,7 +414,7 @@ function whatsapp_(date) {
       const extra = groupOf_(j.tips) === 'Papilddarbs';
       let what = extra ? (j.tips === 'Papilddarbs' || j.tips === 'Cits papilddarbs' ? (j.apraksts || 'papilddarbs') : j.tips) : j.tips.toLowerCase();
       if (j.apraksts && what !== j.apraksts) what += ' (' + j.apraksts + ')';
-      if (j.lidz) what += ' (atvaļinājumā līdz ' + lvDate_(j.lidz) + ')';
+      if (j.prombutne || j.lidz) what += ' (' + (j.prombutne || 'atvaļinājums').toLowerCase() + (j.lidz ? ' līdz ' + lvDate_(j.lidz) : '') + ')';
       lines.push(j.adrese + ' - ' + what);
     });
   });
@@ -443,7 +450,7 @@ function teamView_(r) {
   const units = units_(date);
   const jobs = readJobs_().filter(j => j.datums === date && j.brigade).map(j => ({
     id: j.id, datums: j.datums, adrese: j.adrese, tips: j.tips, apraksts: j.apraksts, vaditajs: j.vaditajs,
-    brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, foto: j.foto, komentars: j.komentars, iemesls: j.iemesls, izpildits: j.izpildits
+    brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, prombutne: j.prombutne, foto: j.foto, komentars: j.komentars, iemesls: j.iemesls, izpildits: j.izpildits
   }));
   const addrs = jobs.map(j => normName_(j.adrese));
   const objects = objects_().filter(o => addrs.indexOf(normName_(o.adrese)) !== -1);
@@ -549,7 +556,8 @@ function aiParse_(u, r) {
     'Darbu veidi (tips jāizvēlas TIKAI no šiem): ' + types.map(t => t.name + ' [' + t.group + ']').join('; ') + '\n' +
     'Zināmās adreses (ja ziņā minēta līdzīga, izmanto precīzi šo rakstību): ' + mine.join('; ') + '\n\n' +
     'Ziņa:\n' + msg.slice(0, 3000) + '\n\n' +
-    'Atgriez JSON: {"datums":"YYYY-MM-DD vai null","vaditajs":"vārds vai null","rindas":[{"adrese":"...","tips":"...","apraksts":"īsa piezīme latviski vai tukšs","lidz":"YYYY-MM-DD vai null"}]}. ' +
+    'Atgriez JSON: {"datums":"YYYY-MM-DD vai null","vaditajs":"vārds vai null","rindas":[{"adrese":"...","tips":"...","apraksts":"īsa piezīme latviski vai tukšs","prombutne":"Atvaļinājums|DNL|Vakance vai null","lidz":"YYYY-MM-DD vai null"}]}. ' +
+    '"prombutne" — kāpēc jāaizvieto: atvaļinājums, DNL (slimības lapa, darba nespējas lapa, slims) vai vakance (nav darbinieka); tikai aizvietošanas darbiem. ' +
     '"datums" = diena, uz kuru attiecas darbi (piem. "rīt" → rītdienas datums); ja nav minēts, null. ' +
     '"lidz" aizpildi tikai, ja aizvietojamais ir atvaļinājumā/prombūtnē līdz konkrētam datumam. ' +
     '"aizvietot sētnieku" → tips "Sētnieks"; "abus"/"sētnieku un apkopēju" → "Abi". Neizdomā adreses.';
@@ -560,7 +568,8 @@ function aiParse_(u, r) {
   const names = types.map(t => t.name);
   const rows = (data.rindas || []).filter(x => x && x.adrese).map(x => ({
     adrese: String(x.adrese).trim(), tips: names.indexOf(x.tips) !== -1 ? x.tips : '',
-    apraksts: String(x.apraksts || '').trim(), lidz: /^\d{4}-\d{2}-\d{2}$/.test(x.lidz || '') ? x.lidz : ''
+    apraksts: String(x.apraksts || '').trim(), lidz: /^\d{4}-\d{2}-\d{2}$/.test(x.lidz || '') ? x.lidz : '',
+    prombutne: PROMBUTNE.indexOf(x.prombutne) !== -1 ? x.prombutne : ''
   }));
   return { datums: /^\d{4}-\d{2}-\d{2}$/.test(data.datums || '') ? data.datums : '', vaditajs: mgrs.indexOf(data.vaditajs) !== -1 ? data.vaditajs : '', rows: rows };
 }
@@ -871,7 +880,7 @@ function setup() {
   let j = ss.getSheetByName(SH_JOBS);
   if (!j) {
     j = ss.insertSheet(SH_JOBS);
-    j.getRange('A:P').setNumberFormat('@');
+    j.getRange('A:Q').setNumberFormat('@');
     j.getRange(1, 1, 1, JOB_COLS.length).setValues([JOB_COLS]).setFontWeight('bold');
     j.setFrozenRows(1);
   }
