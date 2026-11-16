@@ -373,6 +373,7 @@
     padding:10px 16px 18px;background:var(--g-pop);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1px solid var(--g-brd);border-radius:30px;
     box-shadow:var(--g-shadow),0 30px 60px -20px rgba(0,0,0,.5);transform:translateY(calc(100% + 30px));transition:transform .32s cubic-bezier(.3,1.2,.5,1)}
   .sheet.open{transform:none}
+  .sheet.narrow{max-width:440px}
   .grab{width:40px;height:5px;border-radius:3px;background:var(--line-2);margin:2px auto 12px}
   .sheet h3{margin:0 0 4px;font-size:19px;font-weight:800;letter-spacing:-.02em}
   .sheet .lead{margin:0 0 14px;color:var(--ink-2);font-size:13.5px}
@@ -1419,7 +1420,7 @@ function silentToken() { if ('Notification' in window && Notification.permission
 
 /* ---------- Lapa no apakšas ---------- */
 function openSheet(html) { $('sheetBody').innerHTML = html; $('sheet').classList.add('open'); $('backdrop').classList.add('open'); $('sheet').scrollTop = 0; }
-function closeSheet() { $('sheet').classList.remove('open'); $('backdrop').classList.remove('open'); }
+function closeSheet() { setTimeout(() => $('sheet').classList.remove('narrow'), 350); $('sheet').classList.remove('open'); $('backdrop').classList.remove('open'); }
 $('backdrop').onclick = closeSheet;
 bindCombo($('sheetBody'));
 
@@ -1463,8 +1464,9 @@ async function loadTeam() {
   } finally { $('refreshBtn').classList.remove('spin'); }
 }
 $('loginBtnTop').onclick = () => {
+  $('sheet').classList.add('narrow');
   openSheet(`<form id="sheetLogin" autocomplete="off" style="text-align:center">
-    <div class="lock" style="padding:6px 0 0;margin:0"><div class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+    <div class="lock" style="padding:6px 0 0;margin:0 auto;width:100%;max-width:360px"><div class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
     <h3>Ienākt</h3><p>Darbu vadītājiem un adminam — lai pieteiktu darbus</p>
     <input class="input" id="sheetPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••" aria-label="PIN">
     <button class="btn btn-primary btn-block" type="submit" id="sheetLoginBtn">Ienākt</button>
