@@ -184,8 +184,9 @@
   .combo.picked .combo-input{border-color:var(--brand);background:var(--brand-soft);font-weight:700}
   .combo.picked .combo-ic{color:var(--brand)}
   .combo-clear{position:absolute;right:7px;top:7px;width:36px;height:36px;border-radius:50%;border:0;background:var(--line);color:var(--ink-2);display:grid;place-items:center;cursor:pointer}
-  .combo-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;max-height:240px;overflow-y:auto;overscroll-behavior:contain;padding:6px;
+  .combo-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;max-height:320px;overflow-y:auto;overscroll-behavior:contain;padding:6px;
     background:var(--g-pop);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1px solid var(--g-brd);border-radius:20px;box-shadow:var(--g-shadow),0 24px 48px -16px rgba(20,35,28,.45)}
+  .combo-sec{padding:8px 12px 4px;font-size:11.5px;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em}
   .combo-opt{display:flex;align-items:center;gap:10px;width:100%;padding:13px 12px;border:0;background:none;border-radius:14px;cursor:pointer;font-weight:600;font-size:15px;text-align:left}
   .combo-opt svg{color:var(--ink-3)}
   .combo-opt small{margin-left:auto;color:var(--ink-3);font-size:12px;font-weight:700}
@@ -943,10 +944,14 @@ function comboShow(inp) {
   combo.classList.toggle('picked', myObjects().some(o => o.adrese.toLowerCase() === q));
   combo.querySelector('.combo-clear').hidden = !inp.value;
   const norm = (x) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const list = myObjects().filter(o => !q || norm(o.adrese).includes(norm(q))).slice(0, 8);
+  const me = S.user.name, isMgr = S.user.role === 'vaditajs';
+  let list = myObjects().filter(o => !q || norm(o.adrese).includes(norm(q)));
+  if (isMgr && !q) list = list.filter(o => o.vaditajs === me);   // bez meklēšanas — visi paša objekti
+  list = list.slice(0, q ? 80 : (isMgr ? 300 : 80));
   if (!list.length) { box.hidden = true; return; }
   const hl = (s) => { if (!q) return esc(s); const i = s.toLowerCase().indexOf(q); return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length)); };
-  box.innerHTML = list.map(o => `<button type="button" class="combo-opt" data-a="${esc(o.adrese)}">${IC.addr}<span>${hl(o.adrese)}</span>${o.grupa && o.grupa !== 'SH objekti' ? `<small>${esc(o.grupa)}</small>` : o.piekluve ? '<small>🔑</small>' : ''}</button>`).join('');
+  const mine = isMgr ? list.filter(o => o.vaditajs === me).length : 0;
+  box.innerHTML = (isMgr ? `<div class="combo-sec">Mani objekti · ${mine}</div>` : '') + list.map((o, i) => (isMgr && i === mine && i > 0 ? '<div class="combo-sec">Citi objekti</div>' : '') + `<button type="button" class="combo-opt" data-a="${esc(o.adrese)}">${IC.addr}<span>${hl(o.adrese)}</span>${o.grupa && o.grupa !== 'SH objekti' ? `<small>${esc(o.grupa)}</small>` : o.piekluve ? '<small>🔑</small>' : ''}</button>`).join('');
   box.hidden = false;
 }
 function bindCombo(root) {
