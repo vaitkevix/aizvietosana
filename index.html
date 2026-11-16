@@ -712,7 +712,7 @@ async function load() {
   try {
     const r = await api('jobs', { date });
     if (date !== S.date) return;
-    S.jobs = r.jobs; S.crews = r.crews || {}; S.units = r.units || []; if (r.staff) S.staff = r.staff;
+    S.jobs = r.jobs; S.crews = r.crews || {}; S.units = r.units || []; S.links = r.links || {}; if (r.staff) S.staff = r.staff;
     render();
   } catch (err) { toast(err.message, 'err'); }
   finally { $('refreshBtn').classList.remove('spin'); }
@@ -721,8 +721,8 @@ async function load() {
 async function refreshMeta() {
   try { const r = await api('login'); S.meta = r.meta; if (S.view === 'new') { drawMgr(); mgrHints(); } } catch (e) {}
 }
-$('refreshBtn').onclick = () => { refreshMeta(); S.view === 'stats' ? loadStats() : load(); };
-document.addEventListener('visibilitychange', () => { if (!document.hidden && S.user) $('refreshBtn').onclick(); });
+$('refreshBtn').onclick = () => { if (UV) return startUnitView(); refreshMeta(); S.view === 'stats' ? loadStats() : load(); };
+document.addEventListener('visibilitychange', () => { if (!document.hidden && (S.user || UV)) $('refreshBtn').onclick(); });
 
 function render() {
   drawHero();
@@ -773,7 +773,7 @@ function card(j, o = {}) {
     <div class="task-top"><div>
       <h3 class="addr">${esc(j.adrese)}</h3>
       <div class="sub">${esc(typeText(j))}${o.hideMgr ? '' : ` · <b>${esc(j.vaditajs)}</b>`}</div>
-    </div>${statusPill(j)}</div>
+    </div>${o.noPill ? '' : statusPill(j)}</div>
     ${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}
     ${j.apraksts ? `<div class="note">${esc(j.apraksts)}</div>` : ''}
     ${reportHtml(j)}
@@ -855,7 +855,7 @@ function renderCrews() {
     <button class="btn btn-glass" id="copyUnits">Kopēt no ${({ 'Šodien': 'šodienas', 'Vakar': 'vakardienas', 'Rīt': 'rītdienas' })[relDay(addDays(S.date, -1))] || shortDate(addDays(S.date, -1))}</button></div>`;
   h += S.units.map(u => {
     const n = S.jobs.filter(j => j.brigade === u.name).length;
-    return `<div class="card crew-card"><h4>${esc(u.name)}<button class="link-btn" data-unit="${esc(u.name)}">Mainīt</button></h4>
+    return `<div class="card crew-card"><h4>${esc(u.name)}<span><button class="link-btn" data-link="${esc(u.name)}">🔗 Saite</button> <button class="link-btn" data-unit="${esc(u.name)}">Mainīt</button></span></h4>
       <div class="sub">${n} ${plural(n, 'objekts', 'objekti')} · ${day}</div>
       <div class="shortcuts" style="margin:0">${u.persons.length ? u.persons.map(p => `<span class="sc on">${esc(p)}</span>`).join('') : '<span style="color:var(--ink-3);font-size:13.5px;font-weight:600">Cilvēki nav norādīti</span>'}</div></div>`;
   }).join('') || emptyBox('Vienību vēl nav', `Izveidojiet vienības ${day.toLowerCase()} — vai nokopējiet no iepriekšējās dienas.`, IC.crew);
@@ -865,7 +865,19 @@ function renderCrews() {
     catch (err) { toast(err.message, 'err'); }
   };
 }
-$('crewList').addEventListener('click', (e) => { const b = e.target.closest('[data-unit]'); if (b) openCrew(b.dataset.unit); });
+$('crewList').addEventListener('click', (e) => {
+  const l = e.target.closest('[data-link]');
+  if (l) return showLink(l.dataset.link);
+  const b = e.target.closest('[data-unit]'); if (b) openCrew(b.dataset.unit);
+});
+function showLink(name) {
+  const url = (S.links || {})[name];
+  if (!url) return toast('Saite vēl nav pieejama — atjaunojiet lapu', 'err');
+  openSheet(`<h3>🔗 ${esc(name)}</h3><p class="lead">${esc(longDate(S.date))} · brigāde ar šo saiti bez PIN redz tikai savus darbus. Saite ir arī WhatsApp plānā.</p>
+    <div class="field"><textarea class="textarea" id="linkText" readonly style="min-height:90px;font-size:13px">${esc(url)}</textarea></div>
+    <div class="btn-row"><a class="btn btn-glass" href="${esc(url)}" target="_blank" rel="noopener">Atvērt</a><button class="btn btn-primary" id="linkCopy">Kopēt</button></div>`);
+  $('linkCopy').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Saite nokopēta', 'ok'); closeSheet(); } catch (e) { $('linkText').select(); } };
+}
 
 function openCrew(b) {
   const isNew = !b;
@@ -903,6 +915,7 @@ function openCrew(b) {
 
 /* ---------- Klikšķi kartītēs ---------- */
 document.addEventListener('click', async (e) => {
+  if (UV) return;
   const c = e.target.closest('.task'); if (!c || e.target.closest('select, a')) return;
   const job = S.jobs.find(j => j.id === c.dataset.id); if (!job) return;
   if (S.user.role === 'vaditajs' && job.brigade) return toast('Darbs jau piešķirts vienībai — mainīt var tikai admins');
@@ -1042,6 +1055,10 @@ function rowHtml(j = {}, single) {
         <label class="chk"><input type="checkbox" class="fWeek"> Arī sestdienās un svētdienās</label>
         <div class="vacinfo"></div>
       </div></div>`}
+    ${single ? '' : `<div class="field"><span class="label">Bildes <span class="opt">· nav obligāti</span></span>
+      <div class="photos-edit jphotos"></div>
+      <label class="drop-empty"><span class="ic">${IC.cam}</span><span><b>Pievienot bildes</b><small>Līdz 4 bildēm — uzņemiet vai izvēlieties no galerijas</small></span>
+        <input type="file" class="fPhotos" accept="image/*" multiple hidden></label></div>`}
     <div class="field"><span class="label">Piezīme <span class="opt">· nav obligāti</span></span>
       <div class="shortcuts">${NOTE_SC.map(s => `<button type="button" class="sc plus" data-sc="${esc(s)}">${esc(s)}</button>`).join('')}</div>
       ${aiField(`<textarea class="textarea fNote" rows="2" placeholder="Piem. atslēgas pie dežuranta">${esc(j.apraksts || '')}</textarea>`, 'note')}
@@ -1070,8 +1087,13 @@ function collectRows() {
   return [...document.querySelectorAll('#jRows .jrow')].map(r => ({
     adrese: r.querySelector('.fAddr').value.trim(), tips: r.querySelector('.fType').value, apraksts: r.querySelector('.fNote').value.trim(),
     lidz: r.querySelector('.fVac')?.checked && groupOfType(r.querySelector('.fType').value) === 'Aizvietošana' ? r.querySelector('.fLidz').value : '',
-    brivdienas: !!r.querySelector('.fWeek')?.checked
+    brivdienas: !!r.querySelector('.fWeek')?.checked,
+    photos: r._photos || []
   }));
+}
+function drawRowPhotos(row) {
+  const box = row.querySelector('.jphotos'); if (!box) return;
+  box.innerHTML = (row._photos || []).map((p, i) => `<span><img src="${p}" alt=""><button type="button" data-rmph="${i}" aria-label="Noņemt">×</button></span>`).join('');
 }
 function updateSubmit() {
   const items = collectRows().filter(x => x.adrese || x.tips);
@@ -1112,11 +1134,20 @@ $('formDaySeg').addEventListener('change', (e) => { if (e.target.value) { formDa
 bindCombo($('jRows'));
 $('jRows').addEventListener('click', (e) => {
   if (e.target.closest('.jdel')) { e.target.closest('.jrow').remove(); numberRows(); mgrHints(); return; }
+  const rm = e.target.closest('[data-rmph]');
+  if (rm) { const row = rm.closest('.jrow'); row._photos.splice(+rm.dataset.rmph, 1); drawRowPhotos(row); return; }
   const sc = e.target.closest('[data-sc]');
   if (sc) { const t = sc.closest('.field').querySelector('.fNote'); t.value = (t.value.trim() ? t.value.trim().replace(/[.]?$/, '. ') : '') + sc.dataset.sc + '.'; aiLabel(t.closest('.aiwrap')); }
 });
-$('jRows').addEventListener('change', (e) => {
+$('jRows').addEventListener('change', async (e) => {
   const row = e.target.closest('.jrow'); if (!row) return;
+  if (e.target.classList.contains('fPhotos')) {
+    row._photos = row._photos || [];
+    const files = [...e.target.files].slice(0, 4 - row._photos.length);
+    if (e.target.files.length > files.length) toast('Ne vairāk kā 4 bildes vienai adresei');
+    for (const f of files) { try { row._photos.push(await shrinkImage(f, 1400)); } catch (err) { toast(err.message, 'err'); } }
+    e.target.value = ''; drawRowPhotos(row); return;
+  }
   if (e.target.classList.contains('fVac') && e.target.checked && !row.querySelector('.fLidz').value) row.querySelector('.fLidz').value = addDays(formDate, 6);
   updateVac(row);
 });
@@ -1136,7 +1167,8 @@ $('jobForm').onsubmit = async (e) => {
   const badV = items.findIndex(x => x.lidz && x.lidz <= formDate);
   if (badV !== -1) return toast(`${badV + 1}. adresei „līdz” datumam jābūt pēc sākuma datuma`, 'err');
   const total = items.reduce((n, x) => n + seriesDates(formDate, x.lidz, x.brivdienas).length, 0);
-  const b = $('submitBtn'); b.disabled = true; b.innerHTML = '<span class="spinner"></span>Sūta…';
+  const b = $('submitBtn'); b.disabled = true;
+  b.innerHTML = '<span class="spinner"></span>' + (items.some(x => x.photos.length) ? 'Augšupielādē bildes…' : 'Sūta…');
   try {
     const r = await api('saveJobs', { date: formDate, vaditajs: formMgr, jobs: items });
     if (r.objects) S.meta.objects = r.objects;
@@ -1304,6 +1336,7 @@ async function loadStats() {
 
 /* ---------- Palīdzība un iestatījumi ---------- */
 $('helpBtn').onclick = () => {
+  if (UV) return openSheet(`<h3>${esc(UV.unit)}</h3><div class="help"><p>Šeit redzami jūsu vienības darbi izvēlētajā dienā ar piekļuves kodiem un bildēm. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p>Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
   if (!S.user) return openSheet(`<h3>Kā lietot?</h3><div class="help"><p>Ievadiet PIN kodu, ko jums iedeva admins.</p></div>`);
   const role = S.user.role, perm = ('Notification' in window) ? Notification.permission : 'nav';
   const help = {
@@ -1352,9 +1385,43 @@ function closeSheet() { $('sheet').classList.remove('open'); $('backdrop').class
 $('backdrop').onclick = closeSheet;
 bindCombo($('sheetBody'));
 
+/* ---------- Brigādes skats bez PIN (?d=&u=&k=) ---------- */
+const UV = (() => { const q = new URLSearchParams(location.search); return q.get('k') ? { date: q.get('d'), unit: q.get('u'), key: q.get('k') } : null; })();
+async function startUnitView() {
+  S.user = { name: UV.unit, role: 'brigade' };
+  S.date = UV.date; S.view = 'today';
+  $('login').hidden = true; $('login').classList.remove('active'); $('appViews').hidden = false;
+  $('tabs').hidden = true; $('app').classList.add('no-tabs');
+  $('brandSub').textContent = UV.unit + ' · ' + (relDay(UV.date) || shortDate(UV.date));
+  document.querySelectorAll('#appViews > .view').forEach(s => s.classList.toggle('active', s.id === 'v-today'));
+  $('daySeg').hidden = true;
+  $('todayList').innerHTML = '<div class="skel"></div><div class="skel"></div>';
+  $('refreshBtn').classList.add('spin');
+  try {
+    const r = await api('unitView', { date: UV.date, unit: UV.unit, key: UV.key });
+    S.jobs = r.jobs; S.meta = Object.assign(S.meta, r.meta); S.crews = { [UV.unit]: r.persons };
+    renderUnitView();
+  } catch (err) {
+    $('todayList').innerHTML = emptyBox('Saite nav derīga', err.message + '. Palūdziet adminam jaunu saiti.', IC.plan);
+  } finally { $('refreshBtn').classList.remove('spin'); }
+}
+function renderUnitView() {
+  const n = S.jobs.length, persons = S.crews[UV.unit] || [];
+  $('heroDate').textContent = longDate(UV.date) + (relDay(UV.date) ? ' · ' + relDay(UV.date).toLowerCase() : '');
+  $('heroGreeting').textContent = greeting();
+  $('heroPending').className = 'pending-line' + (n ? '' : ' ok');
+  $('heroPending').innerHTML = `<i></i><span>${esc(UV.unit)} · ${n} ${plural(n, 'objekts', 'objekti')}</span>`;
+  $('todaySub').textContent = persons.length ? '👷 ' + persons.join(', ') : 'Jūsu vienības darbi';
+  $('todayList').innerHTML = n ? `<div class="list">${S.jobs.map(j => card(j, { links: true, noPill: true })).join('')}</div>`
+    : emptyBox('Darbu nav', 'Šai vienībai šajā dienā darbi vēl nav piešķirti.', IC.plan);
+}
+
 /* ---------- Starts ---------- */
 if (!self.DEMO_API && 'serviceWorker' in navigator) navigator.serviceWorker.register('./firebase-messaging-sw.js').catch(() => {});
-window.addEventListener('DOMContentLoaded', () => { const saved = ls.get('darbi_pin'); if (saved) tryLogin(saved); else $('pinInput').focus(); });
+window.addEventListener('DOMContentLoaded', () => {
+  if (UV) return startUnitView();
+  const saved = ls.get('darbi_pin'); if (saved) tryLogin(saved); else $('pinInput').focus();
+});
 </script>
 </body>
 </html>

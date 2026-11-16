@@ -31,6 +31,7 @@ function doPost(e) {
     return json_({ ok: false, error: 'Nederīgs pieprasījums' });
   }
   try {
+    if (req.action === 'unitView') return json_(Object.assign({ ok: true }, unitView_(req)));
     const user = auth_(req.pin);
     if (!user) return json_({ ok: false, error: 'Nepareizs PIN' });
     const fn = ACTIONS[req.action];
@@ -44,7 +45,12 @@ function doPost(e) {
 const ACTIONS = {
   login: (u) => ({ user: publicUser_(u), meta: meta_() }),
 
-  jobs: (u, r) => ({ jobs: visibleJobs_(u, r.date), units: units_(r.date), crews: crews_(r.date), staff: staff_() }),
+  jobs: (u, r) => {
+    const units = units_(r.date);
+    const links = {};
+    if (u.role === 'admin') units.forEach(x => links[x.name] = unitLink_(r.date, x.name));
+    return { jobs: visibleJobs_(u, r.date), units: units, crews: crews_(r.date), staff: staff_(), links: links };
+  },
 
   /** Vienība dienai: izveidot, pārsaukt (oldName) vai mainīt cilvēkus */
   setUnit: (u, r) => withLock_(() => {
@@ -153,7 +159,13 @@ const ACTIONS = {
     return { job: clean_(job) };
   }),
 
-  saveJobs: (u, r) => withLock_(() => {
+  saveJobs: (u, r) => {
+    // Bildes saglabā pirms bloķēšanas (augšupielāde var aizņemt dažas sekundes)
+    (r.jobs || []).forEach(j => {
+      j.fotoIds = j.photos && j.photos.length ? savePhotos_({ datums: r.date, adrese: String(j.adrese || '') }, j.photos).join(',') : '';
+      delete j.photos;
+    });
+    return withLock_(() => {
     if (u.role === 'brigade') throw new Error('Nav atļauts');
     const list = (r.jobs || []).filter(j => j && String(j.adrese || '').trim());
     if (!list.length) throw new Error('Pievieno vismaz vienu adresi');
@@ -168,7 +180,7 @@ const ACTIONS = {
       dates.forEach(d => rows.push(toRow_({
         id: Utilities.getUuid().slice(0, 8), datums: d, adrese: String(j.adrese).trim(), tips: j.tips,
         apraksts: String(j.apraksts || '').trim(), vaditajs: u.role === 'admin' ? String(j.vaditajs || objMgr[normName_(j.adrese)] || r.vaditajs || u.name) : u.name, brigade: '',
-        statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija: serija
+        statuss: 'jauns', publicets: '', izpildits: '', izveidots: now_(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija: serija, foto: j.fotoIds || ''
       })));
     });
     const sh = sheet_(SH_JOBS);
@@ -180,7 +192,8 @@ const ACTIONS = {
           : list.length + ' adreses: ' + list.slice(0, 3).map(x => x.adrese).join(', ') + (list.length > 3 ? '…' : ''));
     }
     return { count: rows.length, objects: objects_() };
-  }),
+    });
+  },
 
   aiNote: (u, r) => ({ text: aiWrite_(u, r) }),
 
@@ -384,6 +397,8 @@ function whatsapp_(date) {
   Object.keys(byBrig).sort((a, b) => (order.indexOf(a) + 1 || 999) - (order.indexOf(b) + 1 || 999) || a.localeCompare(b)).forEach(b => {
     lines.push('', '*' + b + '*');
     if (crews[b] && crews[b].length) lines.push(crews[b].join(', '));
+    const link = unitLink_(date, b);
+    if (link) lines.push('🔗 ' + link);
     byBrig[b].forEach(j => {
       const extra = groupOf_(j.tips) === 'Papilddarbs';
       let what = extra ? (j.tips === 'Papilddarbs' || j.tips === 'Cits papilddarbs' ? (j.apraksts || 'papilddarbs') : j.tips) : j.tips.toLowerCase();
@@ -393,6 +408,42 @@ function whatsapp_(date) {
     });
   });
   return lines.join('\n');
+}
+
+/* ---------------- Brigāžu saite bez PIN ---------------- */
+
+function linkSecret_() {
+  const props = PropertiesService.getScriptProperties();
+  let s = props.getProperty('LINK_SECRET');
+  if (!s) { s = Utilities.getUuid() + Utilities.getUuid(); props.setProperty('LINK_SECRET', s); }
+  return s;
+}
+
+/** Neuzminama atslēga konkrētai dienai un vienībai */
+function unitKey_(date, unit) {
+  const sig = Utilities.computeHmacSha256Signature(date + '|' + unit, linkSecret_());
+  return Utilities.base64EncodeWebSafe(sig).replace(/=+$/, '').slice(0, 16);
+}
+
+function unitLink_(date, unit) {
+  const app = PropertiesService.getScriptProperties().getProperty('APP_URL');
+  if (!app) return '';
+  return app + '?d=' + encodeURIComponent(date) + '&u=' + encodeURIComponent(unit) + '&k=' + unitKey_(date, unit);
+}
+
+/** Brigādes skats (bez PIN): tikai šīs vienības darbi šajā dienā */
+function unitView_(r) {
+  const date = String(r.date || ''), unit = String(r.unit || '');
+  if (!date || !unit || String(r.key || '') !== unitKey_(date, unit)) throw new Error('Saite nav derīga');
+  const u = units_(date).find(x => x.name === unit);
+  const jobs = readJobs_().filter(j => j.datums === date && j.brigade === unit).map(j => ({
+    id: j.id, datums: j.datums, adrese: j.adrese, tips: j.tips, apraksts: j.apraksts, vaditajs: j.vaditajs,
+    brigade: j.brigade, statuss: j.statuss, lidz: j.lidz, foto: j.foto, komentars: j.komentars, iemesls: j.iemesls, izpildits: j.izpildits
+  }));
+  const addrs = jobs.map(j => normName_(j.adrese));
+  const objects = objects_().filter(o => addrs.indexOf(normName_(o.adrese)) !== -1);
+  const managers = users_().filter(x => x.role === 'vaditajs').map(x => ({ name: x.name, color: x.color }));
+  return { date: date, unit: unit, persons: u ? u.persons : [], jobs: jobs, meta: { objects: objects, managers: managers, jobTypes: jobTypes_() } };
 }
 
 /* ---------------- Atvaļinājuma sērija ---------------- */
