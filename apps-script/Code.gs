@@ -708,6 +708,8 @@ function setup() {
   }
   j.getRange(1, 1, 1, JOB_COLS.length).setValues([JOB_COLS]).setFontWeight('bold'); // jaunās kolonnas esošai lapai
   photoFolder_(); // pieprasa Drive atļauju foto saglabāšanai
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('APP_URL')) props.setProperty('APP_URL', 'https://vaitkevix.github.io/aizvietosana/');
   let t = ss.getSheetByName(SH_TOKENS);
   if (!t) {
     t = ss.insertSheet(SH_TOKENS);
