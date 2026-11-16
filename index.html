@@ -1187,7 +1187,11 @@ function updateVac(row) {
     row.querySelector('.weekinfo').textContent = wk.checked ? (n > 1 ? `Tiks izveidoti ${n} darbi: ${shortDate(formDate)}–${shortDate(end)}` : 'Šajā nedēļā vairs nav citu darba dienu')
       : `Katru darba dienu līdz piektdienai (${shortDate(end)})`;
     const lf = row.querySelector('.fLidz');
-    if (lf) { if (wk.checked) lf.value = end; lf.disabled = wk.checked; }
+    if (lf) {
+      if (wk.checked) { lf.value = end; lf.dataset.auto = end; }
+      else if (lf.dataset.auto) { if (lf.value === lf.dataset.auto) lf.value = ''; delete lf.dataset.auto; }   // izslēdzot — noņem automātisko datumu
+      lf.disabled = wk.checked;
+    }
   }
   const wrap = row.querySelector('.vacwrap'); if (!wrap) return;
   const t = row.querySelector('.fType').value, isRepl = !!t && groupOfType(t) === 'Aizvietošana';
