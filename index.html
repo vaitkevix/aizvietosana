@@ -487,6 +487,23 @@
     .app:has(.topbar .tabs) main{padding-bottom:calc(40px + var(--safe-b))}
     .app .topbar .tabs{transform:none!important;opacity:1!important;pointer-events:auto!important}
   }
+  /* ===== Pamācība (tutorial) ===== */
+  .tour-ov{position:fixed;inset:0;z-index:300}
+  .tour-hole{position:fixed;border-radius:20px;box-shadow:0 0 0 9999px rgba(8,20,16,.6);outline:2px solid rgba(255,255,255,.85);outline-offset:2px;
+    transition:top .3s ease,left .3s ease,width .3s ease,height .3s ease;pointer-events:none}
+  .tour-hole.none{width:0!important;height:0!important;top:50%!important;left:50%!important;outline:0}
+  .tour-tip{position:fixed;z-index:301;width:min(340px,calc(100vw - 24px));padding:16px 16px 14px;border-radius:22px;background:#fff;color:var(--ink);
+    border:1px solid var(--g-brd);box-shadow:0 20px 50px -12px rgba(0,0,0,.45);transition:top .3s ease,left .3s ease;animation:viewIn .25s ease-out}
+  :root[data-theme="dark"] .tour-tip{background:#1b2321}
+  .tour-tip .tstep{font-size:12px;font-weight:800;color:var(--brand);margin-bottom:4px}
+  .tour-tip h4{margin:0 0 6px;font-size:17px;font-weight:800;letter-spacing:-.01em}
+  .tour-tip p{margin:0 0 14px;font-size:14.5px;line-height:1.45;color:var(--ink-2)}
+  .tour-tip .tbtns{display:flex;align-items:center;gap:8px}
+  .tour-tip .tbtns .skip{margin-right:auto;border:0;background:none;color:var(--ink-3);font-weight:800;font-size:14px;cursor:pointer;padding:8px 4px}
+  .tour-tip .tbtns .btn{min-height:42px;padding:9px 16px;flex:none}
+  .tour-dots{display:flex;gap:4px;margin:0 0 12px}
+  .tour-dots i{width:6px;height:6px;border-radius:3px;background:var(--line-2);transition:width .2s}
+  .tour-dots i.on{width:18px;background:var(--brand)}
 </style>
 </head>
 <body>
@@ -748,6 +765,7 @@ function startApp() {
   S.date = addDays(today(), 1);
   switchView(tabs[0][0]);
   silentToken();
+  maybeTour();
 }
 
 function switchView(v) {
@@ -1678,8 +1696,8 @@ async function openMonthReport(month) {
 
 /* ---------- Palīdzība un iestatījumi ---------- */
 $('helpBtn').onclick = () => {
-  if (UV && LANG === 'ru') return openSheet(`<h3>Работы бригад</h3><div class="help"><p>Вверху выберите день и нажмите на свои имена — увидите работы своей бригады с кодами доступа и фото. Выбор запоминается.</p><p>Когда работа сделана, нажмите на объект → <b>Отметить как выполнено</b> (можно добавить фото и комментарий). Если сделать нельзя — <b>Невозможно выполнить</b> с причиной.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Маршрут</b> открывает Google Maps со всеми невыполненными адресами. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Проблема</b> — сообщить руководителю о поломке на объекте.</p><p>План сохраняется в телефоне — его видно и без интернета.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
-  if (UV) return openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta.</p><p>Kad darbs paveikts, uzspiediet uz objekta → <b>Atzīmēt kā izpildītu</b> (var pievienot bildes un komentāru). Ja nevar izdarīt — <b>Nevar izpildīt</b> ar iemeslu.</p><p>Darbu vadītāji: spiediet <b>Ienākt</b> augšā un ievadiet PIN, lai pieteiktu darbus. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Maršruts</b> atver Google Maps ar visām neizpildītajām adresēm. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Problēma</b> — ziņot vadītājam par bojājumu objektā.</p><p>Plāns saglabājas telefonā — to var redzēt arī bez interneta. Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
+  if (UV && LANG === 'ru') { openSheet(`<h3>Работы бригад</h3><div class="help"><p>Вверху выберите день и нажмите на свои имена — увидите работы своей бригады с кодами доступа и фото. Выбор запоминается.</p><p>Когда работа сделана, нажмите на объект → <b>Отметить как выполнено</b> (можно добавить фото и комментарий). Если сделать нельзя — <b>Невозможно выполнить</b> с причиной.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Маршрут</b> открывает Google Maps со всеми невыполненными адресами. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Проблема</b> — сообщить руководителю о поломке на объекте.</p><p>План сохраняется в телефоне — его видно и без интернета.</p></div><button class="btn btn-primary btn-block" id="mTourT" style="margin-top:14px">Инструкция — шаг за шагом</button><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`); $('mTourT').onclick = startTour; return; }
+  if (UV) { openSheet(`<h3>Brigāžu darbi</h3><div class="help"><p>Augšā izvēlieties dienu un uzspiediet uz saviem vārdiem — redzēsiet savas vienības darbus ar piekļuves kodiem un bildēm. Izvēle tiek atcerēta.</p><p>Kad darbs paveikts, uzspiediet uz objekta → <b>Atzīmēt kā izpildītu</b> (var pievienot bildes un komentāru). Ja nevar izdarīt — <b>Nevar izpildīt</b> ar iemeslu.</p><p>Darbu vadītāji: spiediet <b>Ienākt</b> augšā un ievadiet PIN, lai pieteiktu darbus. Uzspiediet <b>Kartē</b>, lai atvērtu adresi kartē.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8-8-2Z"/></svg> Maršruts</b> atver Google Maps ar visām neizpildītajām adresēm. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Problēma</b> — ziņot vadītājam par bojājumu objektā.</p><p>Plāns saglabājas telefonā — to var redzēt arī bez interneta. Spiediet <b>↻</b>, lai redzētu jaunākās izmaiņas.</p></div><button class="btn btn-primary btn-block" id="mTourT" style="margin-top:14px">Pamācība — soli pa solim</button><p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`); $('mTourT').onclick = startTour; return; }
   if (!S.user) return openSheet(`<h3>Kā lietot?</h3><div class="help"><p>Ievadiet PIN kodu, ko jums iedeva admins.</p></div>`);
   const role = S.user.role, perm = ('Notification' in window) ? Notification.permission : 'nav';
   const help = {
@@ -1692,12 +1710,14 @@ $('helpBtn').onclick = () => {
       ${pushOn() ? `<button id="mPush"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8.5a6 6 0 0 1 12 0c0 6.5 3 8 3 8H3s3-1.5 3-8"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg> ${perm === 'granted' ? 'Paziņojumi ieslēgti' : 'Ieslēgt paziņojumus'}<span>${perm === 'granted' ? '✓' : '›'}</span></button>
       ${perm === 'granted' ? '<button id="mTest"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/></svg> Sūtīt testa paziņojumu<span>›</span></button>' : ''}` : ''}
       <!--DEMO_MENU-->
+      <button id="mTour">Pamācība — soli pa solim<span>›</span></button>
       <button id="mOut" class="red">Iziet<span>›</span></button>
     </div>
     ${isIOS && !standalone ? '<p class="lead" style="margin-top:12px">Paziņojumiem iPhone: Safari → Kopīgot → „Pievienot sākuma ekrānam”, tad atveriet lietotni no ikonas.</p>' : ''}
     <p class="lead" style="margin:14px 0 0;text-align:center;font-size:12px">© VAITKEVIX, SIA</p>`);
   if ($('mPush')) $('mPush').onclick = self.DEMO_API ? () => toast('Demo: paziņojumi parādās ekrāna augšā') : enablePush;
   if ($('mTest')) $('mTest').onclick = async () => { try { const r = await api('testPush'); toast(r.sent ? 'Nosūtīts' : 'Neizdevās — pārbaudiet Firebase', r.sent ? 'ok' : 'err'); } catch (e) { toast(e.message, 'err'); } };
+  $('mTour').onclick = startTour;
   $('mOut').onclick = () => { ls.del('darbi_pin'); location.reload(); };
   if ($('mReset')) $('mReset').onclick = () => self.DEMO_RESET();
 };
@@ -1897,6 +1917,7 @@ function renderTeam() {
     : emptyBox(tr('Darbu nav', 'Работ нет'), tr('Jūsu vienībai šajā dienā darbi nav piešķirti.', 'На этот день вашей бригаде работ не назначено.'), IC.plan)
       + `<button type="button" class="more-btn" id="probTeam"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> ${tr('Ziņot par problēmu objektā', 'Сообщить о проблеме на объекте')}</button>`);
   $('probTeam').onclick = () => openProblem(js, u);
+  if (!TOUR) maybeTour();
 }
 $('unitSeg').addEventListener('click', (e) => {
   const b = e.target.closest('[data-tu]'); if (!b) return;
@@ -1905,6 +1926,109 @@ $('unitSeg').addEventListener('click', (e) => {
   ls.set('darbi_team', JSON.stringify(u ? u.persons : [])); ls.set('darbi_team_name', S.teamUnit);
   renderTeam();
 });
+
+
+/* ---------- Pamācība (tutorial): soli pa solim pa galvenajām pogām ---------- */
+const TOURS = {
+  admin: [
+    { title: 'Sveiki! Īsa pamācība', text: 'Parādīšu, kā sastādīt dienas plānu. Tas aizņems pusminūti. Pamācību vēlāk var atvērt atkal no pogas „?”.' },
+    { view: 'crews', sel: '#crewList', title: '1. Vienības', text: 'Katrai dienai salieciet vienības no cilvēkiem (piem. „Denis + Natālija”). Ar „Kopēt no …” paņemsiet vakardienas sastāvu.' },
+    { view: 'plan', sel: '#daySeg', title: '2. Diena', text: 'Izvēlieties dienu — parasti „Rīt”, jo plānu taisa vakarā.' },
+    { view: 'plan', sel: '#planList .assign', title: '3. Piešķiriet vienību', text: 'Katram darbam uzspiediet vienību. Vienu darbu var dot arī vairākām vienībām.' },
+    { view: 'plan', sel: '#planFilter', title: '4. Filtri', text: '„Nepiešķirti” rāda, kas vēl jāsadala. Šodien un vakar ir arī „Neatzīmēti” — kas vēl nav izdarīts.' },
+    { view: 'plan', sel: '#planList [data-act="accept"], #planList .links', title: '5. Pārbaude', text: 'Kad brigāde atzīmē darbu, to var pieņemt vai atgriezt ar komentāru. „Atkārtot” nokopē darbu, „Vēsture” rāda visu par adresi.' },
+    { view: 'plan', sel: '#waBtn', title: '6. WhatsApp plāns', text: 'Kad viss sadalīts, nokopējiet gatavu tekstu un ielīmējiet brigāžu grupā. Beigās ir saite, kur katrs redz savus darbus.' },
+    { view: 'plan', sel: '#pubCard', title: '7. Problēmas un aktīvās aizvietošanas', text: 'Šeit parādās brigāžu ziņojumi par bojājumiem un DNL / vakances, kas ir plānā katru dienu, kamēr tās atslēgsiet.' },
+    { sel: '#tabs [data-tab="new"]', title: '8. Jauns', text: 'Šeit darbus var pieteikt arī pats vai ar AI no WhatsApp ziņas.' },
+    { sel: '#tabs [data-tab="stats"]', title: '9. Statistika', text: 'Pārskats par periodu un mēneša atskaite, ko var lejupielādēt Excel failā.' },
+    { sel: '#helpBtn', title: 'Gatavs!', text: 'Palīdzība, paziņojumi un šī pamācība — zem pogas „?”.' }
+  ],
+  vaditajs: [
+    { title: 'Sveiki! Īsa pamācība', text: 'Parādīšu, kā pieteikt aizvietošanu vai papilddarbu. Pamācību vēlāk var atvērt atkal no pogas „?”.' },
+    { view: 'new', sel: '#aiFormBtn', title: '1. Ātrākais veids — AI', text: 'Ielīmējiet WhatsApp ziņu vai nodiktējiet, un forma aizpildīsies pati. Pēc tam tikai pārbaudiet.' },
+    { view: 'new', sel: '#formDaySeg', title: '2. Datums', text: 'Pēc noklusējuma — rīt. Var izvēlēties jebkuru citu dienu.' },
+    { view: 'new', sel: '#jRows .combo, #jRows .fAddr', title: '3. Adrese', text: 'Sāciet rakstīt — augšā būs jūsu objekti. Piekļuves kodi brigādei parādīsies paši.' },
+    { view: 'new', sel: '#jRows .fType', title: '4. Darbs', text: 'Aizvietošana (sētnieks, uzkopēja, abi) vai papilddarbs.' },
+    { view: 'new', sel: '#jRows .switch-row', title: '5. Visu šo nedēļu', text: 'Ieslēdziet, ja darbs vajadzīgs katru darba dienu līdz piektdienai.' },
+    { view: 'new', sel: '#jRows .urgline', title: '6. Steidzami', text: 'Atzīmējiet, ja darbs steidzams, un vajadzības gadījumā norādiet laiku „līdz plkst.”.' },
+    { view: 'new', sel: '#jRows .fType', title: '7. Kāpēc jāaizvieto?', text: 'Aizvietošanai izvēlieties iemeslu. Atvaļinājumam obligāti datums „līdz”. DNL un vakance bez datuma būs plānā katru dienu, kamēr pats atslēgsiet ar „Beigt”.' },
+    { view: 'new', sel: '#addRowBtn', title: '8. Vairākas adreses', text: 'Vienā reizē var pieteikt vairākas adreses.' },
+    { view: 'new', sel: '#submitBtn', title: '9. Pieteikt', text: 'Ja ir datums „līdz”, pogā redzams, cik dienu darbs būs plānā.' },
+    { view: 'mine', sel: '#mineList', title: '10. Mani darbi', text: 'Redzat, kurai vienībai darbs piešķirts un vai tas izdarīts. Izpildītu darbu pieņemiet vai atgrieziet ar komentāru.' },
+    { sel: '#helpBtn', title: 'Gatavs!', text: 'Palīdzība un šī pamācība — zem pogas „?”.' }
+  ],
+  brigade: [
+    { title: ['Sveiki! Īsa pamācība', 'Привет! Короткая инструкция'], text: ['Parādīšu, kā redzēt savus darbus un tos atzīmēt.', 'Покажу, как смотреть свои работы и отмечать их.'] },
+    { sel: '#langSeg', title: ['Valoda', 'Язык'], text: ['Izvēlieties latviešu vai krievu valodu.', 'Выберите латышский или русский язык.'] },
+    { sel: '#daySeg', title: ['1. Diena', '1. День'], text: ['Šodiena vai rītdiena. Vakarā jau redzams rītdienas plāns.', 'Сегодня или завтра. Вечером уже виден план на завтра.'] },
+    { sel: '#unitSeg', title: ['2. Jūsu vienība', '2. Ваша бригада'], text: ['Uzspiediet uz saviem vārdiem. Izvēle tiek atcerēta.', 'Нажмите на свои имена. Выбор запоминается.'] },
+    { sel: '#todayList .task', title: ['3. Objekts', '3. Объект'], text: ['Adrese, darbs, piekļuves kodi un vadītāja piezīme. „Kartē” atver navigāciju.', 'Адрес, работа, коды доступа и заметка руководителя. «На карте» открывает навигацию.'] },
+    { sel: '#todayList [data-act="mark"]', title: ['4. Atzīmēt', '4. Отметить'], text: ['Kad izdarīts — „Atzīmēt”, var pievienot bildes un komentāru. Ja nevar — „Nevar izpildīt” ar iemeslu.', 'Когда сделано — «Отметить», можно добавить фото и комментарий. Если нельзя — «Невозможно выполнить» с причиной.'] },
+    { sel: '#todayList .btn-row', title: ['5. Maršruts un problēmas', '5. Маршрут и проблемы'], text: ['„Maršruts” atver Google Maps ar visām adresēm. „Problēma” — ziņot vadītājam par bojājumu.', '«Маршрут» открывает Google Maps со всеми адресами. «Проблема» — сообщить руководителю о поломке.'] },
+    { sel: '#refreshBtn', title: ['Gatavs!', 'Готово!'], text: ['Ar šo pogu redzēsiet jaunākās izmaiņas. Plāns saglabājas telefonā arī bez interneta.', 'Этой кнопкой обновите план. План сохраняется в телефоне и без интернета.'] }
+  ]
+};
+let TOUR = null;
+const tourRole = () => UV ? 'brigade' : S.user && S.user.role;
+const tourT = (v) => Array.isArray(v) ? tr(v[0], v[1]) : v;
+function maybeTour() { const r = tourRole(); if (r && TOURS[r] && !ls.get('darbi_tour_' + r)) setTimeout(() => { if (!TOUR && tourRole() === r && !$('sheet').classList.contains('open')) startTour(); }, 900); }
+function startTour() {
+  const role = tourRole(); if (!TOURS[role]) return;
+  closeSheet(); endTour(true);
+  TOUR = { role, steps: TOURS[role], i: 0, back: S.view };
+  const ov = document.createElement('div'); ov.className = 'tour-ov'; ov.id = 'tourOv';
+  ov.innerHTML = '<div class="tour-hole" id="tourHole"></div><div class="tour-tip" id="tourTip"></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', (e) => {
+    if (e.target.closest('[data-tn]')) tourGo(TOUR.i + 1);
+    else if (e.target.closest('[data-tp]')) tourGo(TOUR.i - 1, -1);
+    else if (e.target.closest('[data-tx]')) endTour();
+  });
+  tourGo(0);
+}
+function tourEl(st) {
+  if (!st.sel) return null;
+  for (const q of st.sel.split(',')) { const el = document.querySelector(q.trim()); if (el && el.offsetParent !== null && el.getClientRects().length) return el; }
+  return null;
+}
+async function tourGo(i, dir = 1) {
+  const T = TOUR; if (!T) return;
+  if (i >= T.steps.length) return endTour();
+  if (i < 0) i = 0;
+  const st = T.steps[i];
+  if (st.view && !UV && S.view !== st.view) { switchView(st.view); await new Promise(r => setTimeout(r, 500)); }
+  const el = tourEl(st);
+  if (st.sel && !el) return tourGo(i + dir, dir);   // elementa nav (piem. nav darbu) — izlaiž
+  T.i = i;
+  const hole = $('tourHole'), tip = $('tourTip');
+  if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); await new Promise(r => setTimeout(r, 380)); }
+  const n = T.steps.length, last = i === n - 1;
+  tip.innerHTML = `<div class="tour-dots">${T.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+    <h4>${esc(tourT(st.title))}</h4><p>${esc(tourT(st.text))}</p>
+    <div class="tbtns">${last ? '' : `<button class="skip" data-tx>${tr('Izlaist', 'Пропустить')}</button>`}
+      ${i > 0 ? `<button class="btn btn-glass" data-tp>${tr('Atpakaļ', 'Назад')}</button>` : ''}
+      <button class="btn btn-primary" data-tn style="${last ? 'margin-left:auto' : ''}">${last ? tr('Sākt darbu', 'Начать') : tr('Tālāk', 'Далее')}</button></div>`;
+  const W = innerWidth, H = innerHeight, tw = tip.offsetWidth, th = tip.offsetHeight;
+  if (!el) { hole.classList.add('none'); tip.style.left = (W - tw) / 2 + 'px'; tip.style.top = Math.max(12, (H - th) / 2) + 'px'; return; }
+  hole.classList.remove('none');
+  const r = el.getBoundingClientRect(), pad = 6;
+  const top = Math.max(4, r.top - pad), h = Math.min(r.height + pad * 2, H - 8);
+  Object.assign(hole.style, { top: top + 'px', left: Math.max(4, r.left - pad) + 'px', width: Math.min(r.width + pad * 2, W - 8) + 'px', height: h + 'px' });
+  let ty = top + h + 12;
+  if (ty + th > H - 12) ty = top - th - 12;
+  if (ty < 12) ty = Math.max(12, H - th - 12);
+  tip.style.top = ty + 'px';
+  tip.style.left = Math.min(Math.max(12, r.left + r.width / 2 - tw / 2), W - tw - 12) + 'px';
+}
+function endTour(silent) {
+  const ov = $('tourOv'); if (ov) ov.remove();
+  if (!TOUR) return;
+  ls.set('darbi_tour_' + TOUR.role, '1');
+  const back = TOUR.back; TOUR = null;
+  if (!silent && !UV && back && S.view !== back) switchView(back);
+}
+addEventListener('resize', () => { if (TOUR) tourGo(TOUR.i); });
+addEventListener('keydown', (e) => { if (!TOUR) return; if (e.key === 'Escape') endTour(); if (e.key === 'ArrowRight') tourGo(TOUR.i + 1); if (e.key === 'ArrowLeft') tourGo(TOUR.i - 1, -1); });
 
 /* ---------- Starts ---------- */
 if (!self.DEMO_API && 'serviceWorker' in navigator) {
