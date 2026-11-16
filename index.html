@@ -293,7 +293,12 @@
   .mgr-hint{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13px;color:var(--ink-2)}
   .mgr-hint .dot{width:9px;height:9px;border-radius:50%}
   #mgrField:not(.need) #mgrChips{opacity:.75}
-  .chip.key{background:var(--amber-soft);color:var(--amber);border-color:transparent;white-space:normal}
+  .chip.key{background:var(--amber-soft);color:var(--amber);border-color:transparent;white-space:normal;border-radius:14px;align-items:flex-start;cursor:pointer;text-align:left;line-height:1.4}
+  .chip.key .i{margin-top:2px}
+  .chip.key .ktxt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+  .chip.key.open .ktxt{-webkit-line-clamp:unset;display:block}
+  .chip.key .ktxt b{display:block;margin-top:4px;color:var(--ink)}
+  .chip.key .ktxt b:first-child{margin-top:0}
   .chip.grp{background:var(--blue-soft);color:var(--blue);border-color:transparent}
   .sc .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 0 1.5px rgba(255,255,255,.7)}
   .chip.crew{background:var(--brand-soft);color:var(--brand);border-color:transparent}
@@ -897,7 +902,7 @@ function card(j, o = {}) {
   else if (j.lidz) chips.push(`<span class="chip vac"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg> ${tr('Līdz', 'До')} ${esc(shortDate(j.lidz))}</span>`);
   const obj = (S.meta.objects || []).find(o => o.adrese.toLowerCase() === String(j.adrese).toLowerCase());
   if (obj && obj.grupa && obj.grupa !== 'SH objekti') chips.push(`<span class="chip grp">${esc(obj.grupa)}</span>`);
-  if (obj && obj.piekluve) chips.push(`<span class="chip key"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg> ${esc(obj.piekluve)}</span>`);
+  if (obj && obj.piekluve) chips.push(`<span class="chip key" data-key><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg> <span class="ktxt">${keyHtml(obj.piekluve)}</span></span>`);
   if (o.showBrig) brigs(j).forEach(b => chips.push(`<span class="chip crew">${IC.crew.replace('<svg', '<svg width="13" height="13"')} ${esc(b)}${S.crews[b]?.length ? ' · ' + esc(S.crews[b].join(', ')) : ''}</span>`));
   const mapUrl = 'https://maps.apple.com/?q=' + encodeURIComponent(j.adrese);
   const cls = (j.statuss === 'izpildīts' ? ' is-done' : '') + (j.steidzami && j.statuss !== 'izpildīts' ? ' urgent' : '');
@@ -925,6 +930,14 @@ function card(j, o = {}) {
       </div>` : ''}
   </article>`;
 }
+/** Piekļuves teksts: katra adrese (atdalīta ar „ | ”) jaunā rindā ar treknu nosaukumu */
+function keyHtml(t) {
+  return String(t).split(' | ').map(part => { const m = part.match(/^([^:;]{4,60}?\d[\w\s-]*?): (.*)$/); return m && /iela|bulv|prosp|gatve|dambis|līnija|krastmala/i.test(m[1]) ? `<b>${esc(m[1])}</b>${esc(m[2])}` : esc(part); }).join('<br>');
+}
+document.addEventListener('click', (e) => {   // piekļuves birka: pieskaroties izvērš/sakļauj, kartīti neatver
+  const k = e.target.closest('[data-key]'); if (!k) return;
+  e.stopPropagation(); k.classList.toggle('open');
+}, true);
 const brigs = (j) => String(j.brigade || '').split('|').map(x => x.trim()).filter(Boolean);
 function unitNames(extra) { const n = S.units.map(u => u.name); if (extra && !n.includes(extra)) n.push(extra); return n; }
 function unitNamesFor(j) { const n = S.units.map(u => u.name); brigs(j).forEach(b => { if (!n.includes(b)) n.push(b); }); return n; }
@@ -1527,7 +1540,7 @@ async function openHistory(adrese) {
       ${photoIds(j).length ? `<div class="thumbs">${photoIds(j).map(id => `<a href="${photoLink(id)}" target="_blank" rel="noopener"><img src="${thumb(id)}" alt="Foto" loading="lazy"></a>`).join('')}</div>` : ''}</div></div>`).join('');
     const done = r.jobs.filter(j => j.statuss === 'izpildīts').length;
     $('sheetBody').innerHTML = `<h3><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> ${esc(adrese)}</h3><p class="lead">${obj && obj.vaditajs ? esc(obj.vaditajs) + ' · ' : ''}${r.total} ${plural(r.total, 'darbs', 'darbi')} · ${done} izpildīti${r.total > r.jobs.length ? ' · rāda pēdējos ' + r.jobs.length : ''}</p>
-      ${obj && obj.piekluve ? `<div class="chips" style="padding:0 0 12px"><span class="chip key"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg> ${esc(obj.piekluve)}</span></div>` : ''}
+      ${obj && obj.piekluve ? `<div class="chips" style="padding:0 0 12px"><span class="chip key"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg> <span class="ktxt" style="-webkit-line-clamp:unset">${keyHtml(obj.piekluve)}</span></span></div>` : ''}
       ${probs}${rows || '<p class="lead">Šajā adresē darbu vēl nav bijis.</p>'}`;
   } catch (err) { closeSheet(); toast(err.message, 'err'); }
 }
