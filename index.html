@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <!-- Darbu sadale — aizvietošana un papilddarbi. © VAITKEVIX, SIA. Visas tiesības aizsargātas. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* Android: lietotne nezīmējas zem sistēmas joslām (augšējās un apakšējās pogām), tāpēc bez viewport-fit=cover */
+if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=viewport]').setAttribute('content', 'width=device-width, initial-scale=1');</script>
 <title>SH | Aizvietošana</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icons/apps/aizvietosana.svg">
