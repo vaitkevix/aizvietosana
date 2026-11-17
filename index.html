@@ -6,6 +6,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>/* Android: lietotne nezīmējas zem sistēmas joslām (augšējās un apakšējās pogām), tāpēc bez viewport-fit=cover */
 if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=viewport]').setAttribute('content', 'width=device-width, initial-scale=1');</script>
+<script>/* Android rezerves variants: ja lapa tomēr aizņem visu ekrānu (zem joslām), bet telefons atstarpes nepasaka — pieliek tās pats */
+(function () {
+  if (!/android/i.test(navigator.userAgent)) return;
+  function fix() {
+    var p = document.createElement('div'); p.style.cssText = 'position:fixed;top:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);visibility:hidden';
+    document.documentElement.appendChild(p); var cs = getComputedStyle(p), t = parseFloat(cs.paddingTop) || 0, b = parseFloat(cs.paddingBottom) || 0; p.remove();
+    var full = screen.height - window.innerHeight < 24, r = document.documentElement.style;
+    r.setProperty('--safe-t', t || !full ? (t + 'px') : '28px');
+    r.setProperty('--safe-b', b || !full ? (b + 'px') : '50px');
+  }
+  fix(); addEventListener('resize', fix); addEventListener('load', fix);
+})();</script>
 <title>SH | Aizvietošana</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icons/apps/aizvietosana.svg">
