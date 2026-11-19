@@ -144,6 +144,41 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
   .view{display:none}
   .view.active{display:block;animation:viewIn .2s ease-out}
   @keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ---- Sadales dēlis ---- */
+  .board{margin-top:12px;-webkit-user-select:none;user-select:none}
+  .btray{padding:10px 10px 11px;border-radius:12px;background:var(--leaf-soft);border:1.5px dashed rgba(194,65,12,.45);transition:background .15s,border-color .15s}
+  .btray-h{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:var(--leaf-2);margin:0 2px 8px;letter-spacing:.02em}
+  .btray-l{display:flex;flex-wrap:wrap;gap:6px}
+  .btray .bempty{font-size:12.5px;color:var(--ink-3);font-weight:600;padding:4px 2px}
+  .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  @media (min-width:700px){.bgrid{grid-template-columns:repeat(3,1fr)}}
+  .bc{background:var(--surface-solid);border:1.5px solid var(--g-brd-2);border-radius:12px;padding:8px 7px 7px;box-shadow:var(--g-shadow-sm);min-width:0;transition:background .15s,border-color .15s,box-shadow .15s,opacity .15s}
+  .bc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin:0 2px 5px}
+  .bc-h b{font-size:13px;font-weight:800;line-height:1.2;overflow:hidden;text-overflow:ellipsis}
+  .bc-h small{display:block;font-size:11px;font-weight:600;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bc-n{flex:0 0 auto;font-size:11px;font-weight:800;border-radius:6px;padding:1px 7px;background:var(--brand-soft);color:var(--brand)}
+  .bc-n.hi{background:var(--leaf-soft);color:var(--leaf-2)}
+  .bc-free{font-size:11px;color:var(--ink-3);text-align:center;padding:7px 0;border:1.5px dashed var(--line-2);border-radius:7px}
+  .bj{display:flex;align-items:center;gap:6px;min-width:0;padding:6px 7px;margin-top:4px;border-radius:7px;background:var(--surface-2);font-size:12px;font-weight:700;line-height:1.25;cursor:grab;
+      border-left:3px solid var(--mc,var(--line-2));-webkit-touch-callout:none;touch-action:manipulation}
+  .bj > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bj small{display:block;font-weight:600;color:var(--ink-3);font-size:10.5px;overflow:hidden;text-overflow:ellipsis}
+  .bj.urg{border-left-color:var(--red);box-shadow:inset 0 0 0 1px rgba(220,38,38,.25)}
+  .btray .bj{background:var(--surface-solid);box-shadow:0 1px 3px rgba(0,0,0,.1);margin:0;max-width:100%}
+  .bd{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:#b0b6b2}
+  .bd.ok{background:var(--green)}.bd.acc{background:var(--blue)}.bd.bad{background:var(--red)}
+  .board.dragging .bc,.board.dragging .btray{opacity:.55}
+  .board.dragging .bc.over,.board.dragging .btray.over{opacity:1}
+  .bc.over{border-color:var(--brand);background:var(--brand-soft);box-shadow:0 0 0 4px rgba(15,107,92,.15)}
+  .btray.over{border-color:var(--leaf-2);background:rgba(224,122,31,.24)}
+  .bj.src{opacity:.3}
+  .bghost{position:fixed;z-index:9999;pointer-events:none;transform:translate(-50%,-120%) rotate(-3deg);background:#fff;color:#1b1f1d;box-shadow:0 14px 28px -6px rgba(0,0,0,.4);margin:0;max-width:220px}
+  .bopts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 0 14px}
+  .bopt{display:flex;justify-content:space-between;align-items:center;gap:6px;min-height:46px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--line-2);background:var(--surface-solid);font:inherit;font-size:13.5px;font-weight:800;color:var(--ink);text-align:left}
+  .bopt small{display:block;font-size:11px;font-weight:600;color:var(--ink-3)}
+  .bopt i{font-style:normal;font-size:12px;font-weight:700;color:var(--ink-3)}
+  .bopt.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
   .view-head{margin:4px 2px 12px}
   .view-head h2{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
   .view-head p{margin:3px 0 0;color:var(--ink-2);font-size:14px}
@@ -622,8 +657,9 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
     <section id="v-plan" class="view">
       <div class="view-head"><h2>Dienas plāns</h2><p>Piešķiriet darbus vienībām un nosūtiet plānu.</p></div>
       <div class="card pubcard" id="pubCard"></div>
+      <div class="seg" id="planMode" style="margin:12px 0 0"><button data-m="board">Dēlis</button><button data-m="list">Saraksts</button></div>
       <div class="seg filter-seg" id="planFilter" style="margin:12px 0"></div>
-      <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <div class="search" id="planSearchBox"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input class="input" id="planSearch" placeholder="Meklēt adresi, vadītāju, darbu…" autocomplete="off"></div>
       <div id="planList"></div>
     </section>
@@ -718,8 +754,9 @@ const ruPl = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 ==
 const trType = (t) => tr(t, RU.types[t] || t);
 const trPromb = (p) => tr(p, RU.promb[p] || p);
 const urgSort = (a, b) => (b.steidzami ? 1 : 0) - (a.steidzami ? 1 : 0) || (a.laiks || '99').localeCompare(b.laiks || '99');
+function ls0(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 const S = { pin: '', user: null, meta: { brigades: [], managers: [], objects: [], jobTypes: [] }, date: '', jobs: [], crews: {}, staff: [],
-  units: [], problems: [], view: '', planFilter: 'all', statsDays: 7, loading: false };
+  units: [], problems: [], view: '', planFilter: 'all', planMode: ls0('darbi_planmode') || 'board', statsDays: 7, loading: false };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1044,6 +1081,10 @@ function renderPlan() {
     <button class="btn btn-primary" id="waBtn" ${n ? '' : 'disabled'}>${IC.wa}WhatsApp plāns</button></div>`;
   $('waBtn').onclick = showWhatsApp; $('unitsBtn').onclick = () => switchView('crews');
   bindTopBtns();
+  const board = S.planMode === 'board';
+  $('planMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === S.planMode));
+  $('planFilter').hidden = board; $('planSearchBox').hidden = board;
+  if (board) return renderBoard();
   const cnt = { all: n, wait: unassigned, as: n - unassigned, open: open + cant };
   const F = [['all', 'Visi'], ['wait', 'Nepiešķirti'], ['as', 'Piešķirti']].concat(past ? [['open', 'Neatzīmēti']] : []);
   $('planFilter').innerHTML = F.map(([k, l]) => `<button data-f="${k}" class="${S.planFilter === k ? 'on' : ''}">${l}<span class="cnt">${cnt[k]}</span></button>`).join('');
@@ -1059,6 +1100,103 @@ function renderPlan() {
     `<div class="section-t"><span>${b ? esc(b) + (S.crews[b]?.length ? ' · ' + esc(S.crews[b].join(', ')) : '') : 'Nepiešķirti'}</span><span class="n">${js.length}</span></div>
      <div class="list">${js.map(j => card(j, { assign: true, edit: true, review: true, tools: true })).join('')}</div>`).join('');
 }
+$('planMode').addEventListener('click', (e) => { const b = e.target.closest('button[data-m]'); if (b) { S.planMode = b.dataset.m; ls.set('darbi_planmode', S.planMode); renderPlan(); } });
+
+/* ---------- Sadales dēlis: visas vienības vienā ekrānā, darbus ievelk ---------- */
+function bDot(j) {
+  if (j.statuss === 'izpildīts' && j.parbaude === 'pieņemts') return 'acc';
+  if (j.statuss === 'izpildīts') return 'ok';
+  if (j.statuss === 'nevar izpildīt' || j.parbaude === 'atgriezts') return 'bad';
+  return '';
+}
+function bJob(j, from) {
+  const mc = managerColor(j.vaditajs);
+  return `<div class="bj${j.steidzami && j.statuss !== 'izpildīts' ? ' urg' : ''}" data-bid="${esc(j.id)}" data-from="${esc(from)}" style="${mc ? '--mc:' + esc(mc) : ''}">${from ? `<i class="bd ${bDot(j)}"></i>` : ''}<span>${esc(j.adrese)}<small>${esc(j.prombutne || j.tips)}${j.steidzami ? ' · steidzami' : ''}${j.laiks ? ' · līdz ' + esc(j.laiks) : ''}</small></span></div>`;
+}
+function crewOf(b) { return S.crews[b]?.length ? S.crews[b].join(', ') : ''; }
+function renderBoard() {
+  if (!S.jobs.length && !S.units.length) { $('planList').innerHTML = emptyBox('Nav pieteikumu', 'Šai dienai darbu vadītāji vēl nav pieteikuši darbus.', IC.plan); return; }
+  const free = S.jobs.filter(j => !j.brigade).sort(urgSort);
+  const names = unitNames(); S.jobs.forEach(j => brigs(j).forEach(b => { if (!names.includes(b)) names.push(b); }));
+  const counts = names.map(b => S.jobs.filter(j => brigs(j).includes(b)).length), avg = counts.reduce((a, c) => a + c, 0) / (counts.length || 1);
+  $('planList').innerHTML = `<div class="board" id="board">
+    <div class="btray" data-drop=""><div class="btray-h"><span>NEPIEŠĶIRTIE · ${free.length}</span><span>${free.length ? 'velc uz vienību ↓' : ''}</span></div>
+      <div class="btray-l">${free.length ? free.map(j => bJob(j, '')).join('') : '<div class="bempty">Visi darbi piešķirti ✓</div>'}</div></div>
+    ${names.length ? `<div class="bgrid">${names.map((b, i) => { const js = S.jobs.filter(j => brigs(j).includes(b)).sort(urgSort), c = counts[i];
+      return `<div class="bc" data-drop="${esc(b)}"><div class="bc-h"><div style="min-width:0"><b>${esc(b)}</b>${crewOf(b) && crewOf(b) !== b ? `<small>${esc(crewOf(b))}</small>` : ''}</div><span class="bc-n${c >= 3 && c > avg + 1 ? ' hi' : ''}">${c}</span></div>
+        ${js.length ? js.map(j => bJob(j, b)).join('') : '<div class="bc-free">brīvs</div>'}</div>`; }).join('')}</div>`
+      : '<div class="card empty" style="margin-top:10px"><b>Nav vienību</b>Vispirms salieciet vienības cilnē „Vienības”.</div>'}
+  </div>`;
+}
+async function moveJob(id, from, to) {
+  const job = S.jobs.find(j => j.id === id); if (!job) return;
+  const cur = brigs(job);
+  let next = from ? cur.filter(x => x !== from) : cur.slice();
+  if (to && !next.includes(to)) next.push(to);
+  if (next.join('|') === cur.join('|')) return;
+  return saveBrigs(job, next);
+}
+async function saveBrigs(job, next) {
+  const id = job.id; job.brigade = next.join(' | '); render();
+  try { const r = await api('assign', { id, brigades: next }); S.jobs = S.jobs.map(j => j.id === id ? r.job : j); render(); }
+  catch (err) { toast(err.message, 'err'); load(); }
+}
+function openBoardJob(job) {
+  let sel = brigs(job);
+  const names = unitNamesFor(job);
+  const cnt = (b) => S.jobs.filter(j => brigs(j).includes(b)).length;
+  const info = [job.prombutne || job.tips, job.steidzami ? 'steidzami' : '', job.laiks ? 'līdz plkst. ' + job.laiks : '', 'vadītājs: ' + job.vaditajs].filter(Boolean).join(' · ');
+  const draw = () => { $('bOpts').innerHTML = names.map(b => `<button type="button" class="bopt${sel.includes(b) ? ' on' : ''}" data-b="${esc(b)}"><span>${esc(b)}${crewOf(b) && crewOf(b) !== b ? `<small>${esc(crewOf(b))}</small>` : ''}</span><i>${cnt(b)}${sel.includes(b) ? ' ✓' : ''}</i></button>`).join(''); };
+  openSheet(`<h3>${esc(job.adrese)}</h3><p class="lead">${esc(info)}</p>
+    ${job.apraksts ? `<div class="note">${esc(job.apraksts)}</div>` : ''}
+    <span class="label" style="margin:14px 2px 0">Vienības <span class="opt">· var izvēlēties vairākas</span></span>
+    <div class="bopts" id="bOpts"></div>
+    <div class="btn-row"><button class="btn btn-glass" id="bEdit">Labot</button><button class="btn btn-glass" id="bClear">Noņemt</button><button class="btn btn-primary" id="bSave">Piešķirt</button></div>`);
+  if (!names.length) $('bOpts').outerHTML = '<p class="lead">Vispirms salieciet vienības cilnē „Vienības”.</p>'; else draw();
+  $('sheetBody').onclick = (e) => { const o = e.target.closest('[data-b]'); if (!o) return; const b = o.dataset.b; sel = sel.includes(b) ? sel.filter(x => x !== b) : [...sel, b]; draw(); };
+  $('bEdit').onclick = () => { closeSheet(); setTimeout(() => openEdit(job), 300); };
+  $('bClear').onclick = () => { closeSheet(); if (brigs(job).length) saveBrigs(job, []); };
+  $('bSave').onclick = () => { closeSheet(); if (sel.join('|') !== brigs(job).join('|')) saveBrigs(job, sel); };
+}
+(function boardDnD() {
+  let st = null;   // { el, id, from, x, y, timer, drag, ghost, over }
+  const end = () => { if (!st) return; clearTimeout(st.timer); if (st.ghost) st.ghost.remove(); st.el.classList.remove('src');
+    const bd = $('board'); if (bd) { bd.classList.remove('dragging'); bd.querySelectorAll('.over').forEach(x => x.classList.remove('over')); } cancelAnimationFrame(st.raf); st = null; };
+  const startDrag = () => {
+    st.drag = true; st.el.classList.add('src'); $('board').classList.add('dragging');
+    const g = st.el.cloneNode(true); g.classList.add('bghost'); g.classList.remove('src'); document.body.appendChild(g); st.ghost = g; place();
+    if (navigator.vibrate) navigator.vibrate(15);
+    const scroll = () => { if (!st) return; const h = innerHeight, y = st.y; if (y < 90) scrollBy(0, -Math.ceil((90 - y) / 6)); else if (y > h - 110) scrollBy(0, Math.ceil((y - h + 110) / 6)); hit(); st.raf = requestAnimationFrame(scroll); };
+    st.raf = requestAnimationFrame(scroll);
+  };
+  const place = () => { st.ghost.style.left = st.x + 'px'; st.ghost.style.top = st.y + 'px'; };
+  const hit = () => {
+    const t = document.elementFromPoint(st.x, st.y)?.closest('#board [data-drop]');
+    if (t !== st.over) { if (st.over) st.over.classList.remove('over'); st.over = t || null; if (t && t.dataset.drop !== st.from) t.classList.add('over'); }
+  };
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('#board .bj'); if (!el || e.button > 0) return;
+    end();
+    st = { el, id: el.dataset.bid, from: el.dataset.from, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, pid: e.pointerId, drag: false };
+    st.timer = setTimeout(() => st && startDrag(), e.pointerType === 'mouse' ? 120 : 260);
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!st || e.pointerId !== st.pid) return;
+    st.x = e.clientX; st.y = e.clientY;
+    if (!st.drag) { if (Math.hypot(st.x - st.x0, st.y - st.y0) > 9) { if (e.pointerType === 'mouse') { clearTimeout(st.timer); startDrag(); } else end(); } return; }
+    e.preventDefault(); place(); hit();
+  }, { passive: false });
+  document.addEventListener('touchmove', (e) => { if (st && st.drag) e.preventDefault(); }, { passive: false });
+  document.addEventListener('pointerup', (e) => {
+    if (!st || e.pointerId !== st.pid) return;
+    const s = st;
+    if (!s.drag) { end(); const job = S.jobs.find(j => j.id === s.id); if (job) openBoardJob(job); return; }
+    const to = s.over ? s.over.dataset.drop : null; end();
+    if (to != null && to !== s.from) moveJob(s.id, s.from, to || '');
+  });
+  document.addEventListener('pointercancel', () => end());
+  document.addEventListener('contextmenu', (e) => { if (e.target.closest('#board .bj')) e.preventDefault(); });
+})();
 $('planFilter').addEventListener('click', (e) => { const b = e.target.closest('button[data-f]'); if (b) { S.planFilter = b.dataset.f; renderPlan(); } });
 $('planSearch').addEventListener('input', () => renderPlan());
 
@@ -1769,7 +1907,7 @@ $('helpBtn').onclick = () => {
   if (!S.user) return openSheet(`<h3>Kā lietot?</h3><div class="help"><p>Ievadiet PIN kodu, ko jums iedeva admins.</p></div>`);
   const role = S.user.role, perm = ('Notification' in window) ? Notification.permission : 'nav';
   const help = {
-    admin: '<p><b>Vienības</b> — katrai dienai salieciet vienības no cilvēkiem (vai nokopējiet no vakardienas).</p><p><b>Plāns</b> — piešķiriet katram darbam vienību un spiediet <b>WhatsApp plāns</b>, lai nokopētu tekstu grupai.</p><p><b>Jauns</b> — ievadiet darbus pats, izvēloties vadītāju, vai ielīmējiet ziņu <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> AI</b>. Atzīmējiet <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c.8 3 4.8 5.3 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.1.9-3.6 2-4.6.1 1.8.9 2.8 2 3.1-.3-3.2-.4-5.6.8-8.5Z"/></svg> Steidzami</b> un laiku „līdz plkst.”.</p><p>Izpildītus darbus var <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11"/><path d="M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3l4-8a3 3 0 0 1 4 3.9Z"/></svg> Pieņemt</b> vai <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> Atgriezt</b> brigādei. Filtrs <b>Neatzīmēti</b> rāda, kas vēl nav izdarīts. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Atkārtot</b> nokopē darbu, <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> Vēsture</b> rāda visus darbus adresē.</p><p><b>Statistika → Mēneša atskaite</b> — kopsavilkums pa vadītājiem un objektiem.</p>',
+    admin: '<p><b>Vienības</b> — katrai dienai salieciet vienības no cilvēkiem (vai nokopējiet no vakardienas).</p><p><b>Plāns → Dēlis</b> — visas vienības vienā ekrānā: ievelciet darbu zem vienības vai pieskarieties tam un izvēlieties. <b>Saraksts</b> — pilnās kartītes. Piešķiriet katram darbam vienību un spiediet <b>WhatsApp plāns</b>, lai nokopētu tekstu grupai.</p><p><b>Jauns</b> — ievadiet darbus pats, izvēloties vadītāju, vai ielīmējiet ziņu <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> AI</b>. Atzīmējiet <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c.8 3 4.8 5.3 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.1.9-3.6 2-4.6.1 1.8.9 2.8 2 3.1-.3-3.2-.4-5.6.8-8.5Z"/></svg> Steidzami</b> un laiku „līdz plkst.”.</p><p>Izpildītus darbus var <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11"/><path d="M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3l4-8a3 3 0 0 1 4 3.9Z"/></svg> Pieņemt</b> vai <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> Atgriezt</b> brigādei. Filtrs <b>Neatzīmēti</b> rāda, kas vēl nav izdarīts. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Atkārtot</b> nokopē darbu, <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> Vēsture</b> rāda visus darbus adresē.</p><p><b>Statistika → Mēneša atskaite</b> — kopsavilkums pa vadītājiem un objektiem.</p>',
     vaditajs: '<p><b>Jauns</b> — izvēlieties adresi un darbu. Vienā reizē var pieteikt vairākas adreses. Ar <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2L12 18.5 10.1 13l-5.6-2 5.6-2L12 3.5Z"/><path d="M19 3v3M17.5 4.5h3M5 17v3M3.5 18.5h3"/></svg> AI</b> var ielīmēt ziņu, un forma aizpildīsies pati.</p><p>Ja aizvietojamais ir atvaļinājumā, ieslēdziet <svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg> un norādiet datumu „līdz”.</p><p><b>Mani darbi</b> — redzat, kurai vienībai darbs piešķirts. Izpildītus darbus apskatiet un <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11"/><path d="M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3l4-8a3 3 0 0 1 4 3.9Z"/></svg> Pieņemiet</b> vai <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> Atgrieziet</b> ar komentāru.</p><p><b>DNL / Vakance</b> bez datuma „līdz” katru darba dienu automātiski parādās plānā, kamēr to atslēgsiet ar <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg> Beigt</b>.</p><p><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg> Atkārtot</b> — tas pats darbs citā dienā. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/></svg> Vēsture</b> — visi darbi un bildes šajā adresē. <b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> Problēmas</b> — brigāžu ziņojumi par jūsu objektiem.</p>'
   }[role];
   openSheet(`<h3>${esc(S.user.name)}</h3><p class="lead">${role === 'admin' ? 'Admins' : 'Darbu vadītājs'}</p>
@@ -2004,9 +2142,9 @@ const TOURS = {
     { title: 'Sveiki! Īsa pamācība', text: 'Parādīšu, kā sastādīt dienas plānu. Tas aizņems pusminūti. Pamācību vēlāk var atvērt atkal no pogas „?”.' },
     { view: 'crews', sel: '#crewList', title: '1. Vienības', text: 'Katrai dienai salieciet vienības no cilvēkiem (piem. „Denis + Natālija”). Ar „Kopēt no …” paņemsiet vakardienas sastāvu.' },
     { view: 'plan', sel: '#daySeg', title: '2. Diena', text: 'Izvēlieties dienu — parasti „Rīt”, jo plānu taisa vakarā.' },
-    { view: 'plan', sel: '#planList .assign', title: '3. Piešķiriet vienību', text: 'Katram darbam uzspiediet vienību. Vienu darbu var dot arī vairākām vienībām.' },
-    { view: 'plan', sel: '#planFilter', title: '4. Filtri', text: '„Nepiešķirti” rāda, kas vēl jāsadala. Šodien un vakar ir arī „Neatzīmēti” — kas vēl nav izdarīts.' },
-    { view: 'plan', sel: '#planList [data-act="accept"], #planList .links', title: '5. Pārbaude', text: 'Kad brigāde atzīmē darbu, to var pieņemt vai atgriezt ar komentāru. „Atkārtot” nokopē darbu, „Vēsture” rāda visu par adresi.' },
+    { view: 'plan', sel: '#board', title: '3. Sadales dēlis', text: 'Augšā nepiešķirtie darbi, zemāk visas vienības. Turiet pirkstu uz darba un ievelciet to zem vienības, vai pieskarieties darbam un izvēlieties vienību. Tāpat var pārvietot darbu starp vienībām.' },
+    { view: 'plan', sel: '#planMode', title: '4. Dēlis / Saraksts', text: '„Saraksts” rāda pilnās kartītes ar filtriem, meklēšanu, pārbaudi (pieņemt / atgriezt), „Atkārtot” un „Vēsturi”.' },
+    { view: 'plan', sel: '#planList [data-act="accept"], #planList .links, #planMode', title: '5. Pārbaude', text: 'Kad brigāde atzīmē darbu, to var pieņemt vai atgriezt ar komentāru. „Atkārtot” nokopē darbu, „Vēsture” rāda visu par adresi.' },
     { view: 'plan', sel: '#waBtn', title: '6. WhatsApp plāns', text: 'Kad viss sadalīts, nokopējiet gatavu tekstu un ielīmējiet brigāžu grupā. Beigās ir saite, kur katrs redz savus darbus.' },
     { view: 'plan', sel: '#pubCard', title: '7. Problēmas un aktīvās aizvietošanas', text: 'Šeit parādās brigāžu ziņojumi par bojājumiem un DNL / vakances, kas ir plānā katru dienu, kamēr tās atslēgsiet.' },
     { sel: '#tabs [data-tab="new"]', title: '8. Jauns', text: 'Šeit darbus var pieteikt arī pats vai ar AI no WhatsApp ziņas.' },
