@@ -1111,7 +1111,7 @@ function bDot(j) {
 }
 function bJob(j, from) {
   const mc = managerColor(j.vaditajs);
-  return `<div class="bj${j.steidzami && j.statuss !== 'izpildīts' ? ' urg' : ''}" data-bid="${esc(j.id)}" data-from="${esc(from)}" style="${mc ? '--mc:' + esc(mc) : ''}">${from ? `<i class="bd ${bDot(j)}"></i>` : ''}<span>${esc(j.adrese)}<small>${esc(j.prombutne || j.tips)}${j.steidzami ? ' · steidzami' : ''}${j.laiks ? ' · līdz ' + esc(j.laiks) : ''}</small></span></div>`;
+  return `<div class="bj${j.steidzami && j.statuss !== 'izpildīts' ? ' urg' : ''}" data-bid="${esc(j.id)}" data-from="${esc(from)}" style="${mc ? '--mc:' + esc(mc) : ''}">${from ? `<i class="bd ${bDot(j)}"></i>` : ''}<span>${esc(j.adrese)}<small>${esc(j.tips)}${j.steidzami ? ' · steidzami' : ''}${j.laiks ? ' · līdz ' + esc(j.laiks) : ''}</small></span></div>`;
 }
 function crewOf(b) { return S.crews[b]?.length ? S.crews[b].join(', ') : ''; }
 function renderBoard() {
@@ -1145,7 +1145,7 @@ function openBoardJob(job) {
   let sel = brigs(job);
   const names = unitNamesFor(job);
   const cnt = (b) => S.jobs.filter(j => brigs(j).includes(b)).length;
-  const info = [job.prombutne || job.tips, job.steidzami ? 'steidzami' : '', job.laiks ? 'līdz plkst. ' + job.laiks : '', 'vadītājs: ' + job.vaditajs].filter(Boolean).join(' · ');
+  const info = [job.tips, job.steidzami ? 'steidzami' : '', job.laiks ? 'līdz plkst. ' + job.laiks : '', 'vadītājs: ' + job.vaditajs].filter(Boolean).join(' · ');
   const draw = () => { $('bOpts').innerHTML = names.map(b => `<button type="button" class="bopt${sel.includes(b) ? ' on' : ''}" data-b="${esc(b)}"><span>${esc(b)}${crewOf(b) && crewOf(b) !== b ? `<small>${esc(crewOf(b))}</small>` : ''}</span><i>${cnt(b)}${sel.includes(b) ? ' ✓' : ''}</i></button>`).join(''); };
   openSheet(`<h3>${esc(job.adrese)}</h3><p class="lead">${esc(info)}</p>
     ${job.apraksts ? `<div class="note">${esc(job.apraksts)}</div>` : ''}
