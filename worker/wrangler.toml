@@ -1,4 +1,4 @@
-# SH | Aizvietošana — Cloudflare Worker (© VAITKEVIX, SIA) — v11
+# SH | Aizvietošana — Cloudflare Worker (© VAITKEVIX, SIA) — v12
 name = "aizvietosana-api"
 main = "src/index.js"
 compatibility_date = "2026-11-01"
@@ -11,6 +11,8 @@ APP_URL = "https://vaitkevix.cloud/shaizvietosana/"
 GAS_URL = "https://script.google.com/macros/s/AKfycbzFlItt2WRyL3skDuKzmMOFP11uL5vTOqR3dN2pK-O812eDIih2nyEL2UEUk_ubcDADiA/exec"
 # Izvešanas pieteikumi (Apps Script)
 IZV_GAS_URL = "https://script.google.com/macros/s/AKfycbzI_DKAaqqqVb6LfKqQ2k5Uy4EfaEuZz79NI8olYUIWcutqj30YuhYHhuh2GBKYcRt2/exec"
+# Kaisāmmateriāls (Apps Script)
+KAIS_GAS_URL = "https://script.google.com/macros/s/AKfycbyEttChYy6oM5bejr0bHFJMNGbWe7NxYONc5fMflWXwGGrs-NqTUhseD0hOZO5lvdd7/exec"
 
 [[d1_databases]]
 binding = "DB"
