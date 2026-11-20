@@ -20,6 +20,7 @@ export default {
     if (url.pathname === SITE_PATH) return Response.redirect(url.origin + SITE_PATH + '/' + url.search, 301);
     if (url.pathname.startsWith(SITE_PATH + '/') && url.pathname !== SITE_PATH + '/api') return site(request, url);
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
+    if (url.pathname === '/izv' || url.pathname.endsWith('/izv')) return izv(request, url, env, ctx);
     if (request.method === 'GET') return json({ ok: true, app: 'SH | Aizvietošana', time: new Date().toISOString() });
     let req;
     try { req = JSON.parse(await request.text()); } catch (e) { return json({ ok: false, error: 'Nederīgs pieprasījums' }); }
@@ -48,6 +49,51 @@ export default {
     ctx.waitUntil(syncConfig(new Ctx(env, ctx)).catch(e => console.error('syncConfig', e)));
   }
 };
+
+/* ---------------- Izvešanas pieteikumi: ātrais starpnieks uz Apps Script ----------------
+ * Google tabula paliek galvenā (no tās taisa rēķinus). Lasīšana (getBoot/getTasks/getInitialData) nāk no kešatmiņas D1 (uzreiz),
+ * kešatmiņa atjaunojas fonā; visas izmaiņas iet uz Apps Script uzreiz, pēc tam kešatmiņa tiek atjaunota.
+ * Pieprasījums: POST /izv?fn=<funkcija>, ķermenis = JSON argumentu masīvs. Atbilde = {"ok":true,"result":...}.
+ */
+const IZV_READ = ['getBoot', 'getTasks', 'getInitialData'];
+const IZV_FNS = IZV_READ.concat(['saveTask', 'updateTask', 'setTaskCancelled', 'getAccess', 'checkCarrierPin', 'completeTask', 'reportProblem', 'reportPdf',
+  'geocodeAddresses', 'aiParseMessage', 'aiCheckPhoto', 'aiCompare', 'aiAsk', 'aiMonthSummary', 'saveFileToDrive']);
+const IZV_FRESH_MS = 20000;
+async function izvGas(env, fn, body) {
+  const r = await fetch(env.IZV_GAS_URL + '?fn=' + encodeURIComponent(fn) + '&key=' + encodeURIComponent(env.BRIDGE_KEY),
+    { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+  const t = await r.text();
+  if (!t.startsWith('{"ok":')) throw new Error('Google atbilde: ' + r.status);
+  return t;
+}
+async function izvRefresh(env, fn) {
+  const t = await izvGas(env, fn, '[]');
+  if (t.startsWith('{"ok":true')) await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?), (?, ?)').bind('izv:' + fn, t, 'izvt:' + fn, String(Date.now())).run();
+  return t;
+}
+async function izv(request, url, env, ctx) {
+  const H = Object.assign({ 'Content-Type': 'application/json;charset=utf-8', 'Cache-Control': 'no-store' }, CORS);
+  const fn = url.searchParams.get('fn') || '';
+  try {
+    if (IZV_FNS.indexOf(fn) === -1) throw new Error('Nezināma darbība');
+    if (!env.IZV_GAS_URL) throw new Error('Izvešanas serveris nav iestatīts');
+    if (IZV_READ.indexOf(fn) !== -1) {
+      const rows = (await env.DB.prepare('SELECT k, v FROM kv WHERE k IN (?, ?)').bind('izv:' + fn, 'izvt:' + fn).all()).results || [];
+      const v = (rows.find(r => r.k === 'izv:' + fn) || {}).v, t = +((rows.find(r => r.k === 'izvt:' + fn) || {}).v || 0);
+      if (v) {
+        if (Date.now() - t > IZV_FRESH_MS || url.searchParams.get('fresh')) ctx.waitUntil(izvRefresh(env, fn).catch(e => console.error(e)));
+        return new Response(v, { headers: H });
+      }
+      return new Response(await izvRefresh(env, fn), { headers: H });
+    }
+    const t = await izvGas(env, fn, await request.text());
+    // pēc izmaiņām — svaiga kešatmiņa visiem lasīšanas pieprasījumiem
+    if (!/^(getAccess|checkCarrierPin|reportPdf|geocodeAddresses|ai)/.test(fn)) ctx.waitUntil(Promise.all(['getBoot', 'getTasks'].map(f => izvRefresh(env, f).catch(() => 0))));
+    return new Response(t, { headers: H });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String((e && e.message) || e) }), { headers: H });
+  }
+}
 
 const SITE_PATH = '/shaizvietosana';
 const SITE_ORIGIN = 'https://vaitkevix.github.io/aizvietosana';
