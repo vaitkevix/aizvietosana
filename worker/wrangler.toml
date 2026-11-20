@@ -12,7 +12,7 @@ GAS_URL = "https://script.google.com/macros/s/AKfycbzFlItt2WRyL3skDuKzmMOFP11uL5
 [[d1_databases]]
 binding = "DB"
 database_name = "aizvietosana"
-database_id = "IELIEC_D1_DATABASE_ID"
+database_id = "cee4976e-af1a-4cf6-ba3f-59d7a332eeb4"
 migrations_dir = "migrations"
 
 [triggers]
