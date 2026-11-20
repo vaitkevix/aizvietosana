@@ -16,11 +16,13 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    // vaitkevix.cloud/shaizvietosana → lietotne (GitHub Pages), …/shaizvietosana/api → šis API
-    if (url.pathname === SITE_PATH) return Response.redirect(url.origin + SITE_PATH + '/' + url.search, 301);
-    if (url.pathname.startsWith(SITE_PATH + '/') && url.pathname !== SITE_PATH + '/api') return site(request, url);
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
     if (url.pathname === '/izv' || url.pathname.endsWith('/izv')) return izv(request, url, env, ctx);
+    // vaitkevix.cloud/shaizvietosana, /shizvesana → lietotnes (GitHub Pages); …/api → šis API
+    for (const base in SITES) {
+      if (url.pathname === base) return Response.redirect(url.origin + base + '/' + url.search, 301);
+      if (url.pathname.startsWith(base + '/') && url.pathname !== base + '/api') return site(request, url, base);
+    }
     if (request.method === 'GET') return json({ ok: true, app: 'SH | Aizvietošana', time: new Date().toISOString() });
     let req;
     try { req = JSON.parse(await request.text()); } catch (e) { return json({ ok: false, error: 'Nederīgs pieprasījums' }); }
@@ -95,13 +97,12 @@ async function izv(request, url, env, ctx) {
   }
 }
 
-const SITE_PATH = '/shaizvietosana';
-const SITE_ORIGIN = 'https://vaitkevix.github.io/aizvietosana';
+const SITES = { '/shaizvietosana': 'https://vaitkevix.github.io/aizvietosana', '/shizvesana': 'https://vaitkevix.github.io/izvesana' };
 /** Lietotnes faili no GitHub Pages zem tava domēna */
-async function site(request, url) {
+async function site(request, url, base) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
-  const rest = url.pathname.slice(SITE_PATH.length) || '/';
-  const r = await fetch(SITE_ORIGIN + rest + url.search, { headers: { 'User-Agent': 'vaitkevix-proxy' }, cf: { cacheTtl: 60, cacheEverything: true } });
+  const rest = url.pathname.slice(base.length) || '/';
+  const r = await fetch(SITES[base] + rest + url.search, { headers: { 'User-Agent': 'vaitkevix-proxy' }, cf: { cacheTtl: 60, cacheEverything: true } });
   const h = new Headers(r.headers);
   h.delete('set-cookie');
   if (/\.(html|js|json)$|\/$/.test(rest)) h.set('Cache-Control', 'no-cache');
