@@ -19,6 +19,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
     if (url.pathname === '/izv' || url.pathname.endsWith('/izv')) return izv(request, url, env, ctx, 'izv');
     if (url.pathname === '/kais' || url.pathname.endsWith('/kais')) return izv(request, url, env, ctx, 'kais');
+    if (url.pathname === '/pers' || url.pathname.endsWith('/pers')) return pers(request, env, ctx);
     if (url.pathname === '/img' || url.pathname.endsWith('/img')) return img(url, ctx);
     // vaitkevix.cloud/shaizvietosana, /shizvesana → lietotnes (GitHub Pages); …/api → šis API
     for (const base in SITES) {
@@ -250,7 +251,57 @@ async function izv(request, url, env, ctx, app) {
   }
 }
 
-const SITES = { '/shaizvietosana': 'https://vaitkevix.github.io/aizvietosana', '/shizvesana': 'https://vaitkevix.github.io/izvesana', '/shkaisammaterials': 'https://vaitkevix.github.io/kaisammaterials' };
+/* ---------------- Personāls: ātrais starpnieks (Google tabula paliek galvenā) ----------------
+ * Lasīšana (login, records, calendar, days) — no kešatmiņas pēc PIN (atceras pēc veiksmīgas pieslēgšanās Google pusē, 2 h),
+ * atjaunojas fonā. Iesniegšana (hire, vacation, status) — uzreiz uz Google (pārbaudes, ID, e-pasts), pēc tam kešatmiņa atjaunojas.
+ */
+const PERS_READS = ['login', 'records', 'calendar', 'days'];
+const PERS_WRITES = ['hire', 'vacation', 'status'];
+async function persGas(env, body) {
+  const r = await fetch(env.PERS_GAS_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+  const t = await r.text();
+  if (!t.startsWith('{')) throw new Error('Google atbilde: ' + r.status);
+  return t;
+}
+async function pers(request, env, ctx) {
+  const H = Object.assign({ 'Content-Type': 'application/json;charset=utf-8', 'Cache-Control': 'no-store' }, CORS);
+  try {
+    if (!env.PERS_GAS_URL) throw new Error('Serveris nav iestatīts');
+    const body = await request.text();
+    let req; try { req = JSON.parse(body); } catch (e) { throw new Error('Nederīgs pieprasījums'); }
+    const action = String(req.action || '');
+    if (PERS_READS.indexOf(action) === -1 && PERS_WRITES.indexOf(action) === -1) throw new Error('Nezināma darbība');
+    const ph = 'perspin:' + await sha('pers|' + String(req.login || '').trim().toLowerCase() + '|' + String(req.pin || '').trim());
+    const known = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind(ph).first();
+    let user = null; if (known) { try { const o = JSON.parse(known.v); if (Date.now() - o.t < 2 * 3600e3) user = o.user; } catch (e) {} }
+    const remember = (t) => { if (action === 'login') { try { const o = JSON.parse(t); if (o.ok && o.user) return env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)').bind(ph, JSON.stringify({ user: o.user, t: Date.now() })).run(); } catch (e) {} }
+      if (/"error":"Nepareizs PIN"/.test(t)) return env.DB.prepare('DELETE FROM kv WHERE k = ?').bind(ph).run(); };
+    if (PERS_READS.indexOf(action) !== -1) {
+      const ck = 'pers:' + (user ? user.name : '?') + ':' + action + ':' + [req.from, req.to, req.no, req.lidz].map(x => x || '').join('|');
+      const refresh = async () => { const t = await persGas(env, body); await remember(t);
+        if (t.startsWith('{"ok":true')) await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?), (?, ?)').bind(ck, t, 'perst:' + ck.slice(5), String(Date.now())).run();
+        return t; };
+      if (user) {
+        const rows = (await env.DB.prepare('SELECT k, v FROM kv WHERE k IN (?, ?)').bind(ck, 'perst:' + ck.slice(5)).all()).results || [];
+        const v = (rows.find(r => r.k === ck) || {}).v, t = +((rows.find(r => r.k !== ck) || {}).v || 0);
+        if (v && t) { if (Date.now() - t > IZV_FRESH_MS) ctx.waitUntil(refresh().catch(() => 0)); return new Response(v, { headers: H }); }
+        return new Response(await refresh(), { headers: H });
+      }
+      const t = await persGas(env, body); await remember(t);
+      if (action === 'login' && t.startsWith('{"ok":true')) { try { const o = JSON.parse(t); const k2 = 'pers:' + o.user.name + ':login:|||';
+        await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?), (?, ?)').bind(k2, t, 'perst:' + k2.slice(5), String(Date.now())).run(); } catch (e) {} }
+      return new Response(t, { headers: H });
+    }
+    // iesniegšana — uzreiz uz Google; pēc tam visiem saraksti/kalendārs tiek atjaunoti fonā
+    const t = await persGas(env, body); ctx.waitUntil(remember(t) || Promise.resolve());
+    if (t.startsWith('{"ok":true')) ctx.waitUntil(env.DB.prepare("DELETE FROM kv WHERE k LIKE 'perst:%'").run());
+    return new Response(t, { headers: H });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String((e && e.message) || e) }), { headers: H });
+  }
+}
+
+const SITES = { '/shaizvietosana': 'https://vaitkevix.github.io/aizvietosana', '/shizvesana': 'https://vaitkevix.github.io/izvesana', '/shkaisammaterials': 'https://vaitkevix.github.io/kaisammaterials', '/shpersonals': 'https://vaitkevix.github.io/personals' };
 /** Lietotnes faili no GitHub Pages zem tava domēna */
 async function site(request, url, base) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
