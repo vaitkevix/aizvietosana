@@ -18,6 +18,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
     if (url.pathname === '/izv' || url.pathname.endsWith('/izv')) return izv(request, url, env, ctx);
+    if (url.pathname === '/img' || url.pathname.endsWith('/img')) return img(url, ctx);
     // vaitkevix.cloud/shaizvietosana, /shizvesana → lietotnes (GitHub Pages); …/api → šis API
     for (const base in SITES) {
       if (url.pathname === base) return Response.redirect(url.origin + base + '/' + url.search, 301);
@@ -60,6 +61,33 @@ const IZV_READ = ['getBoot', 'getTasks', 'getInitialData'];
 const IZV_FNS = IZV_READ.concat(['saveTask', 'updateTask', 'setTaskCancelled', 'getAccess', 'checkCarrierPin', 'completeTask', 'reportProblem', 'reportPdf',
   'geocodeAddresses', 'aiParseMessage', 'aiCheckPhoto', 'aiCompare', 'aiAsk', 'aiMonthSummary', 'saveFileToDrive']);
 const IZV_FRESH_MS = 20000;
+
+/* Bildes no Google Drive caur Cloudflare kešatmiņu: pirmā reize ~1 s, pēc tam ~0,1 s */
+const IMG_SIZES = ['w300', 'w600', 'w1600'];
+function imgKey(id, sz) { return new Request('https://img.cache/' + id + '/' + sz); }
+async function imgFetch(id, sz, ctx) {
+  const cache = caches.default, key = imgKey(id, sz);
+  let r = await cache.match(key);
+  if (r) return r;
+  const g = await fetch('https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=' + sz, { redirect: 'follow' });
+  if (!g.ok || !/^image\//.test(g.headers.get('content-type') || '')) return new Response('Nav bildes', { status: 404, headers: CORS });
+  r = new Response(g.body, { headers: Object.assign({ 'Content-Type': g.headers.get('content-type'), 'Cache-Control': 'public, max-age=31536000, immutable' }, CORS) });
+  ctx.waitUntil(cache.put(key, r.clone()));
+  return r;
+}
+async function img(url, ctx) {
+  const id = url.searchParams.get('id') || '', sz = url.searchParams.get('sz') || 'w600';
+  if (!/^[\w-]{20,80}$/.test(id) || IMG_SIZES.indexOf(sz) === -1) return new Response('Nederīgs', { status: 400, headers: CORS });
+  return imgFetch(id, sz, ctx);
+}
+/** Pēc saraksta atjaunošanas iepriekš ielādē jaunāko pieteikumu bildes (lai arī pirmā atvēršana ir ātra) */
+async function imgPrewarm(text, ctx) {
+  const ids = []; const re = /\/d\/([\w-]{20,80})|[?&]id=([\w-]{20,80})/g; let m;
+  const tail = text.length > 400000 ? text.slice(-400000) : text;
+  while ((m = re.exec(tail)) && ids.length < 400) ids.push(m[1] || m[2]);
+  const uniq = [...new Set(ids)].slice(-15);
+  for (const id of uniq) { try { const r = await caches.default.match(imgKey(id, 'w600')); if (!r) await imgFetch(id, 'w600', ctx); } catch (e) {} }
+}
 async function izvGas(env, fn, body) {
   const r = await fetch(env.IZV_GAS_URL + '?fn=' + encodeURIComponent(fn) + '&key=' + encodeURIComponent(env.BRIDGE_KEY),
     { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
@@ -67,9 +95,10 @@ async function izvGas(env, fn, body) {
   if (!t.startsWith('{"ok":')) throw new Error('Google atbilde: ' + r.status);
   return t;
 }
-async function izvRefresh(env, fn) {
+async function izvRefresh(env, fn, ctx) {
   const t = await izvGas(env, fn, '[]');
   if (t.startsWith('{"ok":true')) await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?), (?, ?)').bind('izv:' + fn, t, 'izvt:' + fn, String(Date.now())).run();
+  if (ctx && fn === 'getBoot') ctx.waitUntil(imgPrewarm(t, ctx).catch(() => 0));
   return t;
 }
 async function izv(request, url, env, ctx) {
@@ -82,14 +111,14 @@ async function izv(request, url, env, ctx) {
       const rows = (await env.DB.prepare('SELECT k, v FROM kv WHERE k IN (?, ?)').bind('izv:' + fn, 'izvt:' + fn).all()).results || [];
       const v = (rows.find(r => r.k === 'izv:' + fn) || {}).v, t = +((rows.find(r => r.k === 'izvt:' + fn) || {}).v || 0);
       if (v) {
-        if (Date.now() - t > IZV_FRESH_MS || url.searchParams.get('fresh')) ctx.waitUntil(izvRefresh(env, fn).catch(e => console.error(e)));
+        if (Date.now() - t > IZV_FRESH_MS || url.searchParams.get('fresh')) ctx.waitUntil(izvRefresh(env, fn, ctx).catch(e => console.error(e)));
         return new Response(v, { headers: H });
       }
-      return new Response(await izvRefresh(env, fn), { headers: H });
+      return new Response(await izvRefresh(env, fn, ctx), { headers: H });
     }
     const t = await izvGas(env, fn, await request.text());
     // pēc izmaiņām — svaiga kešatmiņa visiem lasīšanas pieprasījumiem
-    if (!/^(getAccess|checkCarrierPin|reportPdf|geocodeAddresses|ai)/.test(fn)) ctx.waitUntil(Promise.all(['getBoot', 'getTasks'].map(f => izvRefresh(env, f).catch(() => 0))));
+    if (!/^(getAccess|checkCarrierPin|reportPdf|geocodeAddresses|ai)/.test(fn)) ctx.waitUntil(Promise.all(['getBoot', 'getTasks'].map(f => izvRefresh(env, f, ctx).catch(() => 0))));
     return new Response(t, { headers: H });
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String((e && e.message) || e) }), { headers: H });
