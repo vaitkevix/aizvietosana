@@ -1,4 +1,4 @@
-# SH | Aizvietošana — Cloudflare Worker (© VAITKEVIX, SIA) — v8
+# SH | Aizvietošana — Cloudflare Worker (© VAITKEVIX, SIA) — v9
 name = "aizvietosana-api"
 main = "src/index.js"
 compatibility_date = "2026-11-01"
@@ -20,6 +20,6 @@ migrations_dir = "migrations"
 
 [triggers]
 # lietotāji, darbu veidi un objekti no Google tabulas — ik pēc 30 min
-crons = ["*/30 * * * *"]
+crons = ["*/30 * * * *", "*/5 * * * *"]
 
 # BRIDGE_KEY — slepenā atslēga (GitHub Secrets → tiek ielikta automātiski, kodā to neglabā)

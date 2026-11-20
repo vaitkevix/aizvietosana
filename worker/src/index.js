@@ -48,7 +48,8 @@ export default {
 
   /** Cron: lietotāji, darbu veidi un objekti no Google tabulas */
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(syncConfig(new Ctx(env, ctx)).catch(e => console.error('syncConfig', e)));
+    if (event.cron !== '*/5 * * * *') ctx.waitUntil(syncConfig(new Ctx(env, ctx)).catch(e => console.error('syncConfig', e)));
+    ctx.waitUntil(izvDrain(env, ctx, 60000).catch(e => console.error('izvDrain', e)));
   }
 };
 
@@ -101,6 +102,78 @@ async function izvRefresh(env, fn, ctx) {
   if (ctx && fn === 'getBoot') ctx.waitUntil(imgPrewarm(t, ctx).catch(() => 0));
   return t;
 }
+/* ---- Saglabāšana fonā: Cloudflare uzreiz apstiprina, Google saņem dažu sekunžu laikā (ar atkārtojumiem) ---- */
+const IZV_ASYNC = ['saveTask', 'completeTask', 'reportProblem', 'updateTask', 'setTaskCancelled'];
+const IZV_PIN_FNS = ['completeTask', 'reportProblem'];
+const Q_PART = 1500000;
+const rigaNow = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date()).map(x => [x.type, x.value])); return { d: p.day + '.' + p.month + '.' + p.year, t: p.hour + ':' + p.minute, y: +p.year, m: +p.month, day: +p.day }; };
+async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('izv|' + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 32); }
+async function pinKnown(env, pin) { const r = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('izvpin:' + await sha(pin)).first(); return r && Date.now() - +r.v < 12 * 3600e3; }
+async function pinRemember(env, pin) { await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)').bind('izvpin:' + await sha(pin), String(Date.now())).run(); }
+
+/** Optimistiskās izmaiņas sarakstā (kamēr Google vēl nav apstiprinājis) */
+function izvPatch(fn, a) {
+  const n = rigaNow(), st = n.d + ' ' + n.t;
+  if (fn === 'saveTask') {
+    const d = a[0] || {}; let due = new Date(Date.UTC(n.y, n.m - 1, n.day + 7));
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d.deadline || '')); if (m) { const x = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); if (x < due && x >= new Date(Date.UTC(n.y, n.m - 1, n.day))) due = x; }
+    const dd = ('0' + due.getUTCDate()).slice(-2) + '.' + ('0' + (due.getUTCMonth() + 1)).slice(-2) + '.' + due.getUTCFullYear();
+    return { add: { rowIndex: 0, id: d.id, date: st, address: String(d.address || ''), requester: String(d.requester || ''), bagsEst: String(d.bagsEst || ''), comment: String(d.comment || ''),
+      photoBefore: '', status: 'Neizpildīts', sia: '', photoAfter: '', m3Hauled: '', carrierComment: '', urgent: !!d.urgent, deadline: dd, problem: '',
+      history: st + ' · Izveidots' + (d.requester ? ' (' + d.requester + ')' : ''), doneAt: '', bagsHauled: '', coefNote: '', pending: true } };
+  }
+  if (fn === 'completeTask') {
+    const d = a[0] || {}; let m3 = d.m3Hauled, bags = '', coef = '';
+    if (d.bagsHauled !== undefined && d.bagsHauled !== null && d.bagsHauled !== '') { bags = parseInt(d.bagsHauled, 10); const c = (d.heavy ? 0.10 : 0) + (d.mixed ? 0.05 : 0);
+      m3 = Math.round(bags * 0.15 * (1 + c) * 100) / 100; coef = [d.heavy ? '+10% smagi maisi' : '', d.mixed ? '+5% sadzīves atkritumi' : ''].filter(Boolean).join('; '); }
+    const sia = String(d.pin || '').split('\n')[0].replace(/\s+/g, ' ').trim();
+    return { id: d.id, set: { status: 'Izpildīts', sia, m3Hauled: String(m3 === 0 ? '0' : (m3 || '')), carrierComment: String(d.carrierComment || ''), doneAt: st, bagsHauled: String(bags || ''), coefNote: coef, pending: true } };
+  }
+  if (fn === 'reportProblem') { const d = a[0] || {}; return { id: d.id, set: { problem: st + ' · ' + String(d.reason || '').trim() + (d.comment ? ' — ' + String(d.comment).trim() : ''), pending: true } }; }
+  if (fn === 'updateTask') { const d = a[0] || {}; return { id: d.id, set: { address: String(d.address || ''), requester: String(d.requester || ''), bagsEst: String(d.bagsEst || ''), comment: String(d.comment || ''), urgent: !!d.urgent, pending: true } }; }
+  if (fn === 'setTaskCancelled') return { id: a[0], set: { status: a[1] ? 'Atcelts' : 'Neizpildīts', pending: true } };
+  return null;
+}
+function applyPatches(tasks, patches) {
+  for (const p of patches) {
+    if (p.add) { if (!tasks.some(t => t.id === p.add.id)) tasks.push(p.add); }
+    else { const t = tasks.find(x => x.id === p.id); if (t) Object.assign(t, p.set); }
+  }
+  return tasks;
+}
+async function izvPending(env) {
+  return ((await env.DB.prepare("SELECT qid, fn, patch, created, err FROM izv_q WHERE part = 0 ORDER BY created").all()).results || []);
+}
+/** Viena rindas ieraksta nosūtīšana uz Google (ar slēdzeni pret dubultu sūtīšanu) */
+async function izvProcess(env, ctx, qid) {
+  const now = Date.now();
+  const lk = await env.DB.prepare("UPDATE izv_q SET lock = ?, tries = tries + 1 WHERE qid = ? AND part = 0 AND err = '' AND lock < ?").bind(now, qid, now - 90000).run();
+  if (!lk.meta || !lk.meta.changes) return;
+  const parts = (await env.DB.prepare('SELECT fn, data FROM izv_q WHERE qid = ? ORDER BY part').bind(qid).all()).results || [];
+  if (!parts.length) return;
+  const fn = parts[0].fn, body = parts.map(p => p.data).join('');
+  let t;
+  try { t = await izvGas(env, fn, body); }
+  catch (e) { await env.DB.prepare('UPDATE izv_q SET lock = 0 WHERE qid = ? AND part = 0').bind(qid).run(); return; }   // atkārtos vēlāk
+  let res = null; try { res = JSON.parse(t); } catch (e) {}
+  const r = res && res.result, ok = res && res.ok && r && (r.status === 'success' || /jau ir atzīmēts kā izpildīts/.test(r.message || ''));
+  if (ok) {
+    await env.DB.prepare('DELETE FROM izv_q WHERE qid = ?').bind(qid).run();
+    if (r.tasks) { const boot = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('izv:getBoot').first();
+      if (boot) { try { const b = JSON.parse(boot.v); b.result.tasks = r.tasks; await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?), (?, ?), (?, ?)').bind('izv:getBoot', JSON.stringify(b), 'izv:getTasks', JSON.stringify({ ok: true, result: r.tasks }), 'izvt:getBoot', String(Date.now())).run(); } catch (e) {} } }
+    if (IZV_PIN_FNS.indexOf(fn) !== -1) { try { await pinRemember(env, JSON.parse(body)[0].pin); } catch (e) {} }
+  } else {
+    const msg = (res && (res.error || (r && r.message))) || 'Google kļūda';
+    await env.DB.prepare('UPDATE izv_q SET err = ?, lock = 0 WHERE qid = ? AND part = 0').bind(String(msg).slice(0, 300), qid).run();
+  }
+}
+async function izvDrain(env, ctx, maxAgeMs) {
+  const list = (await izvPending(env)).filter(q => !q.err && Date.now() - q.created > (maxAgeMs || 0)).slice(0, 3);
+  for (const q of list) await izvProcess(env, ctx, q.qid);
+  // vecas kļūdas (paziņotas) dzēš pēc 3 dienām
+  await env.DB.prepare("DELETE FROM izv_q WHERE err != '' AND created < ?").bind(Date.now() - 3 * 864e5).run();
+}
+
 async function izv(request, url, env, ctx) {
   const H = Object.assign({ 'Content-Type': 'application/json;charset=utf-8', 'Cache-Control': 'no-store' }, CORS);
   const fn = url.searchParams.get('fn') || '';
@@ -109,14 +182,54 @@ async function izv(request, url, env, ctx) {
     if (!env.IZV_GAS_URL) throw new Error('Izvešanas serveris nav iestatīts');
     if (IZV_READ.indexOf(fn) !== -1) {
       const rows = (await env.DB.prepare('SELECT k, v FROM kv WHERE k IN (?, ?)').bind('izv:' + fn, 'izvt:' + fn).all()).results || [];
-      const v = (rows.find(r => r.k === 'izv:' + fn) || {}).v, t = +((rows.find(r => r.k === 'izvt:' + fn) || {}).v || 0);
-      if (v) {
-        if (Date.now() - t > IZV_FRESH_MS || url.searchParams.get('fresh')) ctx.waitUntil(izvRefresh(env, fn, ctx).catch(e => console.error(e)));
-        return new Response(v, { headers: H });
+      let v = (rows.find(r => r.k === 'izv:' + fn) || {}).v; const t = +((rows.find(r => r.k === 'izvt:' + fn) || {}).v || 0);
+      if (!v) v = await izvRefresh(env, fn, ctx);
+      else if (Date.now() - t > IZV_FRESH_MS || url.searchParams.get('fresh')) ctx.waitUntil(izvRefresh(env, fn, ctx).catch(e => console.error(e)));
+      const q = await izvPending(env);
+      if (q.length && fn !== 'getInitialData') {
+        ctx.waitUntil(izvDrain(env, ctx, 45000).catch(() => 0));
+        const patches = q.filter(x => !x.err).map(x => { try { return JSON.parse(x.patch); } catch (e) { return null; } }).filter(Boolean);
+        const notices = q.filter(x => x.err).map(x => { let p = {}; try { p = JSON.parse(x.patch); } catch (e) {} return { id: x.qid, text: 'Neizdevās saglabāt' + (p.add ? ' jaunu pieteikumu ' + p.add.address : '') + ': ' + x.err }; });
+        if (patches.length || notices.length) {
+          const o = JSON.parse(v);
+          if (patches.length && o.ok && o.result) { if (fn === 'getBoot') applyPatches(o.result.tasks || (o.result.tasks = []), patches); else if (Array.isArray(o.result)) applyPatches(o.result, patches); }
+          if (notices.length) o.notices = notices;
+          v = JSON.stringify(o);
+        }
       }
-      return new Response(await izvRefresh(env, fn, ctx), { headers: H });
+      return new Response(v, { headers: H });
     }
-    const t = await izvGas(env, fn, await request.text());
+    const body = await request.text();
+    if (IZV_ASYNC.indexOf(fn) !== -1) {
+      let a; try { a = JSON.parse(body); } catch (e) { a = null; }
+      const d = Array.isArray(a) ? a : null;
+      let fast = !!d;
+      if (fast && fn === 'saveTask') {
+        const x = d[0] || {}; if (!String(x.address || '').trim()) throw new Error('Nav norādīta adrese');
+        const ph = x.photos || x.photo; if (!ph || (Array.isArray(ph) && !ph.length)) throw new Error('Pievienojiet bildi pirms izvešanas');
+        if (!/^TASK-\d{10,}$/.test(String(x.id || ''))) x.id = 'TASK-' + Date.now();
+      }
+      if (fast && IZV_PIN_FNS.indexOf(fn) !== -1) fast = await pinKnown(env, (d[0] || {}).pin);   // nezināma parole → pārbauda Google uzreiz
+      if (fast) {
+        const qid = crypto.randomUUID().replace(/-/g, ''), patch = izvPatch(fn, d), raw = fn === 'saveTask' ? JSON.stringify(d) : body, now = Date.now();
+        const st = [];
+        for (let i = 0, k = 0; i < raw.length; i += Q_PART, k++) st.push(env.DB.prepare('INSERT INTO izv_q (qid, part, fn, data, patch, created) VALUES (?, ?, ?, ?, ?, ?)').bind(qid, k, fn, raw.slice(i, i + Q_PART), k ? '' : JSON.stringify(patch), now));
+        await env.DB.batch(st);
+        ctx.waitUntil(izvProcess(env, ctx, qid).catch(e => console.error(e)));
+        // atbilde ar optimistiski izmainītu sarakstu
+        const boot = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('izv:getBoot').first();
+        let tasks;
+        if (boot) { try { const b = JSON.parse(boot.v); const q = await izvPending(env);
+          tasks = applyPatches(b.result.tasks || [], q.filter(x => !x.err).map(x => { try { return JSON.parse(x.patch); } catch (e) { return null; } }).filter(Boolean)); } catch (e) {} }
+        const result = { status: 'success', queued: true };
+        if (fn === 'saveTask') result.id = d[0].id;
+        if (tasks) result.tasks = tasks;
+        return new Response(JSON.stringify({ ok: true, result }), { headers: H });
+      }
+    }
+    const t = await izvGas(env, fn, body);
+    if (/^(completeTask|reportProblem)$/.test(fn) && t.startsWith('{"ok":true') && !/"code":"pin"/.test(t)) { try { ctx.waitUntil(pinRemember(env, JSON.parse(body)[0].pin)); } catch (e) {} }
+    if (fn === 'checkCarrierPin' && t.startsWith('{"ok":true,"result":true')) { try { ctx.waitUntil(pinRemember(env, JSON.parse(body)[0])); } catch (e) {} }
     // pēc izmaiņām — svaiga kešatmiņa visiem lasīšanas pieprasījumiem
     if (!/^(getAccess|checkCarrierPin|reportPdf|geocodeAddresses|ai)/.test(fn)) ctx.waitUntil(Promise.all(['getBoot', 'getTasks'].map(f => izvRefresh(env, f, ctx).catch(() => 0))));
     return new Response(t, { headers: H });
