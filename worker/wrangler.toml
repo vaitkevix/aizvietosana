@@ -3,6 +3,7 @@ name = "aizvietosana-api"
 main = "src/index.js"
 compatibility_date = "2026-11-01"
 workers_dev = true
+account_id = "81cd66c1dae0179ceb25a6b75302a07d"
 
 [vars]
 APP_URL = "https://vaitkevix.github.io/aizvietosana/"

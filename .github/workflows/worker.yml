@@ -1,5 +1,5 @@
 # SH | Aizvietošana — Cloudflare Worker izvietošana (© VAITKEVIX, SIA)
-# Vajadzīgie GitHub Secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, BRIDGE_KEY
+# Vajadzīgie GitHub Secrets: CLOUDFLARE_API_TOKEN, BRIDGE_KEY
 name: Cloudflare Worker
 on:
   push:
@@ -14,7 +14,6 @@ jobs:
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
           secrets: |
             BRIDGE_KEY
