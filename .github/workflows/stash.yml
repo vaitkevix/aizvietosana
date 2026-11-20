@@ -1,0 +1,23 @@
+# Pagaidu: paņem failus no Worker pagaidu krātuves un saglabā repo (koda migrācijai)
+name: Stash pull
+on:
+  push:
+    branches: [main]
+    paths: ['stash-request.txt']
+permissions:
+  contents: write
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          read ID DIR NAMES < stash-request.txt
+          mkdir -p "$DIR"
+          for N in $NAMES; do
+            curl -sS -X POST https://aizvietosana-api.vaitkevix.workers.dev/ -H 'Content-Type: text/plain' \
+              --data "{\"action\":\"stashGet\",\"id\":\"$ID\",\"name\":\"$N\"}" | python3 -c "import sys,json; d=json.load(sys.stdin)['data']; assert d is not None, 'nav'; open('$DIR/$N','w').write(d)"
+          done
+          git rm -q stash-request.txt
+          git config user.name github-actions; git config user.email github-actions@users.noreply.github.com
+          git add -A && git commit -qm "Pagaidu: kods migrācijai" && git push -q
