@@ -27,6 +27,7 @@ export default {
     try {
       if (req.action === 'import') return json(Object.assign({ ok: true }, await importAll(X, req)));
       if (req.action === 'syncConfig') { checkKey(env, req.key); return json(Object.assign({ ok: true }, await syncConfig(X))); }
+      if (req.action === 'stashPut' || req.action === 'stashGet') return json(Object.assign({ ok: true }, await stash(X, req)));
       if (req.action === 'export') return json(Object.assign({ ok: true }, await exportTable(X, req)));
       if (req.action === 'teamView') return json(Object.assign({ ok: true }, await teamView(X, req)));
       if (req.action === 'teamDone') return json(Object.assign({ ok: true }, await teamDone(X, req)));
@@ -59,6 +60,17 @@ async function site(request, url) {
   h.delete('set-cookie');
   if (/\.(html|js|json)$|\/$/.test(rest)) h.set('Cache-Control', 'no-cache');
   return new Response(r.body, { status: r.status, headers: h });
+}
+
+/** Pagaidu failu pārnese (koda migrācijai): vienreizēja, ID ≥ 24 simboli, nolasot izdzēš */
+async function stash(X, r) {
+  const id = String(r.id || ''), name = String(r.name || '');
+  if (!/^[a-z0-9]{24,}$/.test(id) || !/^[\w.-]{1,40}$/.test(name)) throw new Error('Nederīgs');
+  const k = 'stash:' + id + ':' + name;
+  if (r.action === 'stashPut') { const d = String(r.data || ''); if (d.length > 900000) throw new Error('Par lielu'); await X.run('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', k, d); return { len: d.length }; }
+  const row = await X.first('SELECT v FROM kv WHERE k = ?', k);
+  if (row) await X.run('DELETE FROM kv WHERE k = ?', k);
+  return { data: row ? row.v : null };
 }
 
 function json(o) { return new Response(JSON.stringify(o), { headers: Object.assign({ 'Content-Type': 'application/json;charset=utf-8' }, CORS) }); }
