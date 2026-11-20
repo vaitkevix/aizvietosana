@@ -20,6 +20,7 @@ export default {
     if (url.pathname === '/izv' || url.pathname.endsWith('/izv')) return izv(request, url, env, ctx, 'izv');
     if (url.pathname === '/kais' || url.pathname.endsWith('/kais')) return izv(request, url, env, ctx, 'kais');
     if (url.pathname === '/pers' || url.pathname.endsWith('/pers')) return pers(request, env, ctx);
+    if (url.pathname === '/budz' || url.pathname.endsWith('/budz')) return budz(request, env, ctx);
     if (url.pathname === '/img' || url.pathname.endsWith('/img')) return img(url, ctx);
     // vaitkevix.cloud/shaizvietosana, /shizvesana → lietotnes (GitHub Pages); …/api → šis API
     for (const base in SITES) {
@@ -185,7 +186,7 @@ async function appProcess(env, ctx, qid) {
 }
 async function izvDrain(env, ctx, maxAgeMs) {
   const list = (await appPending(env)).filter(q => !q.err && Date.now() - q.created > (maxAgeMs || 0)).slice(0, 3);
-  for (const q of list) await appProcess(env, ctx, q.qid);
+  for (const q of list) { if (q.fn.startsWith('budz|')) await budzProcess(env, ctx, q.qid); else await appProcess(env, ctx, q.qid); }
   await env.DB.prepare("DELETE FROM izv_q WHERE err != '' AND created < ?").bind(Date.now() - 3 * 864e5).run();
 }
 
@@ -295,6 +296,117 @@ async function pers(request, env, ctx) {
     // iesniegšana — uzreiz uz Google; pēc tam visiem saraksti/kalendārs tiek atjaunoti fonā
     const t = await persGas(env, body); ctx.waitUntil(remember(t) || Promise.resolve());
     if (t.startsWith('{"ok":true')) ctx.waitUntil(env.DB.prepare("DELETE FROM kv WHERE k LIKE 'perst:%'").run());
+    return new Response(t, { headers: H });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String((e && e.message) || e) }), { headers: H });
+  }
+}
+
+/* ---------------- Budžets: ātrā lasīšana + saglabāšana fonā (Google tabula paliek galvenā) ---------------- */
+const BUDZ_READS = ['login', 'tplList', 'tplGet', 'list', 'get', 'versions'];
+async function budzGas(env, body) {
+  const r = await fetch(env.BUDZ_GAS_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+  const t = await r.text();
+  if (!t.startsWith('{')) throw new Error('Google atbilde: ' + r.status);
+  return t;
+}
+const budzCk = (user, req) => 'budz:' + user + ':' + req.action + ':' + [req.id, req.versija].map(x => x || '').join('|');
+async function budzStore(env, ck, t) { await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?), (?, ?)').bind(ck, t, 'budzt:' + ck.slice(5), String(Date.now())).run(); }
+/** Pēc saglabāšanas Google pusē — svaigs saraksts un šis budžets kešatmiņā */
+async function budzAfter(env, user, pin, id) {
+  for (const q of [{ action: 'list', pin }, { action: 'get', pin, id }]) {
+    try { const t = await budzGas(env, JSON.stringify(q)); if (t.startsWith('{"ok":true')) await budzStore(env, budzCk(user, q), t); } catch (e) {}
+  }
+}
+async function budzPending(env, user) {
+  return ((await env.DB.prepare("SELECT qid, fn, patch, created, err FROM izv_q WHERE part = 0 AND fn = ? ORDER BY created").bind('budz|' + user).all()).results || []);
+}
+async function budzProcess(env, ctx, qid) {
+  const head = await env.DB.prepare("SELECT fn, patch, created FROM izv_q WHERE qid = ? AND part = 0 AND err = ''").bind(qid).first();
+  if (!head) return;
+  let P = {}; try { P = JSON.parse(head.patch); } catch (e) {}
+  // secība: vispirms vecākās tā paša budžeta izmaiņas
+  const older = ((await env.DB.prepare("SELECT qid, patch FROM izv_q WHERE part = 0 AND fn = ? AND err = '' AND created < ? ORDER BY created").bind(head.fn, head.created).all()).results || [])
+    .filter(x => { try { return JSON.parse(x.patch).bid === P.bid; } catch (e) { return false; } });
+  if (older.length) return budzProcess(env, ctx, older[0].qid);
+  const now = Date.now();
+  const lk = await env.DB.prepare("UPDATE izv_q SET lock = ?, tries = tries + 1 WHERE qid = ? AND part = 0 AND err = '' AND lock < ?").bind(now, qid, now - 90000).run();
+  if (!lk.meta || !lk.meta.changes) return;
+  const parts = (await env.DB.prepare('SELECT data FROM izv_q WHERE qid = ? ORDER BY part').bind(qid).all()).results || [];
+  const body = parts.map(p => p.data).join('');
+  let t; try { t = await budzGas(env, body); } catch (e) { await env.DB.prepare('UPDATE izv_q SET lock = 0 WHERE qid = ? AND part = 0').bind(qid).run(); return; }
+  let res = null; try { res = JSON.parse(t); } catch (e) {}
+  if (res && res.ok) {
+    await env.DB.prepare('DELETE FROM izv_q WHERE qid = ?').bind(qid).run();
+    let pin = ''; try { pin = JSON.parse(body).pin; } catch (e) {}
+    await budzAfter(env, head.fn.slice(5), pin, P.bid);
+    const next = (await budzPending(env, head.fn.slice(5))).find(x => !x.err && (() => { try { return JSON.parse(x.patch).bid === P.bid; } catch (e) { return false; } })());
+    if (next) await budzProcess(env, ctx, next.qid);
+  } else {
+    await env.DB.prepare('UPDATE izv_q SET err = ?, lock = 0 WHERE qid = ? AND part = 0').bind(String((res && res.error) || 'Google kļūda').slice(0, 300), qid).run();
+  }
+}
+function budzApply(action, req, o, pend) {
+  for (const p of pend) {
+    if (action === 'get' && String(req.id) === String(p.bid) && !req.versija && o.meta) { Object.assign(o.meta, p.meta); o.data = p.data; }
+    if (action === 'list' && Array.isArray(o.items)) { const it = o.items.find(x => String(x.id) === String(p.bid)); if (it) Object.assign(it, p.meta, p.item); }
+  }
+}
+async function budz(request, env, ctx) {
+  const H = Object.assign({ 'Content-Type': 'application/json;charset=utf-8', 'Cache-Control': 'no-store' }, CORS);
+  try {
+    if (!env.BUDZ_GAS_URL) throw new Error('Serveris nav iestatīts');
+    const body = await request.text();
+    let req; try { req = JSON.parse(body); } catch (e) { throw new Error('Nederīgs pieprasījums'); }
+    const action = String(req.action || '');
+    const ph = 'budzpin:' + await sha('budz|' + String(req.pin || '').trim());
+    const known = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind(ph).first();
+    let user = null; if (known) { try { const o = JSON.parse(known.v); if (Date.now() - o.t < 2 * 3600e3) user = o.user; } catch (e) {} }
+    const remember = async (t) => {
+      if (action === 'login') { try { const o = JSON.parse(t); if (o.ok && o.user) { user = o.user; await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)').bind(ph, JSON.stringify({ user: o.user, t: Date.now() })).run(); } } catch (e) {} }
+      if (/"error":"Nepareizs PIN"/.test(t)) await env.DB.prepare('DELETE FROM kv WHERE k = ?').bind(ph).run();
+    };
+    if (BUDZ_READS.indexOf(action) !== -1) {
+      if (!user) { const t = await budzGas(env, body); await remember(t); if (user && t.startsWith('{"ok":true')) await budzStore(env, budzCk(user.name, req), t); return new Response(t, { headers: H }); }
+      const ck = budzCk(user.name, req);
+      const refresh = async () => { const t = await budzGas(env, body); await remember(t); if (t.startsWith('{"ok":true')) await budzStore(env, ck, t); return t; };
+      const rows = (await env.DB.prepare('SELECT k, v FROM kv WHERE k IN (?, ?)').bind(ck, 'budzt:' + ck.slice(5)).all()).results || [];
+      let v = (rows.find(r => r.k === ck) || {}).v; const ts = +((rows.find(r => r.k !== ck) || {}).v || 0);
+      if (v && ts) { if (Date.now() - ts > IZV_FRESH_MS) ctx.waitUntil(refresh().catch(() => 0)); } else v = await refresh();
+      if (action === 'get' || action === 'list') {
+        const q = await budzPending(env, user.name);
+        if (q.length) {
+          ctx.waitUntil((async () => { for (const x of q.filter(x => !x.err && Date.now() - x.created > 45000).slice(0, 2)) await budzProcess(env, ctx, x.qid); })().catch(() => 0));
+          const o = JSON.parse(v);
+          budzApply(action, req, o, q.filter(x => !x.err).map(x => { try { return JSON.parse(x.patch); } catch (e) { return null; } }).filter(Boolean));
+          const errs = q.filter(x => x.err);
+          if (errs.length) o.notices = errs.map(x => ({ id: x.qid, text: 'Neizdevās saglabāt budžetu: ' + x.err }));
+          v = JSON.stringify(o);
+        }
+      }
+      return new Response(v, { headers: H });
+    }
+    // Parasta saglabāšana esošam budžetam — fonā (uzreiz atbild); iesniegšana, jauns budžets u.c. — uzreiz uz Google
+    if (action === 'save' && user && req.id && !req.statuss && !req.sutitVadibai && (user.role === 'admin' || user.role === 'gatavotājs')) {
+      const q = await budzPending(env, user.name);
+      const mine = q.filter(x => !x.err).map(x => { try { return JSON.parse(x.patch); } catch (e) { return null; } }).filter(p => p && String(p.bid) === String(req.id));
+      let meta = mine.length ? mine[mine.length - 1].meta : null;
+      if (!meta) { const g = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind(budzCk(user.name, { action: 'get', id: req.id })).first();
+        if (g) { try { const m = JSON.parse(g.v).meta; if (m && (user.role === 'admin' || (m.statuss !== 'Apstiprināts' && norm(m.autors) === norm(user.name)))) meta = { versija: +m.versija || 0, statuss: m.statuss }; } catch (e) {} } }
+      const dataStr = JSON.stringify(req.data || {});
+      if (meta && dataStr.length < 700000) {
+        const n = rigaNow(), ts = n.d + ' ' + n.t, o = (req.data || {}).objekts || {}, c = req.calc || {};
+        const nm = { versija: (+meta.versija || 0) + 1, statuss: meta.statuss === 'Noraidīts' ? 'Melnraksts' : meta.statuss, atjaunots: ts };
+        const patch = { bid: req.id, meta: nm, data: req.data || {}, item: { nosaukums: o.nosaukums || '', adrese: o.adrese || '', pasutitajs: o.pasutitajs || '', bezPVN: c.bezPVN, arPVN: c.arPVN } };
+        const qid = crypto.randomUUID().replace(/-/g, ''), now = Date.now(), st = [];
+        for (let i = 0, k = 0; i < body.length; i += Q_PART, k++) st.push(env.DB.prepare('INSERT INTO izv_q (qid, part, fn, data, patch, created) VALUES (?, ?, ?, ?, ?, ?)').bind(qid, k, 'budz|' + user.name, body.slice(i, i + Q_PART), k ? '' : JSON.stringify(patch), now));
+        await env.DB.batch(st);
+        ctx.waitUntil(budzProcess(env, ctx, qid).catch(e => console.error(e)));
+        return new Response(JSON.stringify({ ok: true, id: req.id, versija: nm.versija, statuss: nm.statuss, atjaunots: ts, sent: [], queued: true }), { headers: H });
+      }
+    }
+    const t = await budzGas(env, body); await remember(t);
+    if (user && t.startsWith('{"ok":true')) ctx.waitUntil(env.DB.prepare("DELETE FROM kv WHERE k LIKE 'budzt:%'").run());   // visiem svaigi dati
     return new Response(t, { headers: H });
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String((e && e.message) || e) }), { headers: H });
