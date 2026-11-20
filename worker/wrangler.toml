@@ -1,4 +1,4 @@
-# SH | Aizvietošana — Cloudflare Worker (© VAITKEVIX, SIA) — v2
+# SH | Aizvietošana — Cloudflare Worker (© VAITKEVIX, SIA) — v3
 name = "aizvietosana-api"
 main = "src/index.js"
 compatibility_date = "2026-11-01"
@@ -6,7 +6,7 @@ workers_dev = true
 account_id = "81cd66c1dae0179ceb25a6b75302a07d"
 
 [vars]
-APP_URL = "https://vaitkevix.github.io/aizvietosana/"
+APP_URL = "https://vaitkevix.cloud/shaizvietosana/"
 # Esošais Apps Script (tilts: bildes Google Drive, AI, push paziņojumi, tabulas kopija)
 GAS_URL = "https://script.google.com/macros/s/AKfycbzFlItt2WRyL3skDuKzmMOFP11uL5vTOqR3dN2pK-O812eDIih2nyEL2UEUk_ubcDADiA/exec"
 

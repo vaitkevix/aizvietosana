@@ -15,6 +15,10 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods
 
 export default {
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    // vaitkevix.cloud/shaizvietosana → lietotne (GitHub Pages), …/shaizvietosana/api → šis API
+    if (url.pathname === SITE_PATH) return Response.redirect(url.origin + SITE_PATH + '/' + url.search, 301);
+    if (url.pathname.startsWith(SITE_PATH + '/') && url.pathname !== SITE_PATH + '/api') return site(request, url);
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
     if (request.method === 'GET') return json({ ok: true, app: 'SH | Aizvietošana', time: new Date().toISOString() });
     let req;
@@ -43,6 +47,19 @@ export default {
     ctx.waitUntil(syncConfig(new Ctx(env, ctx)).catch(e => console.error('syncConfig', e)));
   }
 };
+
+const SITE_PATH = '/shaizvietosana';
+const SITE_ORIGIN = 'https://vaitkevix.github.io/aizvietosana';
+/** Lietotnes faili no GitHub Pages zem tava domēna */
+async function site(request, url) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
+  const rest = url.pathname.slice(SITE_PATH.length) || '/';
+  const r = await fetch(SITE_ORIGIN + rest + url.search, { headers: { 'User-Agent': 'vaitkevix-proxy' }, cf: { cacheTtl: 60, cacheEverything: true } });
+  const h = new Headers(r.headers);
+  h.delete('set-cookie');
+  if (/\.(html|js|json)$|\/$/.test(rest)) h.set('Cache-Control', 'no-cache');
+  return new Response(r.body, { status: r.status, headers: h });
+}
 
 function json(o) { return new Response(JSON.stringify(o), { headers: Object.assign({ 'Content-Type': 'application/json;charset=utf-8' }, CORS) }); }
 function checkKey(env, key) { if (!env.BRIDGE_KEY || key !== env.BRIDGE_KEY) throw new Error('Nav atļauts'); }
