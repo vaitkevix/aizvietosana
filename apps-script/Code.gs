@@ -36,6 +36,7 @@ function doPost(e) {
     return json_({ ok: false, error: 'Nederīgs pieprasījums' });
   }
   try {
+    if (req.action === 'bridge') return json_(Object.assign({ ok: true }, bridge_(req)));
     if (req.action === 'teamView') return json_(Object.assign({ ok: true }, teamView_(req)));
     if (req.action === 'teamDone') return json_(Object.assign({ ok: true }, teamDone_(req)));
     if (req.action === 'teamCant') return json_(Object.assign({ ok: true }, teamCant_(req)));
@@ -1123,3 +1124,136 @@ function setup() {
 function testPushAdmins() {
   Logger.log('Nosūtīti: ' + notify_(namesByRole_('admin'), 'Darbu sadale', 'Tests no Apps Script ✓'));
 }
+
+/* ---------------- Cloudflare tilts (© VAITKEVIX, SIA) ----------------
+ * Ātrā versija strādā Cloudflare (Workers + D1). Šis skripts paliek kā „tilts” uz Google:
+ * bildes Google Drive, AI, push paziņojumi, lietotāju/darbu veidu/objektu saraksts un nakts kopija tabulā.
+ * Script properties: BRIDGE_KEY (tā pati, kas Cloudflare), CF_URL (Cloudflare Worker adrese).
+ */
+
+function bridge_(r) {
+  const key = PropertiesService.getScriptProperties().getProperty('BRIDGE_KEY');
+  if (!key || r.key !== key) throw new Error('Nav atļauts');
+  switch (r.op) {
+    case 'photos': return { ids: savePhotos_({ datums: r.datums, adrese: r.adrese }, r.photos) };
+    case 'aiNote': {
+      const text = aiCall_(AI_SYSTEM, aiPrompt_(r), 2000);
+      return { text: String(text || '').trim().replace(/^["„“]|["”“]$/g, '') };
+    }
+    case 'aiParse': return aiParseBridge_(r);
+    case 'push': return pushTokens_(r.tokens || [], r.title, r.body);
+    case 'config': return { users: users_(), types: jobTypes_(), objects: objects_() };
+    case 'addObjects': return withLock_(() => {
+      const known = objects_().map(o => normName_(o.adrese));
+      const sh = objSheet_();
+      (r.rows || []).forEach(x => { if (known.indexOf(normName_(x[0])) === -1) { known.push(normName_(x[0])); sh.appendRow(x); } });
+      return {};
+    });
+    case 'importObjects': return withLock_(() => {
+      const sh = objSheet_();
+      const last = sh.getLastRow();
+      const cur = last > 1 ? sh.getRange(2, 1, last - 1, 4).getValues() : [];
+      const idx = {};
+      cur.forEach((x, i) => idx[normName_(x[0])] = i);
+      (r.rows || []).forEach(x => { const k = normName_(x[0]); if (idx[k] !== undefined) cur[idx[k]] = x; else { idx[k] = cur.length; cur.push(x); } });
+      if (cur.length) sh.getRange(2, 1, cur.length, 4).setValues(cur);
+      return {};
+    });
+  }
+  throw new Error('Nezināma tilta darbība');
+}
+
+function aiParseBridge_(r) {
+  const msg = String(r.text || '').trim();
+  if (!msg) throw new Error('Ielīmē vai uzraksti ziņu');
+  const types = r.types || [];
+  const mgrs = r.managers || [];
+  const system = 'Tu no apsaimniekošanas darbu vadītāja ziņas izveido darbu pieteikumus. Atbildi TIKAI ar JSON, bez paskaidrojumiem.';
+  const prompt = 'Šodien: ' + r.today + ' (' + r.weekday + ').\n' +
+    (r.role === 'admin' ? 'Darbu vadītāji: ' + mgrs.join(', ') + '. Ja ziņā minēts, kurš vadītājs piesaka, norādi "vaditajs".\n' : '') +
+    'Darbu veidi (tips jāizvēlas TIKAI no šiem): ' + types.map(t => t.name + ' [' + t.group + ']').join('; ') + '\n' +
+    'Zināmās adreses (ja ziņā minēta līdzīga, izmanto precīzi šo rakstību): ' + (r.addresses || []).join('; ') + '\n\n' +
+    'Ziņa:\n' + msg.slice(0, 3000) + '\n\n' +
+    'Atgriez JSON: {"datums":"YYYY-MM-DD vai null","vaditajs":"vārds vai null","rindas":[{"adrese":"...","tips":"...","apraksts":"īsa piezīme latviski vai tukšs","prombutne":"Atvaļinājums|DNL|Vakance vai null","lidz":"YYYY-MM-DD vai null"}]}. ' +
+    '"prombutne" — kāpēc jāaizvieto: atvaļinājums, DNL (slimības lapa, darba nespējas lapa, slims) vai vakance (nav darbinieka); tikai aizvietošanas darbiem. ' +
+    '"datums" = diena, uz kuru attiecas darbi (piem. "rīt" → rītdienas datums); ja nav minēts, null. ' +
+    '"lidz" aizpildi tikai, ja aizvietojamais ir atvaļinājumā/prombūtnē līdz konkrētam datumam. ' +
+    '"aizvietot sētnieku" → tips "Sētnieks"; "abus"/"sētnieku un apkopēju" → "Abi". Neizdomā adreses.';
+  const raw = aiCall_(system, prompt, 8000);
+  const m = String(raw).match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('AI neatgrieza pieteikumu');
+  const data = JSON.parse(m[0]);
+  const names = types.map(t => t.name);
+  const rows = (data.rindas || []).filter(x => x && x.adrese).map(x => ({
+    adrese: String(x.adrese).trim(), tips: names.indexOf(x.tips) !== -1 ? x.tips : '',
+    apraksts: String(x.apraksts || '').trim(), lidz: /^\d{4}-\d{2}-\d{2}$/.test(x.lidz || '') ? x.lidz : '',
+    prombutne: PROMBUTNE.indexOf(x.prombutne) !== -1 ? x.prombutne : ''
+  }));
+  return { datums: /^\d{4}-\d{2}-\d{2}$/.test(data.datums || '') ? data.datums : '', vaditajs: mgrs.indexOf(data.vaditajs) !== -1 ? data.vaditajs : '', rows: rows };
+}
+
+/** Push uz konkrētiem tokeniem; atgriež nederīgos (tos Cloudflare izdzēš) */
+function pushTokens_(tokens, title, body) {
+  const props = PropertiesService.getScriptProperties();
+  const saJson = props.getProperty('FCM_SERVICE_ACCOUNT');
+  if (!saJson || !tokens.length) return { sent: 0, dead: [] };
+  const sa = JSON.parse(saJson);
+  const appUrl = props.getProperty('APP_URL') || '';
+  const access = fcmAccessToken_(sa);
+  const url = 'https://fcm.googleapis.com/v1/projects/' + sa.project_id + '/messages:send';
+  const res = UrlFetchApp.fetchAll(tokens.map(t => ({
+    url: url, method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + access },
+    payload: JSON.stringify({ message: { token: t, notification: { title: title, body: body },
+      webpush: appUrl ? { fcm_options: { link: appUrl }, notification: { icon: appUrl + 'icons/icon-192.png' } } : undefined } })
+  })));
+  let sent = 0; const dead = [];
+  res.forEach((x, i) => { const c = x.getResponseCode(); if (c === 200) sent++; else if (c === 404 || /UNREGISTERED|registration-token-not-registered/.test(x.getContentText())) dead.push(tokens[i]); });
+  return { sent: sent, dead: dead };
+}
+
+function cfPost_(body) {
+  const props = PropertiesService.getScriptProperties();
+  const url = props.getProperty('CF_URL'), key = props.getProperty('BRIDGE_KEY');
+  if (!url || !key) throw new Error('Script properties: ielieciet CF_URL un BRIDGE_KEY');
+  const res = UrlFetchApp.fetch(url, { method: 'post', contentType: 'text/plain;charset=utf-8', muteHttpExceptions: true, payload: JSON.stringify(Object.assign({ key: key }, body)) });
+  const j = JSON.parse(res.getContentText());
+  if (!j.ok) throw new Error(j.error || ('Cloudflare kļūda ' + res.getResponseCode()));
+  return j;
+}
+
+/** VIENREIZ: pārnes visus datus no tabulas uz Cloudflare (var palaist atkārtoti — dati tiek aizvietoti) */
+function exportToCloudflare() {
+  const jobs = readJobs_().map(clean_);
+  const crew = [];
+  const cd = crewSheet_().getDataRange().getValues();
+  for (let i = 1; i < cd.length; i++) if (cd[i][1]) crew.push({ datums: dateStr_(cd[i][0]), name: String(cd[i][1]), persons: splitNames_(cd[i][2]).join(', ') });
+  const tokens = [];
+  const td = sheet_(SH_TOKENS) ? sheet_(SH_TOKENS).getDataRange().getValues() : [];
+  for (let i = 1; i < td.length; i++) if (td[i][1]) tokens.push({ name: String(td[i][0]), token: String(td[i][1]), device: String(td[i][2] || ''), updated: str_(td[i][3]) });
+  const probs = readProblems_().map(p => { const c = Object.assign({}, p); delete c._row; return c; });
+  const stand = readStanding_().map(s => { const c = Object.assign({}, s); delete c._row; return c; });
+  cfPost_({ action: 'import', reset: true, data: { users: users_(), types: jobTypes_(), objects: objects_(), staff: staff_(), crew: crew, tokens: tokens, problems: probs, standing: stand } });
+  for (let i = 0; i < jobs.length; i += 300) cfPost_({ action: 'import', data: { jobs: jobs.slice(i, i + 300) } });
+  Logger.log('Pārnests: ' + jobs.length + ' darbi, ' + crew.length + ' vienību ieraksti, ' + probs.length + ' problēmas, ' + stand.length + ' pastāvīgās');
+}
+
+/** Nakts kopija no Cloudflare atpakaļ uz tabulu (iestatiet laika trigeri, piem., katru nakti 2:00–3:00) */
+function mirrorFromCloudflare() {
+  const pull = (table) => { let rows = [], off = 0, more = true; while (more) { const r = cfPost_({ action: 'export', table: table, offset: off, limit: 1000 }); rows = rows.concat(r.rows); off += r.rows.length; more = r.more; } return rows; };
+  const put = (sh, head, rows) => {
+    sh.clearContents();
+    sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
+    if (rows.length) sh.getRange(2, 1, rows.length, head.length).setNumberFormat('@').setValues(rows.map(r => head.map((_, i) => r[i] == null ? '' : String(r[i]))));
+  };
+  withLock_(() => {
+    put(jobsSheet_(), JOB_COLS, pull('jobs'));
+    put(crewSheet_(), ['Datums', 'Brigade', 'Personas'], pull('crew'));
+    put(staffSheet_(), ['Vards', 'Pamatbrigade'], pull('staff'));
+    if (sheet_(SH_TOKENS)) put(sheet_(SH_TOKENS), ['Vards', 'Token', 'Ierice', 'Atjaunots'], pull('tokens'));
+    put(probSheet_(), PROB_COLS, pull('problems'));
+    put(standSheet_(), STAND_COLS, pull('standing'));
+  });
+}
+
+/** Pēc lietotāju / PIN / darbu veidu / objektu maiņas tabulā — uzreiz nosūta uz Cloudflare (citādi ik pēc 30 min) */
+function syncConfigNow() { Logger.log(JSON.stringify(cfPost_({ action: 'syncConfig' }))); }

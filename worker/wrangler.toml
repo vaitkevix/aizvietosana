@@ -1,0 +1,22 @@
+# SH | Aizvietošana — Cloudflare Worker (© VAITKEVIX, SIA)
+name = "aizvietosana-api"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[vars]
+APP_URL = "https://vaitkevix.github.io/aizvietosana/"
+# Esošais Apps Script (tilts: bildes Google Drive, AI, push paziņojumi, tabulas kopija)
+GAS_URL = "https://script.google.com/macros/s/AKfycbzFlItt2WRyL3skDuKzmMOFP11uL5vTOqR3dN2pK-O812eDIih2nyEL2UEUk_ubcDADiA/exec"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aizvietosana"
+database_id = "IELIEC_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[triggers]
+# lietotāji, darbu veidi un objekti no Google tabulas — ik pēc 30 min
+crons = ["*/30 * * * *"]
+
+# BRIDGE_KEY — slepenā atslēga (GitHub Secrets → tiek ielikta automātiski, kodā to neglabā)
