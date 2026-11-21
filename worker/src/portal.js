@@ -6,7 +6,8 @@ export const ROLES = {
   izv: ['', 'admin', 'pieteicejs'],
   kais: ['', 'admin', 'pieteicejs'],
   pers: ['', 'admin', 'vaditajs'],
-  budz: ['', 'admin', 'gatavotājs', 'vadība']
+  budz: ['', 'admin', 'gatavotājs', 'vadība'],
+  pl: ['', 'admin', 'vaditajs', 'izpilditajs']
 };
 const P_CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
 const pj = (o) => new Response(JSON.stringify(o), { headers: Object.assign({ 'Content-Type': 'application/json;charset=utf-8' }, P_CORS) });
