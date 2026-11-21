@@ -1,4 +1,4 @@
-# SH | Aizvietošana — Cloudflare Worker (© VAITKEVIX, SIA) — v24
+# SH | Aizvietošana — Cloudflare Worker (© VAITKEVIX, SIA) — v25
 name = "aizvietosana-api"
 main = "src/index.js"
 compatibility_date = "2026-11-01"

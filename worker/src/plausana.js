@@ -89,6 +89,31 @@ export async function fetchRain(db) {
   await db.batch([kvSet(db, 'pl:rain', m)]);
   return m;
 }
+/* Koordinātas no adreses (OpenStreetMap Nominatim, ≤ 1 pieprasījums sekundē) — tikai pļaušanas objektiem bez koordinātām */
+function geoQuery(adr) {
+  let a = String(adr || '').trim(), city = 'Rīga';
+  if (/^\s*j\s*\|/i.test(a)) city = 'Jūrmala';
+  a = a.replace(/^\s*(j|vn[iī])\s*\|\s*/i, '').replace(/,?\s*latvija.*$/i, '').replace(/,?\s*lv-?\d{4}\b/i, '');
+  a = a.replace(/(\d+[a-z]?)\s*,\s*\d+[a-z]?(\s*,\s*\d+[a-z]?)*/i, '$1').replace(/\s+k-\d+/i, '');   // «4, 6» → «4»; korpusus nost
+  if (!/r[iī]ga|j[uū]rmala|mārupe|marupe|ķekava|kekava|salaspils|ādaži|adazi/i.test(a)) a += ', ' + city;
+  return a + ', Latvija';
+}
+export async function geocode(db, max) {
+  const L = (await db.prepare("SELECT p.anorm, o.adrese FROM pl_obj p JOIN objects o ON o.anorm = p.anorm WHERE p.aktivs = 1 AND p.m2 > 0 AND p.lat IS NULL LIMIT ?").bind(max || 10).all()).results || [];
+  let ok = 0, miss = 0;
+  for (const o of L) {
+    try {
+      const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=lv&q=' + encodeURIComponent(geoQuery(o.adrese)), { headers: { 'User-Agent': 'SH-plausana/1.0 (+https://vaitkevix.cloud/sh/)', 'Accept-Language': 'lv' } });
+      const j = r.ok ? await r.json() : [];
+      if (j && j[0]) { await db.prepare('UPDATE pl_obj SET lat = ?, lng = ? WHERE anorm = ?').bind(+j[0].lat, +j[0].lon, o.anorm).run(); ok++; }
+      else { await db.prepare('UPDATE pl_obj SET lat = 0, lng = 0 WHERE anorm = ?').bind(o.anorm).run(); miss++; }
+    } catch (e) { break; }
+    await new Promise(res => setTimeout(res, 1100));
+  }
+  const left = (await db.prepare('SELECT COUNT(*) n FROM pl_obj WHERE aktivs = 1 AND m2 > 0 AND lat IS NULL').first()).n;
+  return { found: ok, notFound: miss, left };
+}
+
 /* Cron: reizi dienā no 05:00 (Rīgas laiks) — prognoze + grafiks */
 export async function plCron(env) {
   const db = env.DB, t = today(), h = +fmtT.format(new Date()).slice(11, 13);
@@ -96,26 +121,28 @@ export async function plCron(env) {
   await db.batch([kvSet(db, 'pl:ran', t)]);
   await fetchRain(db).catch(e => console.error('pl rain', e));
   await schedule(db);
+  await geocode(db, 20).catch(e => console.error('pl geo', e));
 }
 
 /* ---------- API ---------- */
-const ROLE_W = { admin: 3, vaditajs: 2, izpilditajs: 1 };
+const ROLE_W = { admin: 3, vaditajs: 2, izpilditajs: 1, skatitajs: 0 };
 export async function plausana(request, env, X) {
   if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
   let b = {}; try { b = await request.json(); } catch (e) { return out({ ok: false, error: 'Nederīgs pieprasījums' }, 400); }
   const db = env.DB;
   const me = await personByPin(db, b.pin);
-  const role = me && me.perms && me.perms.pl;
+  const role = me && ((me.perms || {}).pl || ((me.perms || {}).portal === 'admin' ? 'admin' : 'skatitajs'));
   if (!me || !role) { await new Promise(r => setTimeout(r, 700)); return out({ ok: false, error: 'Nepareizs PIN vai nav piekļuves pļaušanai', code: 'auth' }); }
-  const need = (r) => { if ((ROLE_W[role] || 0) < ROLE_W[r]) throw new Error('Nav atļauts'); };
+  const need = (r) => { if ((ROLE_W[role] || 0) < ROLE_W[r]) throw new Error('Jums ir tikai skatīšanās tiesības'); };
   const a = b.action;
   try {
     if (a === 'boot') {
       const t = today(), from = b.from || addDays(t, -7), to = b.to || addDays(t, 14);
-      const objects = (await db.prepare('SELECT o.anorm, o.adrese, o.vaditajs, o.grupa, o.piekluve, p.m2, p.intervals, p.aktivs, p.brigade, p.piezime FROM objects o LEFT JOIN pl_obj p ON p.anorm = o.anorm ORDER BY o.ord').all()).results || [];
+      const objects = (await db.prepare('SELECT o.anorm, o.adrese, o.vaditajs, o.grupa, o.piekluve, p.m2, p.intervals, p.aktivs, p.brigade, p.piezime, p.lat, p.lng FROM objects o LEFT JOIN pl_obj p ON p.anorm = o.anorm ORDER BY o.ord').all()).results || [];
+      if (ROLE_W[role] < 1) objects.forEach(o => { o.piekluve = ''; });   // vārtu / atslēgu kodi — tikai izpildītājam un vadītājam
       const visits = (await db.prepare('SELECT * FROM pl_visit WHERE datums >= ? AND datums <= ? ORDER BY datums, prio DESC, adrese').bind(from, to).all()).results || [];
       const last = (await db.prepare("SELECT anorm, MAX(datums) d FROM pl_visit WHERE statuss = 'done' GROUP BY anorm").all()).results || [];
-      const logs = role === 'izpilditajs' ? [] : ((await db.prepare('SELECT laiks, teksts FROM pl_log ORDER BY id DESC LIMIT 30').all()).results || []);
+      const logs = ROLE_W[role] < 2 ? [] : ((await db.prepare('SELECT laiks, teksts FROM pl_log ORDER BY id DESC LIMIT 30').all()).results || []);
       return out({ ok: true, me: { name: me.name, role }, today: t, cfg: await cfgOf(db), rain: (await kv(db, 'pl:rain')) || {}, objects, visits, last, logs,
         groups: (await groupsOf(db).catch(() => [])).map(g => ({ name: g.name, adreses: g.adreses })) });
     }
@@ -124,6 +151,12 @@ export async function plausana(request, env, X) {
       const visits = (await db.prepare("SELECT id, anorm, adrese, datums, statuss, prio, parcelts, foto, izpilditajs, laiks, iemesls FROM pl_visit WHERE substr(datums, 1, 7) = ? ORDER BY datums").bind(ym).all()).results || [];
       return out({ ok: true, visits });
     }
+    if (a === 'obj') {
+      const k = anorm(b.anorm || b.adrese);
+      const hist = (await db.prepare('SELECT id, datums, statuss, laiks, izpilditajs, foto, iemesls, piezime, parcelts FROM pl_visit WHERE anorm = ? ORDER BY datums DESC LIMIT 40').bind(k).all()).results || [];
+      return out({ ok: true, hist });
+    }
+    if (a === 'geo') { need('vaditajs'); return out(Object.assign({ ok: true }, await geocode(db, 12))); }
     if (a === 'saveObj') {
       need('vaditajs');
       const list = (Array.isArray(b.objs) ? b.objs : [b]).slice(0, 500), st = [];
@@ -137,6 +170,7 @@ export async function plausana(request, env, X) {
       return out(Object.assign({ ok: true }, await schedule(db)));
     }
     if (a === 'done' || a === 'cant') {
+      need('izpilditajs');
       const v = await db.prepare('SELECT * FROM pl_visit WHERE id = ?').bind(String(b.id || '')).first();
       if (!v) throw new Error('Izbraukums nav atrasts — atjaunojiet');
       if (v.statuss === 'done') return out({ ok: true, already: true });

@@ -365,7 +365,7 @@ const ORDER = ['aizv', 'izv', 'kais', 'pers', 'budz', 'pl'];
 const GLY = {aizv: '<path d="M17 2.5l3.5 3.5L17 9.5"/><path d="M3.5 11V9.5A3.5 3.5 0 0 1 7 6h13.5"/><path d="M7 21.5L3.5 18 7 14.5"/><path d="M20.5 13v1.5A3.5 3.5 0 0 1 17 18H3.5"/>', izv: '<path d="M14 16.5V6H2.5v10.5h2"/><path d="M14 9.5h4l3.5 4v3h-2"/><path d="M9.3 16.5h5.4"/><circle cx="7" cy="16.8" r="2.3"/><circle cx="17" cy="16.8" r="2.3"/>', kais: '<path d="M12.00 12.00L12.00 2.50M12.00 7.25L9.88 5.13M12.00 7.25L14.12 5.13M12.00 12.00L3.77 7.25M7.89 9.62L4.99 10.40M7.89 9.62L7.11 6.73M12.00 12.00L3.77 16.75M7.89 14.38L7.11 17.27M7.89 14.38L4.99 13.60M12.00 12.00L12.00 21.50M12.00 16.75L14.12 18.87M12.00 16.75L9.88 18.87M12.00 12.00L20.23 16.75M16.11 14.38L19.01 13.60M16.11 14.38L16.89 17.27M12.00 12.00L20.23 7.25M16.11 9.62L16.89 6.73M16.11 9.62L19.01 10.40"/>', pers: '<circle cx="9.5" cy="8" r="4"/><path d="M2.5 21a7 7 0 0 1 14 0"/><path d="M19.5 8v6M16.5 11h6"/>', budz: '<path d="M5.5 2.5h13v19l-3.2-2.1-3.3 2.1-3.3-2.1-3.2 2.1z"/><path d="M9 8h6M9 12h6M9 16h3.5"/>', pl: '<path d="M3 20h18"/><path d="M6 20c0-5 1-9 3-12M10 20c0-4 1-7 3-9M14 20c0-3 1-6 4-8"/>'};
 const gl = (k, n) => `<svg class="gl" width="${n || 22}" height="${n || 22}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLY[k]}</svg>`;
 const ib = (k, n) => `<span class="ib c-${k}">${gl(k, n)}</span>`;
-const RL = { admin: 'Administrators', vaditajs: 'Darbu vadītājs', izpilditajs: 'Izpildītājs', pieteicejs: 'Pieteicējs', 'gatavotājs': 'Gatavotājs', 'vadība': 'Vadība' };
+const RL = { admin: 'Administrators', vaditajs: 'Darbu vadītājs', izpilditajs: 'Izpildītājs', skatitajs: 'Skatītājs', pieteicejs: 'Pieteicējs', 'gatavotājs': 'Gatavotājs', 'vadība': 'Vadība' };
 const COLORS = ['#0f6b5c', '#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0891b2', '#475569'];
 
 function toast(m, type) { const t = document.createElement('div'); t.className = 'toast' + (type === 'err' ? ' err' : ''); t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 3200); }
@@ -388,7 +388,7 @@ $('loginForm').onsubmit = async (e) => {
     S.t = r.token; ls.set('sh_t', r.token); ls.set('sh_pin', pin);
     S.me = r.me; S.dash = r.dash; ls.set('sh_me', JSON.stringify(r.me)); sso(pin);
     try { if (window.PasswordCredential && navigator.credentials) navigator.credentials.store(new PasswordCredential({ id: 'SH portāls', password: pin })).catch(() => {}); } catch (e) {}
-    $('pin').value = ''; home(); { const k = location.hash.slice(1); if (APPS[k] && S.me.perms[k]) openApp(k, true); } maybeTour();
+    $('pin').value = ''; home(); { const k = location.hash.slice(1); if (APPS[k] && hasApp(k)) openApp(k, true); } maybeTour();
   } catch (err) {
     $('loginErr').textContent = netMsg(err); $('pin').value = '';
     const c = $('loginForm'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); $('pin').focus();
@@ -411,7 +411,7 @@ function sso(pin) {
   });
   if (P.pers) { ls.set('personals_pin', pin); ls.set('personals_login', ''); } else ls.del('personals_pin');
   if (P.budz) { ls.set('budzets_pin', pin); ls.del('budzets_user'); } else ls.del('budzets_pin');
-  if (P.pl) ls.set('plausana_pin', pin); else ls.del('plausana_pin');
+  if (plRole()) ls.set('plausana_pin', pin); else ls.del('plausana_pin');
 }
 async function logout() {
   try { await api('logout'); } catch (e) {}
@@ -421,7 +421,10 @@ async function logout() {
 }
 
 /* ---------- Sākums ---------- */
-function apps() { return ORDER.filter(k => S.me && S.me.perms[k]); }
+/* Zāles pļaušanu redz visi portāla cilvēki (skatīšanās); tiesības pl dod labošanu */
+const plRole = () => S.me && !S.me.company ? (S.me.perms.pl || (S.me.perms.portal === 'admin' ? 'admin' : 'skatitajs')) : '';
+const hasApp = (k) => !!(S.me && (S.me.perms[k] || (k === 'pl' && plRole())));
+function apps() { return ORDER.filter(hasApp); }
 const COLOR = { aizv: 'c-aizv', izv: 'c-izv', kais: 'c-kais', pers: 'c-pers', budz: 'c-budz', pl: 'c-aizv' };
 const ARROW = '<span class="arrow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>';
 const GRID = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="7.5" cy="7.5" r="3.5"/><circle cx="16.5" cy="7.5" r="3.5"/><circle cx="7.5" cy="16.5" r="3.5"/><circle cx="16.5" cy="16.5" r="3.5"/></svg>';
@@ -440,7 +443,7 @@ function appChip(k) {
   const D = (S.dash || {})[k] || {};
   if (k === 'izv' && D.urgent) return `<span class="chip w">● ${D.urgent} steidzami</span>`;
   if (k === 'aizv' && D.unassigned) return `<span class="chip w">● ${D.unassigned} bez brigādes</span>`;
-  const r = S.me.perms[k]; return r ? `<span class="chip">${esc(RL[r] || (r === 'izvedejs' ? 'Izvedējs' : r === 'kurjers' ? 'Kurjers' : r))}</span>` : '';
+  const r = S.me.perms[k] || (k === 'pl' ? plRole() : ''); return r ? `<span class="chip">${esc(RL[r] || (r === 'izvedejs' ? 'Izvedējs' : r === 'kurjers' ? 'Kurjers' : r))}</span>` : '';
 }
 function home() {
   show('vHome');
@@ -514,7 +517,7 @@ $('refreshBtn').onclick = async () => { const b = $('refreshBtn'); b.style.trans
 
 /* ---------- Lietotnes rāmī (atvērtās paliek ielādētas — pārslēgšanās uzreiz) ---------- */
 function openApp(k, noPush) {
-  if (!S.me || !S.me.perms[k]) return;
+  if (!hasApp(k)) return;
   show('vApp'); $('appTitle').textContent = APPS[k].name;
   const pin = ls.get('sh_pin'); if (pin) sso(pin);
   if (!S.frames[k]) { const f = document.createElement('iframe'); f.src = APPS[k].path + (HX && HX.k === k ? '#' + HX.x : (S.me.company ? '#carrier' : '')); f.title = APPS[k].name; f.allow = 'geolocation; camera; clipboard-write'; $('frames').appendChild(f); S.frames[k] = f; }
