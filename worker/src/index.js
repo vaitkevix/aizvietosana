@@ -108,14 +108,13 @@ async function who(request, env) {
   const rows = (u.results || []).filter(r => r.role === 'admin' || r.role === 'vaditajs');
   if (rows.length === 1) { const r = rows[0]; return json({ ok: true, user: { name: r.name, role: r.role, kind: r.role === 'admin' ? 'admin' : 'pieteicejs', kindLabel: WHO_LABEL[r.role] } }); }
   try {
-    if (app === 'izv') {
-      const t = JSON.parse(await appGas(env, 'izv', 'carrierByPassword', JSON.stringify([pin])));
-      if (t.ok && t.result) { await pinRemember(env, t.result + '\n' + pin.toUpperCase()).catch(() => 0);
-        return json({ ok: true, user: { name: t.result, role: 'izvedejs', kind: 'izvedejs', kindLabel: WHO_LABEL.izvedejs }, carrierPin: t.result + '\n' + pin.toUpperCase() }); }
-    }
-    if (app === 'kais') {
-      const t = JSON.parse(await appGas(env, 'kais', 'courierByPassword', JSON.stringify([pin])));
-      if (t.ok && t.result) return json({ ok: true, user: { name: t.result, role: 'kurjers', kind: 'kurjers', kindLabel: WHO_LABEL.kurjers } });
+    if (app === 'izv' || app === 'kais') {
+      const t = JSON.parse(await appGas(env, app, 'whoByPassword', JSON.stringify([pin])));
+      const w = t.ok && t.result;
+      if (w && w.kind === 'pieteicejs') return json({ ok: true, user: { name: w.name, role: 'pieteicejs', kind: 'pieteicejs', kindLabel: WHO_LABEL.vaditajs } });
+      if (w && w.kind === 'izvedejs') { const cp = w.name + '\n' + pin.toUpperCase(); await pinRemember(env, cp).catch(() => 0);
+        return json({ ok: true, user: { name: w.name, role: 'izvedejs', kind: 'izvedejs', kindLabel: WHO_LABEL.izvedejs }, carrierPin: cp }); }
+      if (w && w.kind === 'kurjers') return json({ ok: true, user: { name: w.name, role: 'kurjers', kind: 'kurjers', kindLabel: WHO_LABEL.kurjers } });
     }
   } catch (e) { return json({ ok: false, error: 'Neizdevās pārbaudīt, mēģiniet vēlreiz' }); }
   await new Promise(r => setTimeout(r, 700));
