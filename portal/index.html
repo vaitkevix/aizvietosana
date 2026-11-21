@@ -455,6 +455,7 @@ function home() {
       <div class="atop"><span class="ib">${gl(k, 20)}</span>${appChip(k)}</div>
       <div><b>${APPS[k].name}</b><small>${esc(appSub(k))}</small></div>${ARROW}</button>`).join('')
     + (me.admin ? `<button class="ac c-adm" data-adm data-q="Administrēšana pilnvaras objekti"><div class="atop"><span style="width:34px;height:34px;display:grid;place-items:center">${SHIELD}</span></div><div><b>Administrēšana</b><small>Cilvēki, pilnvaras, objekti, uzņēmumi</small></div>${ARROW}</button>` : '')
+    + (me.admin ? `<a class="ac c-aizv" href="plausana/" style="text-decoration:none" data-q="Pļaušana zāle koncepts"><div class="atop"><span class="ib"><svg class="gl" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6 20c0-5 1-9 3-12M10 20c0-4 1-7 3-9M14 20c0-3 1-6 4-8"/></svg></span><span class="chip">Koncepts</span></div><div><b>Zāles pļaušana</b><small>Grafiks, karte, bildes</small></div>${ARROW}</a>` : '')
     + (list.length ? '' : '<div class="card" style="grid-column:1/-1;padding:20px;text-align:center;font-weight:700;color:var(--ink-3)">Jums vēl nav piešķirta neviena lietotne. Sazinieties ar administratoru.</div>');
   // Kopsavilkums
   const sx = [];
