@@ -507,12 +507,22 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
   .hist .b{flex:1;min-width:0;font-size:14px}
   .hist .b small{display:block;color:var(--ink-3);font-weight:600;font-size:12.5px;margin-top:2px;word-break:break-word}
   .hist .thumbs{padding:6px 0 0}
-  .rtable{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0 14px}
-  .rtable th,.rtable td{padding:7px 3px;text-align:right;border-bottom:1px solid var(--g-brd-2);white-space:nowrap}
-  .rtable th:first-child,.rtable td:first-child{text-align:left;white-space:normal}
-  .rtable th{font-size:11.5px;color:var(--ink-3);font-weight:800}
-  .rtable tr.tot td{font-weight:800}
+  .rtable{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;margin:4px 0 14px;font-variant-numeric:tabular-nums}
+  .rtable th,.rtable td{padding:8px 3px;text-align:right;border-bottom:1px solid #dfe5e2;white-space:nowrap}
+  .rtable th:first-child,.rtable td:first-child{text-align:left;white-space:normal;padding-left:8px;min-width:72px}
+  .rtable th:last-child,.rtable td:last-child{padding-right:6px}
+  .rtable th{background:#17201c;color:#fff;font-size:11px;font-weight:700;letter-spacing:0;border-bottom:0}
+  .rtable th:first-child{border-radius:8px 0 0 8px}.rtable th:last-child{border-radius:0 8px 8px 0}
+  .rtable tr:nth-child(odd):not(.tot) td{background:#fafbfa}
+  .rtable tr.tot td{font-weight:800;background:#d6e8e1;color:#17201c;border-bottom:0}
+  .rtable tr.tot td:first-child{border-radius:8px 0 0 8px}.rtable tr.tot td:last-child{border-radius:0 8px 8px 0}
+  :root[data-theme="dark"] .rtable th{background:#2a3631}
+  :root[data-theme="dark"] .rtable th,:root[data-theme="dark"] .rtable td{border-bottom-color:rgba(255,255,255,.08)}
+  :root[data-theme="dark"] .rtable tr:nth-child(odd):not(.tot) td{background:rgba(255,255,255,.03)}
+  :root[data-theme="dark"] .rtable tr.tot td{background:#2b4a3f;color:#eef2ef}
   .rwrap{overflow-x:auto;margin:0 -4px}
+  .rbtns{display:flex;gap:8px;margin-top:8px}.rbtns .btn{flex:1}
+  .rcsv{display:block;margin:10px auto 0;background:none;border:0;color:var(--ink-3);font:inherit;font-size:12.5px;font-weight:700;text-decoration:underline;cursor:pointer;min-height:40px}
   .i{width:1em;height:1em;flex:none;vertical-align:-.14em;display:inline-block}
   h3 .i{width:.95em;height:.95em;margin-right:4px;vertical-align:-.1em}
   .chip .i,.chip-link .i{width:15px;height:15px}
@@ -2006,6 +2016,94 @@ async function loadStats() {
 }
 
 /* ---------- Mēneša atskaite ---------- */
+/* ---------- Eksporti SH stilā (sh-theme/eksports.md): izdruka/PDF un .xlsx ---------- */
+const SH_ACC = '#d6e8e1';
+const SH_LOGO = '<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="#17201c"/><rect x="8" y="8" width="8" height="8" rx="2.2" fill="#d6e8e1"/><rect x="18" y="8" width="8" height="8" rx="2.2" fill="#f4e4b4"/><rect x="8" y="18" width="8" height="8" rx="2.2" fill="#d8e6f2"/><rect x="18" y="18" width="8" height="8" rx="2.2" fill="#e2ddf2"/></svg>';
+function shPrintDoc(o) {
+  const lvDate = (x) => x.slice(8, 10) + '.' + x.slice(5, 7) + '.' + x.slice(0, 4);
+  return `<!doctype html><html lang="lv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(o.file || o.title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:14mm}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html,body{margin:0;background:#fff;color:#17201c;font:12px/1.45 Manrope,-apple-system,"Segoe UI",Arial,sans-serif}
+.page{max-width:182mm;margin:0 auto;padding:18px 16px 24px}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:10px}.brand svg{flex:none;display:block}
+.brand b{display:block;font-weight:800;font-size:13px;letter-spacing:-.01em}.brand span{display:block;color:#6d7672;font-size:11px;font-weight:600}
+.meta{text-align:right;color:#4a534f;font-size:11px;font-weight:600}.meta b{display:block;color:#17201c;font-size:12.5px;font-weight:800}
+.band{background:${SH_ACC};border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.band h1{margin:0;font-size:24px;line-height:1.15;font-weight:800;letter-spacing:-.02em}.band p{margin:4px 0 0;color:#4a534f;font-size:12.5px;font-weight:600}
+h2{font-size:13px;font-weight:800;letter-spacing:-.02em;margin:16px 0 8px}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;font-variant-numeric:tabular-nums}
+th{background:#17201c;color:#fff;font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding:8px 7px;text-align:right;white-space:nowrap}
+th:first-child{border-radius:8px 0 0 8px;text-align:left}th:last-child{border-radius:0 8px 8px 0}th+th{box-shadow:-1px 0 0 #17201c}
+td{padding:7px;border-bottom:1px solid #dfe5e2;text-align:right;white-space:nowrap}td:first-child{text-align:left;white-space:normal;font-weight:600}
+tbody tr:nth-child(even) td{background:#fafbfa}
+tr{break-inside:avoid}thead{display:table-header-group}
+tbody tr.tot td{background:${SH_ACC};font-weight:800;border-bottom:0}tr.tot td:first-child{border-radius:8px 0 0 8px}tr.tot td:last-child{border-radius:0 8px 8px 0}
+.note{background:#f3f5f4;border-radius:12px;padding:12px 14px;color:#4a534f;font-size:11px;margin-top:14px}
+.ft{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #dfe5e2;margin-top:22px;padding-top:8px;color:#6d7672;font-size:9.5px;font-weight:600}
+.bar{position:sticky;top:0;display:flex;gap:8px;justify-content:flex-end;padding:10px 16px;background:#f1f4f2}
+.bar button{border:0;border-radius:999px;padding:10px 18px;font:700 13px Manrope,Arial,sans-serif;background:#17201c;color:#fff;cursor:pointer;min-height:40px}
+.bar button.soft{background:#fff;color:#17201c}
+@media screen and (max-width:600px){.page{padding:14px 10px 20px}th,td{padding:7px 4px}th{font-size:9.5px;letter-spacing:.02em}td:first-child{min-width:86px}.band h1{font-size:22px}}
+@media print{.bar{display:none}.page{padding:0;max-width:none}}
+</style></head><body>
+<div class="bar"><button class="soft" onclick="window.close()">Aizvērt</button><button onclick="window.print()">Drukāt / PDF</button></div>
+<div class="page">
+<div class="hd"><div class="brand">${SH_LOGO}<div><b>SELECTUM HOME</b><span>${esc(o.kind)}</span></div></div><div class="meta"><b>${esc(o.right || '')}</b>Sagatavots ${lvDate(today())}</div></div>
+<div class="band"><h1>${esc(o.title)}</h1>${o.sub ? `<p>${esc(o.sub)}</p>` : ''}</div>
+${o.body}
+<div class="ft"><span>SELECTUM HOME · vaitkevix.cloud/sh</span><span>© VAITKEVIX, SIA</span></div>
+</div><script>addEventListener('load',()=>setTimeout(()=>{try{print()}catch(e){}},500))<\/script></body></html>`;
+}
+function shOpenPrint(html) {
+  const w = window.open('', '_blank');
+  if (w) { w.document.open(); w.document.write(html); w.document.close(); return; }
+  const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(f); f.contentDocument.open(); f.contentDocument.write(html.replace(/<script>[\s\S]*?<\/script>/, '')); f.contentDocument.close();
+  setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast('Neizdevās atvērt izdruku', 'err'); } setTimeout(() => f.remove(), 60000); }, 700);
+}
+let _xlLib = null;
+const loadExcelJS = () => _xlLib || (_xlLib = new Promise((ok, no) => {
+  if (self.ExcelJS) return ok(self.ExcelJS);
+  const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+  s.onload = () => self.ExcelJS ? ok(self.ExcelJS) : no(new Error('Excel bibliotēka nav ielādēta'));
+  s.onerror = () => { _xlLib = null; no(new Error('Neizdevās ielādēt Excel bibliotēku — pārbaudiet internetu')); };
+  document.head.appendChild(s);
+}));
+/* cols: [{h, w?, num?, fmt?}], rows: masīvi, total: masīvs vai null */
+function shXlSheet(wb, name, o) {
+  const n = o.cols.length, F = (c) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + c } });
+  const ws = wb.addWorksheet(name.slice(0, 31), { views: [{ state: 'frozen', ySplit: 3 }],
+    pageSetup: { paperSize: 9, orientation: n > 7 ? 'landscape' : 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .55, right: .55, top: .6, bottom: .6, header: .3, footer: .3 } },
+    headerFooter: { oddFooter: '&L&8SELECTUM HOME · © VAITKEVIX, SIA&R&8&P / &N' } });
+  ws.mergeCells(1, 1, 1, n); ws.mergeCells(2, 1, 2, n);
+  const t = ws.getCell(1, 1); t.value = o.title; t.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FF17201C' } }; t.fill = F('D6E8E1'); t.alignment = { vertical: 'middle', indent: 1 };
+  ws.getRow(1).height = 32;
+  const st = ws.getCell(2, 1); st.value = o.sub || ''; st.font = { name: 'Arial', size: 10, color: { argb: 'FF4A534F' } }; st.alignment = { vertical: 'middle', indent: 1 }; ws.getRow(2).height = 20;
+  const hr = ws.getRow(3); hr.height = 22;
+  o.cols.forEach((c, i) => { const x = hr.getCell(i + 1); x.value = c.h; x.fill = F('17201C'); x.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    x.alignment = { vertical: 'middle', horizontal: c.num ? 'right' : 'left', wrapText: false }; });
+  const line = { style: 'thin', color: { argb: 'FFDFE5E2' } };
+  o.rows.forEach((r) => { const row = ws.addRow(r); o.cols.forEach((c, i) => { const x = row.getCell(i + 1);
+    x.font = { name: 'Arial', size: 10, color: { argb: 'FF17201C' } }; x.border = { bottom: line }; x.alignment = { vertical: 'top', horizontal: c.num ? 'right' : 'left', wrapText: !c.num && !c.fmt };
+    if (c.fmt) x.numFmt = c.fmt; }); });
+  if (o.total) { const row = ws.addRow(o.total); o.cols.forEach((c, i) => { const x = row.getCell(i + 1);
+    x.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF17201C' } }; x.fill = F('D6E8E1'); x.border = { top: { style: 'thin', color: { argb: 'FF17201C' } } };
+    x.alignment = { horizontal: c.num ? 'right' : 'left' }; if (c.fmt) x.numFmt = c.fmt; }); }
+  o.cols.forEach((c, i) => { const len = Math.max(String(c.h).length + 2, ...o.rows.concat(o.total ? [o.total] : []).map(r => r[i] instanceof Date ? 10 : String(r[i] ?? '').length));
+    ws.getColumn(i + 1).width = c.w || Math.min(48, Math.max(8, len + 2)); });
+  ws.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3, column: n } };
+  return ws;
+}
+async function shXlDownload(wb, file) {
+  wb.creator = 'SELECTUM HOME'; wb.company = 'VAITKEVIX, SIA';
+  const buf = await wb.xlsx.writeBuffer();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  a.download = file; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
 async function openMonthReport(month) {
   const LV_MON = ['Janvāris', 'Februāris', 'Marts', 'Aprīlis', 'Maijs', 'Jūnijs', 'Jūlijs', 'Augusts', 'Septembris', 'Oktobris', 'Novembris', 'Decembris'];
   const from = month + '-01', d = new Date(from + 'T12:00'); d.setMonth(d.getMonth() + 1); d.setDate(0);
@@ -2035,8 +2133,37 @@ async function openMonthReport(month) {
       ${S.user.role === 'admin' ? `<span class="label">Pa vadītājiem</span>${table('Vadītājs', byMgr)}` : ''}
       <span class="label">Pa objektiem</span>${table('Objekts', byObj)}
       <p class="lead" style="font-size:12px">Aizv. — aizvietošanas · Papild. — papilddarbi · Pieņ. — vadītājs pieņēma · Neatz. — pagājušas dienas darbi bez atzīmes.</p>
-      <button class="btn btn-primary btn-block" id="csvBtn"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg> Lejupielādēt Excel (CSV)</button>`}`;
+      <div class="rbtns"><button class="btn btn-primary" id="xlsxBtn"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg> Excel</button>
+      <button class="btn btn-glass" id="printBtn"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg> Drukāt / PDF</button></div>
+      <button class="rcsv" id="csvBtn">Lejupielādēt CSV</button>`}`;
     $('sheetBody').onclick = (e) => { const b = e.target.closest('[data-m]'); if (b && !b.disabled) openMonthReport(b.dataset.m); };
+    const sumRows = (m) => Object.entries(m).sort((a, b) => b[1].n - a[1].n);
+    const legend = 'Aizv. — aizvietošanas · Papild. — papilddarbi · Pieņ. — vadītājs pieņēma · Neatz. — pagājušas dienas darbi bez atzīmes.';
+    const period = shortDate(from) + from.slice(0, 4) + ' – ' + shortDate(to) + to.slice(0, 4);
+    if ($('printBtn')) $('printBtn').onclick = () => {
+      const pt = (head, m) => `<table><thead><tr><th>${head}</th>${H.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>
+        ${sumRows(m).map(([k, x]) => `<tr><td>${esc(k)}</td>${K.map(c => `<td>${x[c] || ''}</td>`).join('')}</tr>`).join('')}
+        ${tot['Kopā'] ? `<tr class="tot"><td>Kopā</td>${K.map(c => `<td>${tot['Kopā'][c]}</td>`).join('')}</tr>` : ''}</tbody></table>`;
+      shOpenPrint(shPrintDoc({ kind: 'Aizvietošana · Mēneša atskaite', title: 'Mēneša atskaite', sub: title + ' · ' + period, right: title, file: 'Darbi ' + month,
+        body: (S.user.role === 'admin' ? `<h2>Pa vadītājiem</h2>${pt('Vadītājs', byMgr)}` : '') + `<h2>Pa objektiem</h2>${pt('Objekts', byObj)}<div class="note">${legend}</div>` }));
+    };
+    if ($('xlsxBtn')) $('xlsxBtn').onclick = async () => {
+      const b = $('xlsxBtn'); b.disabled = true;
+      try {
+        const X = await loadExcelJS(), wb = new X.Workbook();
+        const dt = (x) => new Date(Date.UTC(+x.slice(0, 4), +x.slice(5, 7) - 1, +x.slice(8, 10)));
+        shXlSheet(wb, 'Darbi', { title: 'Darbi — ' + title, sub: 'Aizvietošana · ' + period + ' · ' + js.length + ' darbi',
+          cols: [{ h: 'Datums', fmt: 'dd.mm.yyyy', w: 12 }, { h: 'Adrese', w: 40 }, { h: 'Darbs', w: 20 }, { h: 'Iemesls', w: 16 }, { h: 'Vadītājs', w: 20 }, { h: 'Vienība', w: 18 }, { h: 'Statuss', w: 15 }, { h: 'Pārbaude', w: 12 }, { h: 'Nevar izpildīt — iemesls', w: 30 }],
+          rows: js.slice().sort((a, b) => a.datums.localeCompare(b.datums)).map(j => [dt(j.datums), j.adrese, j.tips, j.prombutne || '', j.vaditajs, j.brigade, j.statuss, j.parbaude || '', j.statuss === 'nevar izpildīt' ? j.iemesls || '' : '']) });
+        const sumSheet = (nm, head, m) => shXlSheet(wb, nm, { title: 'Mēneša atskaite — ' + title, sub: nm + ' · ' + period,
+          cols: [{ h: head, w: 40 }].concat(H.map(h => ({ h, num: true, fmt: '#,##0', w: 10 }))),
+          rows: sumRows(m).map(([k, x]) => [k].concat(K.map(c => x[c] || null))), total: tot['Kopā'] ? ['Kopā'].concat(K.map(c => tot['Kopā'][c])) : null });
+        if (S.user.role === 'admin') sumSheet('Pa vadītājiem', 'Vadītājs', byMgr);
+        sumSheet('Pa objektiem', 'Objekts', byObj);
+        await shXlDownload(wb, 'Darbi ' + month + '.xlsx');
+      } catch (err) { toast(err.message, 'err'); }
+      b.disabled = false;
+    };
     if ($('csvBtn')) $('csvBtn').onclick = () => {
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv()], { type: 'text/csv;charset=utf-8' }));
       a.download = 'Darbi ' + month + '.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
