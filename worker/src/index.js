@@ -21,6 +21,7 @@ export default {
     if (url.pathname === '/kais' || url.pathname.endsWith('/kais')) return izv(request, url, env, ctx, 'kais');
     if (url.pathname === '/pers' || url.pathname.endsWith('/pers')) return pers(request, env, ctx);
     if (url.pathname === '/budz' || url.pathname.endsWith('/budz')) return budz(request, env, ctx);
+    if (url.pathname === '/who' || url.pathname.endsWith('/who')) return who(request, env);
     if (url.pathname === '/img' || url.pathname.endsWith('/img')) return img(url, ctx);
     // vaitkevix.cloud/shaizvietosana, /shizvesana → lietotnes (GitHub Pages); …/api → šis API
     for (const base in SITES) {
@@ -95,6 +96,30 @@ async function imgPrewarm(text, ctx) {
   while ((m = re.exec(tail)) && ids.length < 400) ids.push(m[1] || m[2]);
   const uniq = [...new Set(ids)].slice(-15);
   for (const id of uniq) { try { const r = await caches.default.match(imgKey(id, 'w600')); if (!r) await imgFetch(id, 'w600', ctx); } catch (e) {} }
+}
+/** Ieeja ar PIN visos servisos: pieteicēji — Aizvietošanas lietotāju PIN; izvedēji/kurjeri — sava SIA parole */
+const WHO_LABEL = { admin: 'Administrators', vaditajs: 'Pieteicējs', izvedejs: 'Izvedējs', kurjers: 'Kurjers' };
+async function who(request, env) {
+  if (request.method !== 'POST') return json({ ok: false, error: 'POST' });
+  let b = {}; try { b = JSON.parse(await request.text() || '{}'); } catch (e) {}
+  const pin = String(b.pin || '').trim(), app = String(b.app || '');
+  if (!pin || pin.length > 64) return json({ ok: false, error: 'Ievadiet PIN' });
+  const u = await env.DB.prepare('SELECT name, role FROM users WHERE pin = ? AND pin != \'\'').bind(pin).all();
+  const rows = (u.results || []).filter(r => r.role === 'admin' || r.role === 'vaditajs');
+  if (rows.length === 1) { const r = rows[0]; return json({ ok: true, user: { name: r.name, role: r.role, kind: r.role === 'admin' ? 'admin' : 'pieteicejs', kindLabel: WHO_LABEL[r.role] } }); }
+  try {
+    if (app === 'izv') {
+      const t = JSON.parse(await appGas(env, 'izv', 'carrierByPassword', JSON.stringify([pin])));
+      if (t.ok && t.result) { await pinRemember(env, t.result + '\n' + pin.toUpperCase()).catch(() => 0);
+        return json({ ok: true, user: { name: t.result, role: 'izvedejs', kind: 'izvedejs', kindLabel: WHO_LABEL.izvedejs }, carrierPin: t.result + '\n' + pin.toUpperCase() }); }
+    }
+    if (app === 'kais') {
+      const t = JSON.parse(await appGas(env, 'kais', 'courierByPassword', JSON.stringify([pin])));
+      if (t.ok && t.result) return json({ ok: true, user: { name: t.result, role: 'kurjers', kind: 'kurjers', kindLabel: WHO_LABEL.kurjers } });
+    }
+  } catch (e) { return json({ ok: false, error: 'Neizdevās pārbaudīt, mēģiniet vēlreiz' }); }
+  await new Promise(r => setTimeout(r, 700));
+  return json({ ok: false, error: 'Nepareizs PIN' });
 }
 async function appGas(env, app, fn, body) {
   const r = await fetch(env[APPS[app].gas] + '?fn=' + encodeURIComponent(fn) + '&key=' + encodeURIComponent(env.BRIDGE_KEY),
