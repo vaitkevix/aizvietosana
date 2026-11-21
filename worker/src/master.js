@@ -149,3 +149,53 @@ export function publicLists(M) {
     amati: M.lists.amati, kodi: M.lists.tel_kodi, materiali: M.lists.materiali, objekti: M.objects.map(o => o.adrese), types: M.types };
 }
 export { kvGet, kvSet, cleanPerms };
+
+
+/* ---------- «Pārbaudīt»: dublikātu apvienošana (paturētais saņem visu; atsauces pārceltas, nekas netiek zaudēts) ---------- */
+const PAIR = '  ↔  ';
+export async function resolveReview(db, i, keep) {
+  const R = JSON.parse((await kvGet(db, 'masterReview')) || '[]');
+  const it = R[i]; if (!it) return { ok: false, error: 'Ieraksts vairs nav — atjaunojiet' };
+  let people = false;
+  if (keep === 0 || keep === 1) {
+    const pair = String(it[1] || '').split(PAIR); if (pair.length !== 2) return { ok: false, error: 'Šim ierakstam nav pāra' };
+    const K = pair[keep].trim(), D = pair[1 - keep].trim();
+    if (it[0] === 'Objekts') {
+      const ko = await db.prepare('SELECT * FROM objects WHERE anorm = ?').bind(anorm(K)).first();
+      const dobj = await db.prepare('SELECT * FROM objects WHERE anorm = ?').bind(anorm(D)).first();
+      if (!ko) return { ok: false, error: 'Objekts «' + K + '» vairs nav sarakstā' };
+      const st = [];
+      if (dobj) st.push(db.prepare('UPDATE objects SET vaditajs = ?, grupa = ?, piekluve = ? WHERE anorm = ?')
+        .bind(ko.vaditajs || dobj.vaditajs, ko.grupa || dobj.grupa, ko.piekluve || dobj.piekluve, ko.anorm),
+        db.prepare('DELETE FROM objects WHERE anorm = ?').bind(dobj.anorm));
+      st.push(db.prepare('UPDATE jobs SET adrese = ?, anorm = ? WHERE anorm = ?').bind(ko.adrese, ko.anorm, anorm(D)),
+        db.prepare('UPDATE problems SET adrese = ?, anorm = ? WHERE anorm = ?').bind(ko.adrese, ko.anorm, anorm(D)),
+        db.prepare('UPDATE standing SET adrese = ? WHERE adrese = ?').bind(ko.adrese, D));
+      await db.batch(st);
+    } else if (it[0] === 'Cilvēks') {
+      const all = await db.prepare('SELECT * FROM people').all().then(r => r.results || []);
+      const kp = all.find(p => normN(p.name) === normN(K)), dp = all.find(p => normN(p.name) === normN(D));
+      if (!kp) return { ok: false, error: 'Cilvēks «' + K + '» vairs nav sarakstā' };
+      const st = [];
+      if (dp) {
+        const kpm = JSON.parse(kp.perms || '{}'), dpm = JSON.parse(dp.perms || '{}');
+        Object.keys(dpm).forEach(a => { if (dpm[a] && !kpm[a]) kpm[a] = dpm[a]; });
+        st.push(db.prepare('UPDATE people SET perms = ?, phone = ?, email = ?, color = ? WHERE name = ?')
+          .bind(JSON.stringify(cleanPerms(kpm)), kp.phone || dp.phone || '', kp.email || dp.email || '', kp.color || dp.color || '', kp.name),
+          db.prepare('DELETE FROM people WHERE name = ?').bind(dp.name));
+        ['jobs', 'standing', 'objects', 'problems'].forEach(t => st.push(db.prepare('UPDATE ' + t + ' SET vaditajs = ? WHERE vaditajs = ?').bind(kp.name, dp.name)));
+        st.push(db.prepare('UPDATE tokens SET name = ? WHERE name = ?').bind(kp.name, dp.name));
+      }
+      await db.batch(st); people = true;
+    } else return { ok: false, error: 'Šo ierakstu apvienot nevar — spiediet «Izdarīts»' };
+  }
+  R.splice(i, 1);
+  await db.batch([kvSet(db, 'masterReview', JSON.stringify(R))]);
+  return { ok: true, people };
+}
+export async function clearInfoReview(db) {
+  const R = JSON.parse((await kvGet(db, 'masterReview')) || '[]');
+  const left = R.filter(r => String(r[1] || '').indexOf(PAIR) >= 0);
+  await db.batch([kvSet(db, 'masterReview', JSON.stringify(left))]);
+  return R.length - left.length;
+}

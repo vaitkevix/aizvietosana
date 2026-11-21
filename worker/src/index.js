@@ -6,7 +6,7 @@
  */
 
 import { portal, people, personByPin, seedFrom, peopleStmts, usersStmts } from './portal.js';
-import { master, importAll as importMaster, legacyPayload, publicLists, objectsStmts, companiesStmts, listsStmts, typesStmts, kvGet, kvSet } from './master.js';
+import { master, importAll as importMaster, legacyPayload, publicLists, objectsStmts, companiesStmts, listsStmts, typesStmts, kvGet, kvSet, resolveReview, clearInfoReview } from './master.js';
 const TZ = 'Europe/Riga';
 const PROMBUTNE = ['Atvaļinājums', 'DNL', 'Vakance'];
 const STAND_PROMB = ['DNL', 'Vakance'];
@@ -1047,6 +1047,9 @@ async function masterAdmin(X, a, b, me) {
   if (a === 'saveLists') { await db.batch(listsStmts(db, b.lists || {})); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
   if (a === 'saveTypes') { const list = (b.types || []).filter(t => t && t.name); if (!list.length) return { ok: false, error: 'Saraksts ir tukšs' };
     await db.batch(typesStmts(db, list)); X.c = {}; masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  if (a === 'reviewResolve') { const r = await resolveReview(db, +b.i, b.keep === 0 || b.keep === 1 ? b.keep : -1); if (!r.ok) return r;
+    X.c = {}; if (r.people) await peopleSaved(X, await people(db)); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  if (a === 'reviewClearInfo') { const n = await clearInfoReview(db); masterDirty(X); return Object.assign({ ok: true, cleared: n }, await master(db)); }
   if (a === 'saveReview') { await db.batch([kvSet(db, 'masterReview', JSON.stringify(b.review || []))]); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
   return null;
 }

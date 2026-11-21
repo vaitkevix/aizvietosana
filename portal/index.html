@@ -237,6 +237,13 @@ button{cursor:pointer}
 .ni b{display:block;font-size:14.5px;font-weight:800}.ni small{display:block;font-size:12.5px;font-weight:700;opacity:.65;margin-top:2px}
 .ni.u{background:var(--sand)}.ni.k{background:var(--sky)}
 .hidden-q{display:none!important}
+.rv .nm{display:grid;gap:8px}.rv .chip{justify-self:start}
+.rvp{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rk{min-height:64px;padding:10px 14px;border:0;border-radius:18px;background:var(--surface);color:var(--ink);font-weight:800;font-size:14px;text-align:left;line-height:1.3;word-break:break-word}
+.rk small{display:block;font-size:11.5px;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.rk:hover{box-shadow:0 0 0 2px var(--ink-strong)}
+.rv .rd{height:44px;font-size:13px;background:var(--surface)}
+@media(max-width:520px){.rvp{grid-template-columns:1fr}}
 
 /* ===== Vienotais portāla stils: ieeja, Administrēšana, lapas. © VAITKEVIX, SIA ===== */
 .sx .arrow{display:grid;padding:0}
@@ -607,10 +614,23 @@ function drawAdmin() {
     });
   }
   if (A.tab === 'review') {
-    const R = A.M.review || [];
-    const s = adminShell(R.length ? `<p class="copy" style="text-align:left;margin:0 0 10px">Šos ierakstus apvienojot neaiztiku — pārbaudiet un izlabojiet attiecīgajā cilnē, tad spiediet «Izdarīts».</p><div class="plist">${R.map((r, i) => `<div class="prow"><div class="nm"><b>${esc(r[0])}: ${esc(r[1])}</b><div style="font-size:13px;color:var(--ink-3);font-weight:600;margin-top:4px">${esc(r[2])}. ${esc(r[3])}</div></div><button class="btn ghost" data-done="${i}" style="width:auto;height:38px;padding:0 12px;font-size:13px">Izdarīts</button></div>`).join('')}</div>` : '<div class="card" style="padding:20px;text-align:center;font-weight:700;color:var(--ink-3)">Viss pārbaudīts ✓</div>', null);
-    s.addEventListener('click', (e) => { const b = e.target.closest('[data-done]'); if (!b) return; const R2 = R.slice(); R2.splice(+b.dataset.done, 1); saveM('saveReview', { review: R2 }); });
+    const R = A.M.review || [], PR = '  ↔  ';
+    const pairs = R.filter(r => String(r[1]).indexOf(PR) >= 0).length, info = R.length - pairs;
+    const row = (r, i) => { const p = String(r[1]).split(PR);
+      if (p.length === 2 && (r[0] === 'Objekts' || r[0] === 'Cilvēks')) return `<div class="prow rv"><div class="nm"><span class="chip">${esc(r[0])}</span>
+        <div class="rvp"><button class="rk" data-keep="0" data-i="${i}"><small>Paturēt</small>${esc(p[0])}</button><button class="rk" data-keep="1" data-i="${i}"><small>Paturēt</small>${esc(p[1])}</button></div>
+        <button class="btn ghost rd" data-keep="-1" data-i="${i}">Atšķiras — paturēt abus</button></div></div>`;
+      return `<div class="prow"><div class="nm"><b>${esc(r[0])}: ${esc(r[1])}</b><div style="font-size:13px;color:var(--ink-3);font-weight:600;margin-top:4px">${esc(r[2])}. ${esc(r[3])}</div></div><button class="btn ghost" data-keep="-1" data-i="${i}" style="width:auto;height:40px;padding:0 14px;font-size:13px">Izdarīts</button></div>`; };
+    const s = adminShell(R.length ? `<p class="copy" style="text-align:left;margin:0 0 10px">${pairs ? `<b>${pairs} līdzīgi pāri.</b> Izvēlieties, kuru paturēt — otrs tiks apvienots ar to (darbi, problēmas un tiesības pārceltas, nekas netiek zaudēts). ` : ''}${info ? info + ' informatīvi ieraksti.' : ''}</p>
+      ${info ? `<button class="btn ghost" id="rvInfo" style="margin:0 0 12px">Notīrīt informatīvos (${info})</button>` : ''}<div class="plist">${R.map(row).join('')}</div>` : '<div class="card" style="padding:20px;text-align:center;font-weight:700;color:var(--ink-3)">Viss pārbaudīts ✓</div>', null);
+    s.addEventListener('click', (e) => {
+      if (e.target.closest('#rvInfo')) { if (confirm('Notīrīt ' + info + ' informatīvos ierakstus? Dati netiek mainīti.')) saveM('reviewClearInfo', {}); return; }
+      const b = e.target.closest('[data-keep]'); if (!b) return; const keep = +b.dataset.keep, i = +b.dataset.i, r = R[i];
+      if (keep >= 0) { const p = String(r[1]).split(PR); if (!confirm('Paturēt «' + p[keep].trim() + '» un apvienot ar to «' + p[1 - keep].trim() + '»?\n\nOtrs ieraksts tiks dzēsts, tā darbi un tiesības pārcelti.')) return; }
+      saveM('reviewResolve', { i, keep });
+    });
   }
+
 }
 const CHEV = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-3);flex:none"><path d="M9 6l6 6-6 6"/></svg>';
 const empty = () => '<div class="card" style="padding:18px;text-align:center;font-weight:700;color:var(--ink-3)">Nekas nav atrasts</div>';
