@@ -14,7 +14,7 @@ async function h(s) { const b = await crypto.subtle.digest('SHA-256', new TextEn
 const parse = (s) => { try { return JSON.parse(s || '{}') || {}; } catch (e) { return {}; } };
 export function cleanPerms(p) { const o = {}; for (const k in ROLES) { const v = String((p || {})[k] || ''); if (v && ROLES[k].indexOf(v) > 0) o[k] = v; } return o; }
 
-export async function people(db) { return ((await db.prepare('SELECT name, pin, color, ord, active, perms FROM people ORDER BY ord, name').all()).results || []).map(r => ({ name: r.name, pin: r.pin, color: r.color, ord: r.ord, active: !!r.active, perms: parse(r.perms) })); }
+export async function people(db) { return ((await db.prepare('SELECT * FROM people ORDER BY ord, name').all()).results || []).map(r => ({ name: r.name, pin: r.pin, color: r.color, phone: r.phone || '', email: r.email || '', ord: r.ord, active: !!r.active, perms: parse(r.perms) })); }
 export async function personByPin(db, pin) { pin = String(pin || '').trim(); if (!pin) return null; return (await people(db)).find(p => p.active && p.pin === pin) || null; }
 
 /** Pirmā reize: pilnvaras no Aizvietošanas lietotājiem */
@@ -27,7 +27,7 @@ export function seedFrom(users) {
 }
 export function peopleStmts(db, list) {
   const st = [db.prepare('DELETE FROM people')];
-  list.forEach((p, i) => st.push(db.prepare('INSERT INTO people (name, pin, color, ord, active, perms) VALUES (?, ?, ?, ?, ?, ?)').bind(p.name, p.pin, p.color || '', i, p.active ? 1 : 0, JSON.stringify(cleanPerms(p.perms)))));
+  list.forEach((p, i) => st.push(db.prepare('INSERT INTO people (name, pin, color, ord, active, perms, phone, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').bind(p.name, String(p.pin), p.color || '', i, p.active === false ? 0 : 1, JSON.stringify(cleanPerms(p.perms)), p.phone || '', p.email || '')));
   return st;
 }
 /** Aizvietošanas lietotāji = cilvēki ar Aizvietošanas lomu */
@@ -82,6 +82,7 @@ export async function portal(request, env, ctx, hooks) {
   const b = parse(await request.text()), a = String(b.action || '');
   try {
     if (a === 'login' || a === 'check') await ensureSeed(env.DB);
+    if (a === 'lists') return pj(Object.assign({ ok: true }, await hooks.lists()));
     if (a === 'login') {
       const me = await personByPin(env.DB, b.pin);
       if (!me) { await new Promise(r => setTimeout(r, 700)); return pj({ ok: false, error: 'Nepareizs PIN' }); }
@@ -104,10 +105,10 @@ export async function portal(request, env, ctx, hooks) {
       const list = await people(env.DB), p = b.person || {};
       const name = String(p.name || '').replace(/\s+/g, ' ').trim(), pin = String(p.pin || '').trim(), old = String(p.oldName || '');
       if (!name) return pj({ ok: false, error: 'Ierakstiet vārdu' });
-      if (!/^\d{4,8}$/.test(pin)) return pj({ ok: false, error: 'PIN — 4 līdz 8 cipari' });
+      if (!/^[0-9A-Za-z]{4,12}$/.test(pin)) return pj({ ok: false, error: 'PIN — 4 līdz 12 cipari vai burti' });
       if (list.some(x => x.name !== old && x.name.toLowerCase() === name.toLowerCase())) return pj({ ok: false, error: 'Šāds vārds jau ir' });
       if (list.some(x => x.name !== old && x.pin === pin)) return pj({ ok: false, error: 'Šāds PIN jau ir citam — izvēlieties citu' });
-      const rec = { name, pin, color: String(p.color || '').slice(0, 20), active: p.active !== false, perms: cleanPerms(p.perms) };
+      const rec = { name, pin, color: String(p.color || '').slice(0, 20), phone: String(p.phone || '').trim().slice(0, 40), email: String(p.email || '').trim().slice(0, 120), active: p.active !== false, perms: cleanPerms(p.perms) };
       if (old === me.name && rec.perms.portal !== 'admin') return pj({ ok: false, error: 'Sev administratora tiesības noņemt nevar' });
       const i = list.findIndex(x => x.name === old);
       if (i >= 0) list[i] = Object.assign(list[i], rec); else list.push(rec);
@@ -120,6 +121,7 @@ export async function portal(request, env, ctx, hooks) {
       await hooks.saved(list);
       return pj({ ok: true, people: await people(env.DB) });
     }
+    if (hooks.admin) { const r = await hooks.admin(a, b, me); if (r) return pj(r); }
     return pj({ ok: false, error: 'Nezināma darbība' });
   } catch (e) { return pj({ ok: false, error: String(e && e.message || e) }); }
 }

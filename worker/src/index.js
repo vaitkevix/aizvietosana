@@ -6,6 +6,7 @@
  */
 
 import { portal, people, personByPin, seedFrom, peopleStmts, usersStmts } from './portal.js';
+import { master, importAll as importMaster, legacyPayload, publicLists, objectsStmts, companiesStmts, listsStmts, typesStmts, kvGet, kvSet } from './master.js';
 const TZ = 'Europe/Riga';
 const PROMBUTNE = ['Atvaļinājums', 'DNL', 'Vakance'];
 const STAND_PROMB = ['DNL', 'Vakance'];
@@ -23,7 +24,7 @@ export default {
     if (url.pathname === '/pers' || url.pathname.endsWith('/pers')) return pers(request, env, ctx);
     if (url.pathname === '/budz' || url.pathname.endsWith('/budz')) return budz(request, env, ctx);
     if (url.pathname === '/who' || url.pathname.endsWith('/who')) return who(request, env);
-    if (url.pathname === '/portal' || url.pathname.endsWith('/portal')) { const X = new Ctx(env, ctx); return portal(request, env, ctx, { saved: (list) => peopleSaved(X, list) }); }
+    if (url.pathname === '/portal' || url.pathname.endsWith('/portal')) { const X = new Ctx(env, ctx); return portal(request, env, ctx, { saved: (list) => peopleSaved(X, list), admin: (a, b, me) => masterAdmin(X, a, b, me), lists: async () => publicLists(await master(env.DB)) }); }
     if (url.pathname === '/img' || url.pathname.endsWith('/img')) return img(url, ctx);
     // vaitkevix.cloud/shaizvietosana, /shizvesana → lietotnes (GitHub Pages); …/api → šis API
     for (const base in SITES) {
@@ -569,7 +570,8 @@ async function addObjects(X, addrs, vaditajs) {
   if (!add.length) return;
   await X.db.batch(add.map(a => X.st('INSERT OR IGNORE INTO objects (anorm, adrese, vaditajs, grupa, piekluve, ord) VALUES (?, ?, ?, ?, ?, ?)', norm(a), a, vaditajs || '', 'SH objekti', '', 100000)));
   X.c.objects = null;
-  X.bg(X.bridge('addObjects', { rows: add.map(a => [a, vaditajs || '', 'SH objekti', '']) }, 30000));   // tabula paliek galvenā objektu sarakstam
+  X.bg(X.bridge('addObjects', { rows: add.map(a => [a, vaditajs || '', 'SH objekti', '']) }, 30000));
+  X.bg(X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('masterDirty', '1')"));   // tabula paliek galvenā objektu sarakstam
 }
 
 /* ---------------- Pastāvīgās aizvietošanas ---------------- */
@@ -715,7 +717,7 @@ const ACTIONS = {
     });
     if (st.length) await X.db.batch(st);
     X.c.objects = null;
-    if (rows.length) X.bg(X.bridge('importObjects', { rows }, 60000));
+    if (rows.length) { X.bg(X.bridge('importObjects', { rows }, 60000)); X.bg(X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('masterDirty', '1')")); }
     return { added, updated, objects: await X.objects() };
   },
 
@@ -1004,11 +1006,50 @@ async function teamProblem(X, r) {
 
 /* ---------------- Sinhronizācija ar Google tabulu ---------------- */
 
+/* ---------------- Pamatdati (viens saraksts visām lietotnēm) ---------------- */
+async function masterImport(X) {
+  const env = X.env, src = {};
+  const g = async (app) => { const t = JSON.parse(await appGas(env, app, 'getLists', '[]')); if (!t.ok) throw new Error(app + ': ' + t.error); return t.result; };
+  src.izv = await g('izv'); src.kais = await g('kais');
+  const pc = await X.first("SELECT v FROM kv WHERE k LIKE 'pers:%:login:%' LIMIT 1");
+  try { const o = pc && JSON.parse(pc.v); if (o && o.meta && o.meta.lists) src.pers = o.meta.lists; } catch (e) {}
+  const r = await importMaster(X.db, src);
+  X.c = {};
+  return r;
+}
+async function pushMaster(X) {
+  const env = X.env, M = await master(X.db), pl = legacyPayload(M);
+  await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('masterDirty', '0')");
+  try {
+    await X.bridge('master', pl.aizv, 90000);
+    for (const app of ['izv', 'kais']) { const t = JSON.parse(await appGas(env, app, 'setLists', JSON.stringify([pl[app]]))); if (!t.ok) throw new Error(app + ': ' + t.error); }
+  } catch (e) { await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('masterDirty', '1')"); throw e; }
+  await Promise.all([appRefresh(env, 'izv', 'getBoot').catch(() => 0), appRefresh(env, 'kais', 'getInitialData').catch(() => 0)]);
+}
+const masterDirty = (X) => { X.bg((async () => { await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('masterDirty', '1')"); await pushMaster(X); })()); };
+/** Portāla administrēšana: pamatdati */
+async function masterAdmin(X, a, b, me) {
+  const db = X.db;
+  if (a === 'master') return Object.assign({ ok: true }, await master(db));
+  if (a === 'import') { const r = await masterImport(X); X.bg(pushMaster(X)); X.bg(pushPeople(X, await people(db))); return Object.assign({ ok: true, imported: r }, await master(db)); }
+  if (a === 'saveObjects') { const list = (b.objects || []).filter(o => o && String(o.adrese || '').trim()); if (!list.length) return { ok: false, error: 'Saraksts ir tukšs' };
+    await db.batch(objectsStmts(db, list)); X.c = {}; masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  if (a === 'saveCompanies') { const list = b.companies || [];
+    const pw = list.filter(c => c.pass).map(c => String(c.pass).trim().toUpperCase()); if (new Set(pw).size !== pw.length) return { ok: false, error: 'Divām firmām ir vienāda parole' };
+    await db.batch(companiesStmts(db, list)); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  if (a === 'saveLists') { await db.batch(listsStmts(db, b.lists || {})); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  if (a === 'saveTypes') { const list = (b.types || []).filter(t => t && t.name); if (!list.length) return { ok: false, error: 'Saraksts ir tukšs' };
+    await db.batch(typesStmts(db, list)); X.c = {}; masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  if (a === 'saveReview') { await db.batch([kvSet(db, 'masterReview', JSON.stringify(b.review || []))]); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  return null;
+}
+
 /** Portālā saglabātās pilnvaras: D1 uzreiz, Google tabulā (lapas «Pilnvaras» un «Lietotaji») fonā */
 async function peopleSaved(X, list) {
   await X.db.batch([...peopleStmts(X.db, list), ...usersStmts(X.db, (list || []).map(p => Object.assign({}, p, { perms: p.perms || {} })))]);
   await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('peopleDirty', '1')");
   X.bg(pushPeople(X, await people(X.db)));
+  if ((await kvGet(X.db, 'masterMode')) === '1') masterDirty(X);
 }
 async function pushPeople(X, list) {
   await X.bridge('people', { people: list.map(p => ({ name: p.name, pin: p.pin, color: p.color || '', active: !!p.active, perms: p.perms || {} })) }, 60000);
@@ -1021,14 +1062,20 @@ async function syncConfig(X) {
   // Lietotāji un pilnvaras: galvenais saraksts ir portālā (D1). Pirmo reizi ņem no tabulas.
   let ppl = await people(X.db);
   if (!ppl.length && (r.users || []).length) { ppl = seedFrom(r.users); await X.db.batch(peopleStmts(X.db, ppl)); await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('peopleDirty', '1')"); }
-  const st = [...usersStmts(X.db, ppl), X.st('DELETE FROM types'), X.st('DELETE FROM objects')];
-  (r.types || []).forEach((t, i) => st.push(X.st('INSERT OR REPLACE INTO types (name, grp, ord) VALUES (?, ?, ?)', t.name, t.group || 'Papilddarbs', i)));
-  (r.objects || []).forEach((o, i) => st.push(X.st('INSERT OR REPLACE INTO objects (anorm, adrese, vaditajs, grupa, piekluve, ord) VALUES (?, ?, ?, ?, ?, ?)', norm(o.adrese), o.adrese, o.vaditajs || '', o.grupa || 'SH objekti', o.piekluve || '', i)));
+  const mm = (await kvGet(X.db, 'masterMode')) === '1';   // pamatdati jau portālā → tabulu nepārraksta D1
+  const st = [...usersStmts(X.db, ppl)];
+  if (!mm) {
+    st.push(X.st('DELETE FROM types'), X.st('DELETE FROM objects'));
+    (r.types || []).forEach((t, i) => st.push(X.st('INSERT OR REPLACE INTO types (name, grp, ord) VALUES (?, ?, ?)', t.name, t.group || 'Papilddarbs', i)));
+    (r.objects || []).forEach((o, i) => st.push(X.st('INSERT OR REPLACE INTO objects (anorm, adrese, vaditajs, grupa, piekluve, ord) VALUES (?, ?, ?, ?, ?, ?)', norm(o.adrese), o.adrese, o.vaditajs || '', o.grupa || 'SH objekti', o.piekluve || '', i)));
+  }
   if (!(r.users || []).length) throw new Error('Tabulā nav lietotāju — sinhronizācija atcelta');
   await X.db.batch(st);
   await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('configSync', ?)", now());
   const dirty = await X.first("SELECT v FROM kv WHERE k = 'peopleDirty'");
   if (dirty && dirty.v === '1') await pushPeople(X, ppl).catch(e => console.error('pushPeople', e));
+  if (!mm) await masterImport(X).catch(e => console.error('masterImport', e));
+  if ((await kvGet(X.db, 'masterDirty')) === '1') await pushMaster(X).catch(e => console.error('pushMaster', e));
   return { users: (r.users || []).length, types: (r.types || []).length, objects: (r.objects || []).length };
 }
 
