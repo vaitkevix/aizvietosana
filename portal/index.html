@@ -236,6 +236,38 @@ button{cursor:pointer}
 .ni b{display:block;font-size:14.5px;font-weight:800}.ni small{display:block;font-size:12.5px;font-weight:700;opacity:.65;margin-top:2px}
 .ni.u{background:var(--sand)}.ni.k{background:var(--sky)}
 .hidden-q{display:none!important}
+
+/* ===== Vienotais portāla stils: ieeja, Administrēšana, lapas. © VAITKEVIX, SIA ===== */
+.sx .arrow{display:grid;padding:0}
+.search input{font-size:16px}
+.pin{border:0;border-radius:18px;font-size:22px}
+.pin::placeholder{letter-spacing:0;font-size:16px;font-weight:700;color:var(--ink-3)}
+.pin:focus{box-shadow:0 0 0 2px var(--ink-strong)}
+.btn{border-radius:999px;background:var(--ink-strong);color:var(--bg)}
+.btn.ghost{background:var(--surface-2);color:var(--ink);border:0}
+.sheet{border-radius:28px 28px 0 0;padding-left:18px;padding-right:18px}
+@media(min-width:700px){.sheet{border-radius:28px}}
+.x{width:40px;height:40px;display:grid;place-items:center;padding:0;flex:none}
+.seg{gap:6px}
+.seg button{min-height:40px;padding:6px 16px;border-radius:999px;border:0;background:var(--surface-2);color:var(--ink)}
+.seg button.on{background:var(--ink-strong);color:var(--bg)}
+.perm .seg button:not(.on){background:var(--surface)}
+.adm-top input,.f input[type=text],.f input[type=tel],.row2 .lv{border:0!important;border-radius:16px!important;background:var(--surface-2)!important;height:46px!important}
+.adm-top input:focus,.f input:focus{box-shadow:0 0 0 2px var(--ink-strong)}
+.prow{border:0;border-radius:22px;background:var(--surface-2)}
+.perm .row2 .lv{background:var(--surface)!important}
+.perm{border-radius:22px}
+.chip.a{background:var(--mint);color:var(--ink-strong)}
+.menu button{border:0;border-radius:18px;background:var(--surface-2)}
+.who{border-radius:22px;background:var(--mint)}
+.sw button{width:40px;height:40px;border-radius:50%}
+.sw button.on{border-color:var(--ink-strong)}
+.tog input{accent-color:var(--ink-strong)}
+.cdel{display:inline-grid;place-items:center;width:24px;height:24px;margin:-4px -6px -4px 2px;border-radius:50%;color:var(--red);text-decoration:none;font-size:15px}
+.cdel:hover{background:var(--surface)}
+.cal .ch button{width:40px;height:40px}
+.cal .dd small{font-size:10px}
+@media(max-width:520px){.ac{justify-content:flex-start}.ac small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}
 </style>
 </head>
 <body>
@@ -479,7 +511,7 @@ addEventListener('popstate', () => { const k = location.hash.slice(1); if (APPS[
 
 /* ---------- Lapas ---------- */
 function sheet(html) { closeSheet(); const b = document.createElement('div'); b.className = 'sheet-bg'; b.id = 'sheetBg'; b.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
-  b.addEventListener('click', e => { if (e.target === b || e.target.closest('.x')) closeSheet(); }); document.body.appendChild(b); return b.firstChild; }
+  b.addEventListener('click', e => { if (e.target === b || (e.target.closest('.x') && !e.target.closest('.bk'))) closeSheet(); }); document.body.appendChild(b); return b.firstChild; }
 function closeSheet() { const b = $('sheetBg'); if (b) b.remove(); }
 const X = '<button class="x" aria-label="Aizvērt">×</button>';
 
@@ -555,10 +587,11 @@ function drawAdmin() {
   }
   if (A.tab === 'lists') {
     const vals = (k) => k === 'types' ? A.M.types.map(t => t.name + (t.group ? ' · ' + t.group : '')) : (A.M.lists[k] || []);
-    const s = adminShell(Object.keys(LK).map(k => `<div class="perm"><div class="pt">${LK[k]}</div><div class="chips" style="margin-bottom:8px">${vals(k).map((v, i) => `<span class="chip">${esc(v)} <a href="#" data-del="${k}:${i}" style="color:var(--red);text-decoration:none;margin-left:4px">×</a></span>`).join('') || '<span class="chip">tukšs</span>'}</div>
+    const s = adminShell(Object.keys(LK).map(k => `<div class="perm"><div class="pt">${LK[k]}</div><div class="chips" style="margin-bottom:8px">${vals(k).map((v, i) => `<span class="chip">${esc(v)} <a href="#" class="cdel" data-del="${k}:${i}" aria-label="Dzēst">×</a></span>`).join('') || '<span class="chip">tukšs</span>'}</div>
       <div class="row2"><input type="text" class="lv" data-k="${k}" placeholder="${k === 'types' ? 'Darbs · Grupa' : 'Jauna vērtība'}" style="flex:1;height:40px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface);padding:0 12px;min-width:0"><button class="btn ghost" data-add="${k}" style="height:40px">Pievienot</button></div></div>`).join(''), null);
     s.addEventListener('click', async (e) => {
       const d = e.target.closest('[data-del]'), a = e.target.closest('[data-add]'); if (!d && !a) return; e.preventDefault();
+      if (d && !confirm('Dzēst «' + d.parentElement.firstChild.textContent.trim() + '»?')) return;
       const k = (d || a).dataset[d ? 'del' : 'add'].split(':')[0];
       if (k === 'types') {
         const t = A.M.types.slice();
@@ -584,7 +617,7 @@ async function saveM(action, data, after) {
 }
 function subSheet(title, body, onSave, onDel) {
   const s = sheet('');
-  s.innerHTML = `<div class="hd"><button class="x" id="sBack" aria-label="Atpakaļ" style="font-size:18px">‹</button><h3>${esc(title)}</h3>${X}</div>${body}
+  s.innerHTML = `<div class="hd"><button class="x bk" id="sBack" aria-label="Atpakaļ" style="font-size:18px">‹</button><h3>${esc(title)}</h3>${X}</div>${body}
     <div class="acts">${onDel ? '<button class="btn red" id="sDel" type="button">Dzēst</button>' : ''}<button class="btn" id="sSave" type="button">Saglabāt</button></div>`;
   $('sBack').onclick = () => { sheet(''); drawAdmin(); };
   $('sSave').onclick = onSave;
@@ -633,7 +666,7 @@ function editPerson(p) {
   const old = isNew ? '' : p.name;
   const s = sheet('');
   const draw = () => {
-    s.innerHTML = `<div class="hd"><button class="x" id="pBack" aria-label="Atpakaļ" style="font-size:18px">‹</button><h3>${isNew ? 'Jauns lietotājs' : esc(old)}</h3>${X}</div>
+    s.innerHTML = `<div class="hd"><button class="x bk" id="pBack" aria-label="Atpakaļ" style="font-size:18px">‹</button><h3>${isNew ? 'Jauns lietotājs' : esc(old)}</h3>${X}</div>
       <div class="f"><label for="pName">Vārds</label><input type="text" id="pName" value="${esc(p.name)}" autocomplete="off" placeholder="Vārds Uzvārds"></div>
       <div class="f"><label for="pPin">PIN (viens visām lietotnēm)</label><div class="row2"><input type="tel" id="pPin" maxlength="12" value="${esc(p.pin)}"><button class="btn ghost" id="pGen" type="button">Jauns PIN</button></div></div>
       <div class="row2" style="gap:8px"><div class="f" style="flex:1"><label for="pTel">Tālrunis</label><input type="tel" id="pTel" value="${esc(p.phone || '')}"></div><div class="f" style="flex:1.4"><label for="pMail">E-pasts</label><input type="text" id="pMail" inputmode="email" value="${esc(p.email || '')}"></div></div>
