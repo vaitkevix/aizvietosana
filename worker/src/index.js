@@ -6,7 +6,7 @@
  */
 
 import { portal, people, personByPin, seedFrom, peopleStmts, usersStmts } from './portal.js';
-import { master, importAll as importMaster, legacyPayload, publicLists, objectsStmts, companiesStmts, listsStmts, typesStmts, kvGet, kvSet, resolveReview, clearInfoReview } from './master.js';
+import { master, importAll as importMaster, legacyPayload, publicLists, objectsStmts, companiesStmts, listsStmts, typesStmts, kvGet, kvSet, resolveReview, clearInfoReview, autoMergePrefixed } from './master.js';
 const TZ = 'Europe/Riga';
 const PROMBUTNE = ['Atvaļinājums', 'DNL', 'Vakance'];
 const STAND_PROMB = ['DNL', 'Vakance'];
@@ -220,14 +220,21 @@ async function appProcess(env, ctx, qid) {
     else await appRefresh(env, app, 'getTasks', ctx).catch(() => 0);
     if (APPS[app].pinFns.indexOf(fn) !== -1) { try { await pinRemember(env, JSON.parse(body)[0].pin); } catch (e) {} }
   } else {
-    const msg = (res && (res.error || (r && r.message))) || 'Google kļūda';
-    await env.DB.prepare('UPDATE izv_q SET err = ?, lock = 0 WHERE qid = ? AND part = 0').bind(String(msg).slice(0, 300), qid).run();
+    await qFail(env, qid, (res && (res.error || (r && r.message))) || 'Google kļūda');
   }
 }
 async function izvDrain(env, ctx, maxAgeMs) {
   const list = (await appPending(env)).filter(q => !q.err && Date.now() - q.created > (maxAgeMs || 0)).slice(0, 3);
   for (const q of list) { if (q.fn.startsWith('budz|')) await budzProcess(env, ctx, q.qid); else await appProcess(env, ctx, q.qid); }
-  await env.DB.prepare("DELETE FROM izv_q WHERE err != '' AND created < ?").bind(Date.now() - 3 * 864e5).run();
+  // kļūdainie ieraksti netiek dzēsti automātiski (datu zudums) — tos redz lietotājs un var nodzēst pats
+}
+/* Pārejoša Google kļūda (slēdzene, kvota, taimauts) → mēģina vēlreiz (līdz 12 reizēm ik pēc 5 min); citādi atzīmē kļūdu */
+const TRANSIENT = /lock|timeout|timed out|too many|exceeded|try again|busy|unavailable|kvot|quota|Google atbilde: 5\d\d|Service/i;
+async function qFail(env, qid, msg) {
+  const m = String(msg || 'Google kļūda').slice(0, 300);
+  const row = await env.DB.prepare('SELECT tries FROM izv_q WHERE qid = ? AND part = 0').bind(qid).first();
+  if (TRANSIENT.test(m) && row && row.tries < 12) return env.DB.prepare('UPDATE izv_q SET lock = 0 WHERE qid = ? AND part = 0').bind(qid).run();
+  return env.DB.prepare('UPDATE izv_q SET err = ?, lock = 0 WHERE qid = ? AND part = 0').bind(m, qid).run();
 }
 
 async function izv(request, url, env, ctx, app) {
@@ -383,7 +390,7 @@ async function budzProcess(env, ctx, qid) {
     const next = (await budzPending(env, head.fn.slice(5))).find(x => !x.err && (() => { try { return JSON.parse(x.patch).bid === P.bid; } catch (e) { return false; } })());
     if (next) await budzProcess(env, ctx, next.qid);
   } else {
-    await env.DB.prepare('UPDATE izv_q SET err = ?, lock = 0 WHERE qid = ? AND part = 0').bind(String((res && res.error) || 'Google kļūda').slice(0, 300), qid).run();
+    await qFail(env, qid, (res && res.error) || 'Google kļūda');
   }
 }
 function budzApply(action, req, o, pend) {
@@ -1041,14 +1048,18 @@ async function masterAdmin(X, a, b, me) {
   if (a === 'import') { const r = await masterImport(X); X.bg(pushMaster(X)); X.bg(pushPeople(X, await people(db))); return Object.assign({ ok: true, imported: r }, await master(db)); }
   if (a === 'saveObjects') { const list = (b.objects || []).filter(o => o && String(o.adrese || '').trim()); if (!list.length) return { ok: false, error: 'Saraksts ir tukšs' };
     await db.batch(objectsStmts(db, list)); X.c = {}; masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
-  if (a === 'saveCompanies') { const list = b.companies || [];
+  if (a === 'saveCompanies') { const list = (b.companies || []).filter(c => c && String(c.name || '').trim());
+    const had = (await master(db)).companies.length; if (had && (!list.length || (had >= 10 && list.length < had * 0.5))) return { ok: false, error: 'Uzņēmumu saraksts sarucis no ' + had + ' uz ' + list.length + ' — nesaglabāju. Atjaunojiet lapu un mēģiniet vēlreiz.' };
     const pw = list.filter(c => c.pass).map(c => String(c.pass).trim().toUpperCase()); if (new Set(pw).size !== pw.length) return { ok: false, error: 'Divām firmām ir vienāda parole' };
     await db.batch(companiesStmts(db, list)); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
-  if (a === 'saveLists') { await db.batch(listsStmts(db, b.lists || {})); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  if (a === 'saveLists') { const cnt = (L) => Object.keys(L || {}).reduce((n, k) => n + ((L[k] || []).length), 0), had = cnt((await master(db)).lists), now = cnt(b.lists);
+    if (had && (!now || (had >= 10 && now < had * 0.5))) return { ok: false, error: 'Saraksti saruka no ' + had + ' uz ' + now + ' vērtībām — nesaglabāju. Atjaunojiet lapu.' };
+    await db.batch(listsStmts(db, b.lists || {})); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
   if (a === 'saveTypes') { const list = (b.types || []).filter(t => t && t.name); if (!list.length) return { ok: false, error: 'Saraksts ir tukšs' };
     await db.batch(typesStmts(db, list)); X.c = {}; masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
   if (a === 'reviewResolve') { const r = await resolveReview(db, +b.i, b.keep === 0 || b.keep === 1 ? b.keep : -1); if (!r.ok) return r;
     X.c = {}; if (r.people) await peopleSaved(X, await people(db)); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  if (a === 'reviewAutoPrefix') { const r = await autoMergePrefixed(db); X.c = {}; masterDirty(X); return Object.assign({ ok: true }, r, await master(db)); }
   if (a === 'reviewClearInfo') { const n = await clearInfoReview(db); masterDirty(X); return Object.assign({ ok: true, cleared: n }, await master(db)); }
   if (a === 'saveReview') { await db.batch([kvSet(db, 'masterReview', JSON.stringify(b.review || []))]); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
   return null;
@@ -1084,7 +1095,7 @@ async function syncConfig(X) {
   await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('configSync', ?)", now());
   const dirty = await X.first("SELECT v FROM kv WHERE k = 'peopleDirty'");
   if (dirty && dirty.v === '1') await pushPeople(X, ppl).catch(e => console.error('pushPeople', e));
-  if (!mm) await masterImport(X).catch(e => console.error('masterImport', e));
+  // pirmais imports tikai ar admina pogu (Administrēšana), ne automātiski no cron
   if ((await kvGet(X.db, 'masterDirty')) === '1') await pushMaster(X).catch(e => console.error('pushMaster', e));
   return { users: (r.users || []).length, types: (r.types || []).length, objects: (r.objects || []).length };
 }
@@ -1125,6 +1136,8 @@ async function importAll(X, r) {
     p.id, p.laiks || '', p.adrese || '', norm(p.adrese), p.vaditajs || '', p.vieniba || '', p.apraksts || '', p.foto || '', p.statuss || 'jauns', p.atrisinats || '', base + n)); });
   (d.standing || []).forEach(s => { n++; st.push(X.st('INSERT OR REPLACE INTO standing (id, adrese, tips, apraksts, vaditajs, prombutne, no, beigas, brivdienas, steidzami, laiks, foto, izlaistas, izveidots, seq) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
     s.id, s.adrese, s.tips || '', s.apraksts || '', s.vaditajs || '', s.prombutne || '', s.no || '', s.beigas || '', s.brivdienas ? '1' : '', s.steidzami ? '1' : '', s.laiks || '', s.foto || '', (s.izlaistas || []).join ? s.izlaistas.join(',') : String(s.izlaistas || ''), s.izveidots || '', base + n)); });
-  for (let i = 0; i < st.length; i += 400) await X.db.batch(st.slice(i, i + 400));
+  if (r.reset && st.length > 900) throw new Error('Atiestatīšanai pārāk daudz ierakstu (' + st.length + ') vienā partijā — dati netika dzēsti. Importējiet bez reset.');
+  if (r.reset) await X.db.batch(st);   // DELETE + ieraksti vienā darījumā: vai nu viss, vai nekas
+  else for (let i = 0; i < st.length; i += 400) await X.db.batch(st.slice(i, i + 400));
   return { imported: { jobs: (d.jobs || []).length, crew: (d.crew || []).length, objects: (d.objects || []).length, users: (d.users || []).length, problems: (d.problems || []).length, standing: (d.standing || []).length } };
 }

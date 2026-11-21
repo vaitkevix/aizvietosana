@@ -199,3 +199,18 @@ export async function clearInfoReview(db) {
   await db.batch([kvSet(db, 'masterReview', JSON.stringify(left))]);
   return R.length - left.length;
 }
+
+/* Adrešu pāri, kur tieši vienai pusei ir filtra prefikss «J |» vai «VNĪ |» → paturēt prefiksēto, otru apvienot ar to */
+const PFX = /^\s*(j|vn[iī])\s*\|/i;
+export const pfxSide = (r) => { if (!r || r[0] !== 'Objekts') return -1; const p = String(r[1] || '').split(PAIR); if (p.length !== 2) return -1;
+  const a = PFX.test(p[0]), b = PFX.test(p[1]); return a && !b ? 0 : b && !a ? 1 : -1; };
+export async function autoMergePrefixed(db) {
+  let merged = 0; const failed = new Set();
+  for (let g = 0; g < 1000; g++) {
+    const R = JSON.parse((await kvGet(db, 'masterReview')) || '[]');
+    const i = R.findIndex(r => pfxSide(r) >= 0 && !failed.has(r[1])); if (i < 0) break;
+    const r = await resolveReview(db, i, pfxSide(R[i]));
+    if (r.ok) merged++; else failed.add(R[i][1]);
+  }
+  return { merged, failed: failed.size };
+}
