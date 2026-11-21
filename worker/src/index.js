@@ -463,7 +463,7 @@ async function budz(request, env, ctx) {
   }
 }
 
-const SITES = { '/shaizvietosana': 'https://vaitkevix.github.io/aizvietosana', '/shizvesana': 'https://vaitkevix.github.io/izvesana', '/shkaisammaterials': 'https://vaitkevix.github.io/kaisammaterials', '/shpersonals': 'https://vaitkevix.github.io/personals', '/shbudzets': 'https://vaitkevix.github.io/budzets', '/shplausana': 'https://vaitkevix.github.io/plausana', '/sh': 'https://vaitkevix.github.io/aizvietosana/portal' };
+const SITES = { '/shaizvietosana': 'https://vaitkevix.github.io/aizvietosana', '/shizvesana': 'https://vaitkevix.github.io/izvesana', '/shkaisammaterials': 'https://vaitkevix.github.io/kaisammaterials', '/shpersonals': 'https://vaitkevix.github.io/personals', '/shbudzets': 'https://vaitkevix.github.io/budzets', '/shplausana': 'https://vaitkevix.github.io/plausana', '/sh': 'https://vaitkevix.github.io/portals' };
 const SITE_KEY = { '/shaizvietosana': 'aizv', '/shizvesana': 'izv', '/shkaisammaterials': 'kais', '/shpersonals': 'pers', '/shbudzets': 'budz', '/shplausana': 'pl' };
 /** Lietotnes faili no GitHub Pages zem tava domēna */
 async function site(request, url, base) {
