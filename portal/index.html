@@ -237,6 +237,11 @@ button{cursor:pointer}
 .ni b{display:block;font-size:14.5px;font-weight:800}.ni small{display:block;font-size:12.5px;font-weight:700;opacity:.65;margin-top:2px}
 .ni.u{background:var(--sand)}.ni.k{background:var(--sky)}
 .hidden-q{display:none!important}
+.glist{display:grid;gap:6px;max-height:46vh;overflow:auto;padding:2px}
+.f .gpick,.gpick{display:flex;gap:12px;align-items:flex-start;margin:0;padding:10px 14px;border-radius:16px;background:var(--surface-2);cursor:pointer;font-weight:700;font-size:14px;color:var(--ink)}
+.gpick input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--ink-strong);flex:none}
+.gpick small{display:block;font-size:12px;color:var(--ink-3);font-weight:700}
+.gpick.auto{opacity:.75}
 .rv .nm{display:grid;gap:8px}.rv .chip{justify-self:start}
 .rvp{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .rk{min-height:64px;padding:10px 14px;border:0;border-radius:18px;background:var(--surface);color:var(--ink);font-weight:800;font-size:14px;text-align:left;line-height:1.3;word-break:break-word}
@@ -548,7 +553,7 @@ $('menuBtn').onclick = () => {
 };
 
 /* ---------- Administrēšana: cilvēki un pilnvaras + pamatdati (viens saraksts visām lietotnēm) ---------- */
-const TABS = [['people', 'Cilvēki'], ['objects', 'Objekti'], ['companies', 'Uzņēmumi'], ['lists', 'Saraksti'], ['review', 'Pārbaudīt']];
+const TABS = [['people', 'Cilvēki'], ['objects', 'Objekti'], ['groups', 'Grupas'], ['companies', 'Uzņēmumi'], ['lists', 'Saraksti'], ['review', 'Pārbaudīt']];
 const LK = { types: 'Darbu veidi (Aizvietošana)', materiali: 'Materiāli (Kaisāmmateriāls)', bankas: 'Bankas', atv_veidi: 'Atvaļinājuma veidi', amati: 'Amati', tel_kodi: 'Tālruņa kodi' };
 const KN = { izvedejs: 'Izvedējs', kurjers: 'Kurjers', darba_devejs: 'Darba devējs' };
 const A = { tab: 'people', q: '', M: null };
@@ -587,6 +592,13 @@ function drawAdmin() {
       ${list.length > 300 ? `<p class="copy">Rāda 300 no ${list.length} — sašauriniet meklēšanu</p>` : ''}</div>`, 'Objekts');
     $('pAdd').onclick = () => editObject(-1);
     s.querySelector('.plist').onclick = (e) => { const r = e.target.closest('[data-o]'); if (r) editObject(+r.dataset.o); };
+  }
+  if (A.tab === 'groups') {
+    const G = (A.M.groups || []).map((g, i) => Object.assign({ i }, g)).filter(g => qm(g.name));
+    const s = adminShell(`<p class="copy" style="text-align:left;margin:0 0 10px">Grupu var izvēlēties Aizvietošanā (darbs katrai mājai, progress kopā) un Personālā (darba vieta).</p><div class="plist">${G.map(g => `<button class="prow" data-g="${g.i}"><div class="nm"><b>🏘 ${esc(g.name)}</b>
+      <div class="chips"><span class="chip a">${g.adreses.length} objekti</span>${g.rule ? `<span class="chip">automātiski: «${esc(g.rule)}…»</span>` : ''}</div></div>${CHEV}</button>`).join('') || empty()}</div>`, 'Grupa');
+    $('pAdd').onclick = () => editGroup(-1);
+    s.querySelector('.plist').onclick = (e) => { const r = e.target.closest('[data-g]'); if (r) editGroup(+r.dataset.g); };
   }
   if (A.tab === 'companies') {
     const list = A.M.companies.map((c, i) => Object.assign({ i }, c)).filter(c => qm(c.name));
@@ -664,6 +676,29 @@ function editObject(i) {
       if (i >= 0) list[i] = n; else list.unshift(n); saveM('saveObjects', { objects: list }, () => sheet('')); },
     i >= 0 ? () => { const list = A.M.objects.slice(); list.splice(i, 1); saveM('saveObjects', { objects: list }, () => sheet('')); } : null);
   $('oM').onclick = (e) => { const b = e.target.closest('[data-m]'); if (b) $('oM').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
+}
+function editGroup(i) {
+  const g = i >= 0 ? JSON.parse(JSON.stringify(A.M.groups[i])) : { id: '', name: '', rule: '', members: [], adreses: [] };
+  const an = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const pf = (s) => an(s).replace(/\s+/g, ' ').replace(/\s*\|\s*/g, '|');
+  const byRule = (a) => g.rule && pf(a).startsWith(pf(g.rule));
+  const sel = new Set(g.members);
+  const draw = () => { const q = ($('gQ') || {}).value || ''; const L = A.M.objects.filter(o => !q || an(o.adrese).includes(an(q))).slice(0, 200);
+    $('gL').innerHTML = L.map(o => { const auto = byRule(o.adrese), on = auto || sel.has(an(o.adrese));
+      return `<label class="gpick ${auto ? 'auto' : ''}"><input type="checkbox" data-a="${esc(o.adrese)}" ${on ? 'checked' : ''} ${auto ? 'disabled' : ''}><span>${esc(o.adrese)}${o.vaditajs ? `<small>${esc(o.vaditajs)}</small>` : ''}</span></label>`; }).join('') || '<p class="copy">Nekas neatbilst</p>';
+    $('gN').textContent = A.M.objects.filter(o => byRule(o.adrese) || sel.has(an(o.adrese))).length; };
+  subSheet(i >= 0 ? g.name : 'Jauna grupa', fld('gName', 'Nosaukums', g.name, 'Piem. Ziemas tīrīšana') +
+    (g.rule ? `<div class="f"><label>Automātiski</label><div class="chip a" style="display:inline-block">visas adreses, kas sākas ar «${esc(g.rule)}»</div></div>` : '') +
+    `<div class="f"><label>Objekti grupā: <b id="gN">0</b></label><input type="text" id="gQ" placeholder="Meklēt adresi…" autocomplete="off" style="margin-bottom:8px"><div id="gL" class="glist"></div></div>`,
+    () => { const name = $('gName').value.trim(); if (!name) return toast('Ierakstiet nosaukumu', 'err');
+      if ((A.M.groups || []).some((x, j) => j !== i && x.name.toLowerCase() === name.toLowerCase())) return toast('Šāda grupa jau ir', 'err');
+      const list = (A.M.groups || []).map(x => ({ id: x.id, name: x.name, rule: x.rule, adreses: x.members }));
+      const n = { id: g.id, name, rule: g.rule, adreses: [...sel] };
+      if (i >= 0) list[i] = n; else list.push(n); saveM('saveGroups', { groups: list }, () => sheet('')); },
+    i >= 0 && !g.rule ? () => { const list = (A.M.groups || []).map(x => ({ id: x.id, name: x.name, rule: x.rule, adreses: x.members })); list.splice(i, 1); saveM('saveGroups', { groups: list }, () => sheet('')); } : null);
+  $('gQ').oninput = draw;
+  $('gL').onchange = (e) => { const c = e.target.closest('[data-a]'); if (!c) return; const k = an(c.dataset.a); if (c.checked) sel.add(k); else sel.delete(k); $('gN').textContent = A.M.objects.filter(o => byRule(o.adrese) || sel.has(an(o.adrese))).length; };
+  draw();
 }
 function genPw() { const a = 'ABCDEFGHJKLMNPRSTUVZ23456789'; let x = ''; for (let i = 0; i < 8; i++) x += a[Math.floor(Math.random() * a.length)]; return x; }
 function editCompany(i) {

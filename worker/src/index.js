@@ -6,11 +6,11 @@
  */
 
 import { portal, people, personByPin, seedFrom, peopleStmts, usersStmts } from './portal.js';
-import { master, importAll as importMaster, legacyPayload, publicLists, objectsStmts, companiesStmts, listsStmts, typesStmts, kvGet, kvSet, resolveReview, clearInfoReview, autoMergePrefixed } from './master.js';
+import { master, importAll as importMaster, legacyPayload, publicLists, objectsStmts, companiesStmts, listsStmts, typesStmts, kvGet, kvSet, resolveReview, clearInfoReview, autoMergePrefixed, groupsOf, groupsStmts } from './master.js';
 const TZ = 'Europe/Riga';
 const PROMBUTNE = ['Atvaļinājums', 'DNL', 'Vakance'];
 const STAND_PROMB = ['DNL', 'Vakance'];
-const JOB_F = ['id', 'datums', 'adrese', 'tips', 'apraksts', 'vaditajs', 'brigade', 'statuss', 'publicets', 'izpildits', 'izveidots', 'komentars', 'foto', 'iemesls', 'lidz', 'serija', 'prombutne', 'steidzami', 'laiks', 'parbaude', 'parbKom'];
+const JOB_F = ['id', 'datums', 'adrese', 'tips', 'apraksts', 'vaditajs', 'brigade', 'statuss', 'publicets', 'izpildits', 'izveidots', 'komentars', 'foto', 'iemesls', 'lidz', 'serija', 'prombutne', 'steidzami', 'laiks', 'parbaude', 'parbKom', 'grupa'];
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
 
 /* ---------------- HTTP ---------------- */
@@ -668,7 +668,7 @@ async function canMark(u, job) {
 /* ---------------- Darbības ar PIN ---------------- */
 
 const ACTIONS = {
-  login: async (X, u) => ({ user: pubUser(u), meta: { managers: (await X.users()).filter(x => x.role === 'vaditajs').map(x => ({ name: x.name, color: x.color })), objects: await X.objects(), jobTypes: await X.types() } }),
+  login: async (X, u) => ({ user: pubUser(u), meta: { managers: (await X.users()).filter(x => x.role === 'vaditajs').map(x => ({ name: x.name, color: x.color })), objects: await X.objects(), groups: await groupsOf(X.db).catch(() => []), jobTypes: await X.types() } }),
 
   jobs: async (X, u, r) => {
     await ensureStanding(X, r.date);
@@ -773,6 +773,7 @@ const ACTIONS = {
     if (u.role === 'brigade') throw new Error('Nav atļauts');
     const list = (r.jobs || []).filter(j => j && String(j.adrese || '').trim());
     if (!list.length) throw new Error('Pievieno vismaz vienu adresi');
+    if (list.some(j => /^grupa:/i.test(String(j.adrese).trim()))) throw new Error('Grupa jāizvērš adresēs — atjaunojiet lapu');
     if (!r.date) throw new Error('Norādi datumu');
     const types = (await X.types()).map(t => t.name);
     for (const j of list) {
@@ -796,7 +797,7 @@ const ACTIONS = {
       }
       dates.forEach(d => { count++; st.push(insJob(X, { id: uid(), datums: d, adrese, tips: j.tips, apraksts: String(j.apraksts || '').trim(), vaditajs: mgr, brigade: '', statuss: 'jauns',
         izveidots: now(), lidz: j.lidz && dates.length > 1 ? j.lidz : '', serija, foto: j.fotoIds || '', prombutne: PROMBUTNE.indexOf(j.prombutne) !== -1 ? j.prombutne : '',
-        steidzami: j.steidzami ? '1' : '', laiks: cleanTime(j.laiks) })); });
+        steidzami: j.steidzami ? '1' : '', laiks: cleanTime(j.laiks), grupa: String(j.grupa || '').slice(0, 120) })); });
     }
     await X.db.batch(st);
     await addObjects(X, list.map(j => String(j.adrese).trim()), u.role === 'admin' ? String(r.vaditajs || '') : u.name);
@@ -1059,6 +1060,8 @@ async function masterAdmin(X, a, b, me) {
     await db.batch(typesStmts(db, list)); X.c = {}; masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
   if (a === 'reviewResolve') { const r = await resolveReview(db, +b.i, b.keep === 0 || b.keep === 1 ? b.keep : -1); if (!r.ok) return r;
     X.c = {}; if (r.people) await peopleSaved(X, await people(db)); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
+  if (a === 'saveGroups') { const list = (b.groups || []).filter(g => g && String(g.name || '').trim());
+    await db.batch(groupsStmts(db, list)); X.c = {}; masterDirty(X); return Object.assign({ ok: true }, await master(db)); }
   if (a === 'reviewAutoPrefix') { const r = await autoMergePrefixed(db); X.c = {}; masterDirty(X); return Object.assign({ ok: true }, r, await master(db)); }
   if (a === 'reviewClearInfo') { const n = await clearInfoReview(db); masterDirty(X); return Object.assign({ ok: true, cleared: n }, await master(db)); }
   if (a === 'saveReview') { await db.batch([kvSet(db, 'masterReview', JSON.stringify(b.review || []))]); masterDirty(X); return Object.assign({ ok: true }, await master(db)); }

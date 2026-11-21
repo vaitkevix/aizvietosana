@@ -714,6 +714,8 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
   :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 </style>
 
+<style>.combo-opt.grp b{font-weight:800}.combo-opt.grp small{margin-left:auto;font-weight:700;color:var(--ink-3)}
+.gprog{display:grid;gap:8px;margin-top:12px}.gprog>div{position:relative;display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:16px;background:var(--surface-2);overflow:hidden;font-size:14px}.gprog>div span{flex:1;min-width:0}.gprog i{position:absolute;left:0;bottom:0;height:4px;width:var(--p);background:var(--ink)}</style>
 <!--SH-THEME--><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap"><link rel="stylesheet" href="sh-theme.css?v=1"><script>document.documentElement.setAttribute("data-sh","aizv")</script><!--/SH-THEME-->
 </head>
 <body>
@@ -1201,6 +1203,8 @@ function renderPlan() {
       ${S.units.length ? '' : ' Vispirms <b>salieciet vienības</b>.'}</p>
     <div class="btn-row"><button class="btn btn-glass" id="unitsBtn">${IC.crew.replace('<svg', '<svg width="18" height="18"')}Vienības${S.units.length ? ' (' + S.units.length + ')' : ''}</button>
     <button class="btn btn-primary" id="waBtn" ${n ? '' : 'disabled'}>${IC.wa}WhatsApp plāns</button></div>`;
+  const GB = {}; S.jobs.filter(j => j.grupa).forEach(j => { const k = j.grupa + '|' + j.tips; (GB[k] = GB[k] || { n: j.grupa.split(' · ')[0], t: j.tips, all: 0, done: 0 }); GB[k].all++; if (j.statuss === 'izpildīts') GB[k].done++; });
+  if (Object.keys(GB).length) $('pubCard').insertAdjacentHTML('beforeend', '<div class="gprog">' + Object.values(GB).map(x => `<div><span>🏘 <b>${esc(x.n)}</b> · ${esc(x.t)}</span><b>${x.done}/${x.all}</b><i style="--p:${Math.round(x.done / x.all * 100)}%"></i></div>`).join('') + '</div>');
   $('waBtn').onclick = showWhatsApp; $('unitsBtn').onclick = () => switchView('crews');
   bindTopBtns();
   const board = S.planMode === 'board';
@@ -1484,10 +1488,11 @@ function comboShow(inp) {
   let list = myObjects().filter(o => !q || norm(o.adrese).includes(norm(q)));
   if (isMgr && !q) list = list.filter(o => o.vaditajs === me);   // bez meklēšanas — visi paša objekti
   list = list.slice(0, q ? 80 : (isMgr ? 300 : 80));
-  if (!list.length) { box.hidden = true; return; }
+  const grp = S.user.role === 'admin' ? (S.meta.groups || []).filter(g => g.adreses.length && (!q || norm(g.name).includes(norm(q)) || norm('grupa').includes(norm(q)))) : [];
+  if (!list.length && !grp.length) { box.hidden = true; return; }
   const hl = (s) => { if (!q) return esc(s); const i = s.toLowerCase().indexOf(q); return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length)); };
   const mine = isMgr ? list.filter(o => o.vaditajs === me).length : 0;
-  box.innerHTML = (isMgr ? `<div class="combo-sec">Mani objekti · ${mine}</div>` : '') + list.map((o, i) => (isMgr && i === mine && i > 0 ? '<div class="combo-sec">Citi objekti</div>' : '') + `<button type="button" class="combo-opt" data-a="${esc(o.adrese)}">${IC.addr}<span>${hl(o.adrese)}</span>${o.grupa && o.grupa !== 'SH objekti' ? `<small>${esc(o.grupa)}</small>` : o.piekluve ? '<small><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg></small>' : ''}</button>`).join('');
+  box.innerHTML = (grp.length ? '<div class="combo-sec">Visai grupai</div>' + grp.map(g => `<button type="button" class="combo-opt grp" data-a="Grupa: ${esc(g.name)}">🏘<span><b>${esc(g.name)}</b></span><small>${g.adreses.length} objekti</small></button>`).join('') + '<div class="combo-sec">Objekti</div>' : '') + (isMgr ? `<div class="combo-sec">Mani objekti · ${mine}</div>` : '') + list.map((o, i) => (isMgr && i === mine && i > 0 ? '<div class="combo-sec">Citi objekti</div>' : '') + `<button type="button" class="combo-opt" data-a="${esc(o.adrese)}">${IC.addr}<span>${hl(o.adrese)}</span>${o.grupa && o.grupa !== 'SH objekti' ? `<small>${esc(o.grupa)}</small>` : o.piekluve ? '<small><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg></small>' : ''}</button>`).join('');
   box.hidden = false;
 }
 function bindCombo(root) {
@@ -1635,6 +1640,19 @@ function updateVac(row) {
     info.textContent = `Tiks izveidoti ${n} darbi: ${shortDate(formDate)}–${shortDate(lidz)}${n === 62 ? ' (maks.)' : ''}`; }
   updateSubmit();
 }
+/* «Grupa: X» → pa darbam katrā grupas mājā; visiem viena atzīme «X · id», lai redz progresu kopā */
+function expandGroups(items) {
+  const out = [];
+  for (const it of items) {
+    const m = /^grupa:\s*(.+)$/i.exec(it.adrese || '');
+    if (!m) { out.push(it); continue; }
+    const g = (S.meta.groups || []).find(x => x.name.toLowerCase() === m[1].trim().toLowerCase());
+    if (!g || !g.adreses.length) { out.badGroup = m[1]; continue; }
+    const tag = g.name + ' · ' + Date.now().toString(36);
+    g.adreses.forEach((a, i) => out.push(Object.assign({}, it, { adrese: a, grupa: tag, photos: i ? [] : it.photos })));
+  }
+  return out;
+}
 function collectRows() {
   return [...document.querySelectorAll('#jRows .jrow')].map(r => ({
     adrese: r.querySelector('.fAddr').value.trim(), tips: r.querySelector('.fType').value, apraksts: r.querySelector('.fNote').value.trim(),
@@ -1725,8 +1743,9 @@ $('addRowBtn').onclick = () => {
 };
 $('jobForm').onsubmit = async (e) => {
   e.preventDefault();
-  const items = collectRows().filter(x => x.adrese || x.tips || x.apraksts);
+  const items = expandGroups(collectRows().filter(x => x.adrese || x.tips || x.apraksts));
   if (!items.length) return toast('Pievienojiet adresi', 'err');
+  if (items.badGroup) return toast('Nezināma grupa: ' + items.badGroup, 'err');
   if (S.user.role === 'admin' && !formMgr && items.some(x => !(objOf(x.adrese) || {}).vaditajs)) { $('mgrField').scrollIntoView({ behavior: 'smooth', block: 'center' }); return toast('Kādai adresei nav vadītāja — izvēlieties, kam to pierakstīt', 'err'); }
   const bad = items.findIndex(x => !x.adrese || !x.tips);
   if (bad !== -1) return toast(`${bad + 1}. adresei trūkst ${!items[bad].adrese ? 'adreses' : 'darba'}`, 'err');

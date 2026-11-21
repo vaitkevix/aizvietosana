@@ -22,7 +22,8 @@ export async function master(db) {
     people(db), kvGet(db, 'masterReview')]);
   const L = {}; Object.keys(LIST_KINDS).forEach(k => L[k] = []); lists.forEach(r => (L[r.kind] = L[r.kind] || []).push(r.value));
   return { objects, types: types.map(t => ({ name: t.name, group: t.grp })), companies: companies.map(c => ({ name: c.name, kinds: c.kinds ? c.kinds.split(',') : [], pass: c.pass, phone: c.phone, active: !!c.active })),
-    lists: L, people: ppl, review: review ? JSON.parse(review) : [], mode: (await kvGet(db, 'masterMode')) === '1' };
+    lists: L, people: ppl, review: review ? JSON.parse(review) : [], mode: (await kvGet(db, 'masterMode')) === '1',
+    groups: await groupsOf(db, objects).catch(() => []) };
 }
 
 /* ---------- Saglabāšana ---------- */
@@ -147,7 +148,8 @@ export function legacyPayload(M) {
 /** Personālam un citām lietotnēm: publiskie saraksti (bez parolēm) */
 export function publicLists(M) {
   return { sia: M.companies.filter(c => c.active && c.kinds.indexOf('darba_devejs') !== -1).map(c => c.name), bankas: M.lists.bankas, veidi: M.lists.atv_veidi,
-    amati: M.lists.amati, kodi: M.lists.tel_kodi, materiali: M.lists.materiali, objekti: M.objects.map(o => o.adrese), types: M.types };
+    amati: M.lists.amati, kodi: M.lists.tel_kodi, materiali: M.lists.materiali, types: M.types,
+    objekti: (M.groups || []).map(g => 'Grupa: ' + g.name).concat(M.objects.map(o => o.adrese)), grupas: (M.groups || []).map(g => ({ name: g.name, adreses: g.adreses })) };
 }
 export { kvGet, kvSet, cleanPerms };
 
@@ -215,4 +217,23 @@ export async function autoMergePrefixed(db) {
   }
   const left = JSON.parse((await kvGet(db, 'masterReview')) || '[]').filter(r => pfxSide(r) >= 0 && !failed.has(r[1])).length;
   return { merged, failed: failed.size, remaining: left };
+}
+
+/* ---------- Objektu grupas: «rule» = adreses sākums (piem. «J |»), «members» = ar roku pievienotās adreses (anorm) ---------- */
+const pfxN = (s) => normN(s).replace(/\s*\|\s*/g, '|');
+export async function groupsOf(db, objs) {
+  const G = (await db.prepare('SELECT * FROM groups ORDER BY ord, name').all()).results || [];
+  objs = objs || ((await db.prepare('SELECT adrese FROM objects ORDER BY ord').all()).results || []);
+  return G.map(g => { let mem = []; try { mem = JSON.parse(g.members || '[]'); } catch (e) {}
+    const set = new Set(mem), r = pfxN(g.rule);
+    const adreses = objs.filter(o => (r && pfxN(o.adrese).startsWith(r)) || set.has(anorm(o.adrese))).map(o => o.adrese);
+    return { id: g.id, name: g.name, rule: g.rule, members: mem, adreses }; });
+}
+export function groupsStmts(db, list) {
+  const st = [db.prepare('DELETE FROM groups')], seen = new Set();
+  list.forEach((g, i) => { const name = String(g.name || '').replace(/\s+/g, ' ').trim(); if (!name || seen.has(name.toLowerCase())) return; seen.add(name.toLowerCase());
+    const id = String(g.id || '').trim() || ('g' + Date.now().toString(36) + i);
+    const mem = [...new Set((g.adreses || g.members || []).map(a => anorm(a)).filter(Boolean))];
+    st.push(db.prepare('INSERT INTO groups (id, name, rule, members, ord) VALUES (?, ?, ?, ?, ?)').bind(id, name, String(g.rule || '').trim(), JSON.stringify(mem), i)); });
+  return st;
 }
