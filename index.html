@@ -978,7 +978,7 @@ function startApp() {
   UV = null; $('langSeg').hidden = true; $('todayH').textContent = 'Mani objekti'; $('loginBtnTop').hidden = true; $('app').classList.remove('team');
   $('login').classList.remove('active'); $('login').hidden = true; $('appViews').hidden = false;
   const role = S.user.role;
-  $('brandSub').textContent = S.user.name + (role === 'admin' ? ' · admins' : ' · darbu vadītājs');
+  $('brandSub').textContent = S.user.name + (role === 'admin' ? ' · Administrators' : ' · Darbu vadītājs');
   const tabs = ROLE_TABS[role] || [];
   $('tabs').innerHTML = '<span class="tab-ind" id="tabInd"></span>' + tabs.map(([id, l, ic]) =>
     `<button class="tab" data-tab="${id}">${ic}<span>${l}</span><span class="count" id="cnt-${id}"></span></button>`).join('');
