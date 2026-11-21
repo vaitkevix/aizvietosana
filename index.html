@@ -21,9 +21,9 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
 })();</script>
 <title>SH | Aizvietošana</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="icons/apps/aizvietosana.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/apps/aizvietosana-32.png">
-<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/svg+xml" href="icons/apps/aizvietosana.svg?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/apps/aizvietosana-32.png?v=3">
+<link rel="apple-touch-icon" href="icon.png?v=3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="SH | Aizvietošana">
@@ -36,9 +36,9 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
   // Tēma pirms lapas zīmēšanas — bez mirgošanas
-  (function () { var t; try { t = localStorage.getItem('darbi_theme'); } catch (e) {}
-    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', t); })();
+  // Tēma kopīga ar SH portālu (localStorage sh_theme); bez atslēgas — gaišā
+  (function () { var t; try { t = localStorage.getItem('sh_theme'); } catch (e) {}
+    document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light'); })();
 </script>
 <script src="config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
@@ -716,7 +716,8 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
 
 <style>.combo-opt.grp b{font-weight:800}.combo-opt.grp small{margin-left:auto;font-weight:700;color:var(--ink-3)}
 .gprog{display:grid;gap:8px;margin-top:12px}.gprog>div{position:relative;display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:16px;background:var(--surface-2);overflow:hidden;font-size:14px}.gprog>div span{flex:1;min-width:0}.gprog i{position:absolute;left:0;bottom:0;height:4px;width:var(--p);background:var(--ink)}</style>
-<!--SH-THEME--><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap"><link rel="stylesheet" href="sh-theme.css?v=1"><script>document.documentElement.setAttribute("data-sh","aizv")</script><!--/SH-THEME-->
+
+<!--SH-THEME--><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap"><link rel="stylesheet" href="sh-theme.css?v=2"><script>/*SH tēma: kopīga ar portālu (sh_theme), mainās uzreiz*/(function(d){d.setAttribute("data-sh","aizv");function a(t){d.setAttribute("data-theme",t==="dark"?"dark":"light")}try{a(localStorage.getItem("sh_theme"))}catch(e){}addEventListener("storage",function(e){if(e.key==="sh_theme")a(e.newValue)});addEventListener("message",function(e){var m=e.data;if(e.origin===location.origin&&m&&m.sh==="theme")a(m.t)})})(document.documentElement)</script><!--/SH-THEME-->
 </head>
 <body>
 <div class="app no-tabs" id="app">
@@ -724,7 +725,7 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
   <div class="topbar-inner">
     <div class="brand-row">
       <div class="logo">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="7" r="3"/><path d="M2.5 20v-1a5.5 5.5 0 0 1 9.2-4.1"/><path d="M15 12.5h6.5M18.5 9.5l3 3-3 3M21.5 19H15M18 16l-3 3 3 3"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2.5l3.5 3.5L17 9.5"/><path d="M3.5 11V9.5A3.5 3.5 0 0 1 7 6h13.5"/><path d="M7 21.5L3.5 18 7 14.5"/><path d="M20.5 13v1.5A3.5 3.5 0 0 1 17 18H3.5"/></svg>
       </div>
       <div class="brand-text">
         <h1>SH | Aizvietošana</h1>
@@ -943,7 +944,7 @@ self.showPush = function (to, title, body) {
 /* ---------- Tēma ---------- */
 $('themeBtn').onclick = () => {
   const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', t); ls.set('darbi_theme', t);
+  document.documentElement.setAttribute('data-theme', t); ls.set('sh_theme', t);
 };
 
 /* ---------- Pieteikšanās ---------- */
