@@ -54,7 +54,8 @@ export function typesStmts(db, list) {
 }
 
 /* ---------- Pirmais imports no visām lietotnēm (dublikātus apvieno tikai, ja pilnīgi vienādi) ---------- */
-const rowsOf = (raw) => { if (!raw || raw.length < 2) return { head: (raw && raw[0]) || [], rows: [] }; return { head: raw[0].map(h => String(h).trim()), rows: raw.slice(1).filter(r => String(r[0] || '').trim()) }; };
+const rowsOf = (raw) => { if (!raw || raw.length < 2) return { head: (raw && raw[0]) || [], rows: [] }; const head = raw[0].map(h => String(h).trim()), m = head.findIndex(h => h.toLowerCase() === 'portālā');
+  return { head, rows: raw.slice(1).filter(r => String(r[0] || '').trim() && (m < 0 || String(r[m] || '').trim().toLowerCase() !== 'nē')) }; };
 const colOf = (head, re) => head.findIndex(h => re.test(h));
 
 export async function importAll(db, src) {
@@ -206,11 +207,12 @@ export const pfxSide = (r) => { if (!r || r[0] !== 'Objekts') return -1; const p
   const a = PFX.test(p[0]), b = PFX.test(p[1]); return a && !b ? 0 : b && !a ? 1 : -1; };
 export async function autoMergePrefixed(db) {
   let merged = 0; const failed = new Set();
-  for (let g = 0; g < 1000; g++) {
+  for (let g = 0; g < 30; g++) {   // D1 vaicājumu limits vienā pieprasījumā — pa 30 pāriem; pogu var spiest vēlreiz
     const R = JSON.parse((await kvGet(db, 'masterReview')) || '[]');
     const i = R.findIndex(r => pfxSide(r) >= 0 && !failed.has(r[1])); if (i < 0) break;
     const r = await resolveReview(db, i, pfxSide(R[i]));
     if (r.ok) merged++; else failed.add(R[i][1]);
   }
-  return { merged, failed: failed.size };
+  const left = JSON.parse((await kvGet(db, 'masterReview')) || '[]').filter(r => pfxSide(r) >= 0 && !failed.has(r[1])).length;
+  return { merged, failed: failed.size, remaining: left };
 }
