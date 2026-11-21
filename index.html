@@ -2,7 +2,7 @@
 <html lang="lv">
 <head>
 <meta charset="utf-8">
-<script>/*SH viena saite: lietotne strādā tikai portālā vaitkevix.cloud/sh. © VAITKEVIX, SIA*/(function(){try{if(window.top!==window)return}catch(e){return}var h=location.hash.slice(1);location.replace('https://vaitkevix.cloud/sh/#aizv'+(h?'/'+h:''))})()</script>
+<script>/*SH viena saite: lietotne strādā tikai portālā vaitkevix.cloud/sh. © VAITKEVIX, SIA*/(function(){try{if(window.top!==window)return}catch(e){return}if(/[?&]k=/.test(location.search))return;/*brigādes saite*/var h=location.hash.slice(1);location.replace('https://vaitkevix.cloud/sh/#aizv'+(h?'/'+h:''))})()</script>
 <!-- Darbu sadale — aizvietošana un papilddarbi. © VAITKEVIX, SIA. Visas tiesības aizsargātas. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>/* Android: lietotne nezīmējas zem sistēmas joslām (augšējās un apakšējās pogām), tāpēc bez viewport-fit=cover */
@@ -915,6 +915,8 @@ const IC = {
 async function api(action, data = {}) {
   if (self.DEMO_API) return self.DEMO_API(action, Object.assign({ pin: S.pin }, data));
   if (!CFG.API_URL || CFG.API_URL.includes('IELIEC')) throw new Error('config.js nav ievadīts API_URL');
+  if (UV && /^team(Done|Cant|Problem)$/.test(action) && UV.canEdit === false) throw new Error(tr('Lai atzīmētu, vajag brigādes saiti no vadītāja', 'Чтобы отметить, нужна ссылка бригады от руководителя'));
+  if (UV && /^team/.test(action)) data = Object.assign({ key: UV.key }, data);   // brigādes saite ?k=
   const r = await fetch(CFG.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action, pin: S.pin }, data)) });
   const j = await r.json();
   if (!j.ok) throw new Error(j.error || 'Kļūda');
@@ -2123,7 +2125,7 @@ async function loadTeam() {
   $('refreshBtn').classList.add('spin');
   let r, offline = '';
   try {
-    r = await api('teamView', { key: UV.key, date });
+    r = await api('teamView', { key: UV.key, date }); UV.canEdit = !!r.canEdit;
     ls.set('darbi_tv_' + date, JSON.stringify({ t: new Date().toISOString(), r }));
     cleanTeamCache();
   } catch (err) {
