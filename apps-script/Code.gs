@@ -1188,7 +1188,7 @@ function peopleWrite_(list) {
 /** Portāla pamatdati → Objekti, DarbuVeidi + pārskata lapas Uzņēmumi, Saraksti, Pārbaudīt. Mainīt tikai portālā. © VAITKEVIX, SIA */
 function masterWrite_(r) {
   const put = (sh, head, rows, keepHeadStyle) => {
-    const last = sh.getLastRow(), lc = Math.max(head.length, sh.getLastColumn(), 1);
+    const last = sh.getLastRow(), lc = keepHeadStyle ? head.length : Math.max(head.length, sh.getLastColumn(), 1);   // Objekti/DarbuVeidi: citas kolonnas neaiztiek
     if (last > 1) sh.getRange(2, 1, last - 1, lc).clearContent();
     sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
     if (!keepHeadStyle) sh.getRange(1, 1, 1, head.length).setBackground('#0f6b5c').setFontColor('#ffffff');
