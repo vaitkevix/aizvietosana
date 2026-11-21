@@ -1283,8 +1283,13 @@ function mirrorFromCloudflare() {
   const pull = (table) => { let rows = [], off = 0, more = true; while (more) { const r = cfPost_({ action: 'export', table: table, offset: off, limit: 1000 }); rows = rows.concat(r.rows); off += r.rows.length; more = r.more; } return rows; };
   const put = (sh, head, rows) => {
     // Nekad nepārraksta ar daudz mazāk rindām (D1 kļūda / pustukšs imports); vispirms raksta, tikai tad notīra lieko galu
+    // Ja D1 ir krietni mazāk rindu, vispirms saglabā lapas kopiju slēptā arhīvā (reizi dienā); dati nekad nepazūd
     const had = Math.max(0, sh.getLastRow() - 1);
-    if (had >= 10 && rows.length < had * 0.5) { Logger.log(sh.getName() + ': D1 ' + rows.length + ' rindas, lapā ' + had + ' — nepārrakstu'); return; }
+    if (had >= 10 && rows.length < had * 0.5) {
+      const nm = '⚙ Arhīvs ' + sh.getName() + ' ' + Utilities.formatDate(new Date(), 'Europe/Riga', 'yyyy-MM-dd');
+      if (!sh.getParent().getSheetByName(nm)) sh.copyTo(sh.getParent()).setName(nm).hideSheet();
+      Logger.log(sh.getName() + ': D1 ' + rows.length + ' rindas, lapā ' + had + ' — kopija «' + nm + '»');
+    }
     sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
     if (rows.length) sh.getRange(2, 1, rows.length, head.length).setNumberFormat('@').setValues(rows.map(r => head.map((_, i) => r[i] == null ? '' : String(r[i]))));
     if (had > rows.length) sh.getRange(rows.length + 2, 1, had - rows.length, Math.max(head.length, sh.getLastColumn())).clearContent();
