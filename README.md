@@ -8,3 +8,5 @@ Dati un loģika atrodas Google Apps Script / Google Sheets (`apps-script/Code.gs
 Iestatīšana — `IESTATISANA.md`.
 
 © VAITKEVIX, SIA. Visas tiesības aizsargātas.
+
+Servera daļa (Cloudflare Worker «aizvietosana-api», arī Aizvietošanas API) ir repo **portals** → `worker/`.
