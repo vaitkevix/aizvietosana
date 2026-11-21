@@ -7,7 +7,11 @@ export const ROLES = {
   kais: ['', 'admin', 'pieteicejs'],
   pers: ['', 'admin', 'vaditajs'],
   budz: ['', 'admin', 'gatavotājs', 'vadība'],
-  pl: ['', 'admin', 'vaditajs', 'izpilditajs']
+  pl: ['', 'admin', 'vaditajs', 'izpilditajs'],
+  logi: ['', 'admin', 'vaditajs', 'izpilditajs'],
+  sniegs: ['', 'admin', 'vaditajs', 'izpilditajs'],
+  darz: ['', 'admin', 'vaditajs', 'izpilditajs'],
+  stav: ['', 'admin', 'vaditajs', 'izpilditajs']
 };
 const P_CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
 const pj = (o) => new Response(JSON.stringify(o), { headers: Object.assign({ 'Content-Type': 'application/json;charset=utf-8' }, P_CORS) });
@@ -58,11 +62,12 @@ export async function companyBy(db, field, v) {
   const c = await db.prepare('SELECT name, kinds, pass FROM companies WHERE active = 1 AND ' + (field === 'pass' ? 'pass' : 'name') + ' = ?').bind(String(v || '').trim().toUpperCase() && field === 'pass' ? String(v).trim().toUpperCase() : v).first();
   if (!c || !c.pass) return null;
   const k = String(c.kinds || '').split(',');
-  if (k.indexOf('izvedejs') === -1 && k.indexOf('kurjers') === -1 && k.indexOf('plausejs') === -1) return null;
+  const DO = { plausejs: 'pl', logu_mazg: 'logi', traktorists: 'sniegs', darznieks: 'darz', stav_mazg: 'stav' };
+  if (k.indexOf('izvedejs') === -1 && k.indexOf('kurjers') === -1 && !k.some(x => DO[x])) return null;
   const perms = {};   // darbu izpildītāja pilnvaras pa projektiem
   if (k.indexOf('izvedejs') !== -1) perms.izv = 'izvedejs';
   if (k.indexOf('kurjers') !== -1) perms.kais = 'kurjers';
-  if (k.indexOf('plausejs') !== -1) perms.pl = 'izpilditajs';
+  k.forEach(x => { if (DO[x]) perms[DO[x]] = 'izpilditajs'; });
   return { name: c.name, company: true, pass: c.pass, color: '', perms };
 }
 const pub = (p) => p.company ? { name: p.name, company: true, perms: p.perms, admin: false, carrier: { name: p.name, pass: p.pass } }
