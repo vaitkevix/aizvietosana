@@ -5,6 +5,7 @@
  * © VAITKEVIX, SIA
  */
 
+import { portal, people, personByPin, seedFrom, peopleStmts, usersStmts } from './portal.js';
 const TZ = 'Europe/Riga';
 const PROMBUTNE = ['Atvaļinājums', 'DNL', 'Vakance'];
 const STAND_PROMB = ['DNL', 'Vakance'];
@@ -22,6 +23,7 @@ export default {
     if (url.pathname === '/pers' || url.pathname.endsWith('/pers')) return pers(request, env, ctx);
     if (url.pathname === '/budz' || url.pathname.endsWith('/budz')) return budz(request, env, ctx);
     if (url.pathname === '/who' || url.pathname.endsWith('/who')) return who(request, env);
+    if (url.pathname === '/portal' || url.pathname.endsWith('/portal')) { const X = new Ctx(env, ctx); return portal(request, env, ctx, { saved: (list) => peopleSaved(X, list) }); }
     if (url.pathname === '/img' || url.pathname.endsWith('/img')) return img(url, ctx);
     // vaitkevix.cloud/shaizvietosana, /shizvesana → lietotnes (GitHub Pages); …/api → šis API
     for (const base in SITES) {
@@ -104,9 +106,16 @@ async function who(request, env) {
   let b = {}; try { b = JSON.parse(await request.text() || '{}'); } catch (e) {}
   const pin = String(b.pin || '').trim(), app = String(b.app || '');
   if (!pin || pin.length > 64) return json({ ok: false, error: 'Ievadiet PIN' });
-  const u = await env.DB.prepare('SELECT name, role FROM users WHERE pin = ? AND pin != \'\'').bind(pin).all();
-  const rows = (u.results || []).filter(r => r.role === 'admin' || r.role === 'vaditajs');
-  if (rows.length === 1) { const r = rows[0]; return json({ ok: true, user: { name: r.name, role: r.role, kind: r.role === 'admin' ? 'admin' : 'pieteicejs', kindLabel: WHO_LABEL[r.role] } }); }
+  let pp = await personByPin(env.DB, pin);
+  if (!pp) {   // pilnvaras vēl nav izveidotas → Aizvietošanas lietotāji
+    const u = await env.DB.prepare("SELECT name, role FROM users WHERE pin = ? AND pin != ''").bind(pin).first();
+    if (u && (u.role === 'admin' || u.role === 'vaditajs') && !(await env.DB.prepare('SELECT COUNT(*) n FROM people').first()).n) pp = { name: u.name, perms: { [app]: u.role === 'admin' ? 'admin' : 'pieteicejs' } };
+  }
+  if (pp) {
+    const r = pp.perms[app] || '';
+    if (!r) { await new Promise(r => setTimeout(r, 400)); return json({ ok: false, error: 'Jums nav piekļuves šai lietotnei' }); }
+    return json({ ok: true, user: { name: pp.name, role: r, kind: r === 'admin' ? 'admin' : 'pieteicejs', kindLabel: r === 'admin' ? 'Administrators' : 'Pieteicējs' } });
+  }
   try {
     if (app === 'izv' || app === 'kais') {
       const t = JSON.parse(await appGas(env, app, 'whoByPassword', JSON.stringify([pin])));
@@ -437,7 +446,7 @@ async function budz(request, env, ctx) {
   }
 }
 
-const SITES = { '/shaizvietosana': 'https://vaitkevix.github.io/aizvietosana', '/shizvesana': 'https://vaitkevix.github.io/izvesana', '/shkaisammaterials': 'https://vaitkevix.github.io/kaisammaterials', '/shpersonals': 'https://vaitkevix.github.io/personals', '/shbudzets': 'https://vaitkevix.github.io/budzets' };
+const SITES = { '/shaizvietosana': 'https://vaitkevix.github.io/aizvietosana', '/shizvesana': 'https://vaitkevix.github.io/izvesana', '/shkaisammaterials': 'https://vaitkevix.github.io/kaisammaterials', '/shpersonals': 'https://vaitkevix.github.io/personals', '/shbudzets': 'https://vaitkevix.github.io/budzets', '/sh': 'https://vaitkevix.github.io/aizvietosana/portal' };
 /** Lietotnes faili no GitHub Pages zem tava domēna */
 async function site(request, url, base) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
@@ -995,16 +1004,31 @@ async function teamProblem(X, r) {
 
 /* ---------------- Sinhronizācija ar Google tabulu ---------------- */
 
+/** Portālā saglabātās pilnvaras: D1 uzreiz, Google tabulā (lapas «Pilnvaras» un «Lietotaji») fonā */
+async function peopleSaved(X, list) {
+  await X.db.batch([...peopleStmts(X.db, list), ...usersStmts(X.db, (list || []).map(p => Object.assign({}, p, { perms: p.perms || {} })))]);
+  await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('peopleDirty', '1')");
+  X.bg(pushPeople(X, await people(X.db)));
+}
+async function pushPeople(X, list) {
+  await X.bridge('people', { people: list.map(p => ({ name: p.name, pin: p.pin, color: p.color || '', active: !!p.active, perms: p.perms || {} })) }, 60000);
+  await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('peopleDirty', '0')");
+}
+
 /** Lietotāji, darbu veidi un objekti — galvenais saraksts paliek tabulā */
 async function syncConfig(X) {
   const r = await X.bridge('config', {}, 60000);
-  const st = [X.st('DELETE FROM users'), X.st('DELETE FROM types'), X.st('DELETE FROM objects')];
-  (r.users || []).forEach((u, i) => st.push(X.st('INSERT OR REPLACE INTO users (name, role, pin, color, ord) VALUES (?, ?, ?, ?, ?)', u.name, u.role, u.pin, u.color || '', i)));
+  // Lietotāji un pilnvaras: galvenais saraksts ir portālā (D1). Pirmo reizi ņem no tabulas.
+  let ppl = await people(X.db);
+  if (!ppl.length && (r.users || []).length) { ppl = seedFrom(r.users); await X.db.batch(peopleStmts(X.db, ppl)); await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('peopleDirty', '1')"); }
+  const st = [...usersStmts(X.db, ppl), X.st('DELETE FROM types'), X.st('DELETE FROM objects')];
   (r.types || []).forEach((t, i) => st.push(X.st('INSERT OR REPLACE INTO types (name, grp, ord) VALUES (?, ?, ?)', t.name, t.group || 'Papilddarbs', i)));
   (r.objects || []).forEach((o, i) => st.push(X.st('INSERT OR REPLACE INTO objects (anorm, adrese, vaditajs, grupa, piekluve, ord) VALUES (?, ?, ?, ?, ?, ?)', norm(o.adrese), o.adrese, o.vaditajs || '', o.grupa || 'SH objekti', o.piekluve || '', i)));
   if (!(r.users || []).length) throw new Error('Tabulā nav lietotāju — sinhronizācija atcelta');
   await X.db.batch(st);
   await X.run("INSERT OR REPLACE INTO kv (k, v) VALUES ('configSync', ?)", now());
+  const dirty = await X.first("SELECT v FROM kv WHERE k = 'peopleDirty'");
+  if (dirty && dirty.v === '1') await pushPeople(X, ppl).catch(e => console.error('pushPeople', e));
   return { users: (r.users || []).length, types: (r.types || []).length, objects: (r.objects || []).length };
 }
 

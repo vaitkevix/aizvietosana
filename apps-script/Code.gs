@@ -1143,6 +1143,7 @@ function bridge_(r) {
     case 'aiParse': return aiParseBridge_(r);
     case 'push': return pushTokens_(r.tokens || [], r.title, r.body);
     case 'config': return { users: users_(), types: jobTypes_(), objects: objects_() };
+    case 'people': return withLock_(() => peopleWrite_(r.people || []));
     case 'addObjects': return withLock_(() => {
       const known = objects_().map(o => normName_(o.adrese));
       const sh = objSheet_();
@@ -1161,6 +1162,26 @@ function bridge_(r) {
     });
   }
   throw new Error('Nezināma tilta darbība');
+}
+
+/** Portāla pilnvaras → lapas «Pilnvaras» (viss) un «Lietotaji» (Aizvietošanas lomas). Mainīt tikai portālā. © VAITKEVIX, SIA */
+function peopleWrite_(list) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const R = { '': '—', admin: 'Administrators', vaditajs: 'Darbu vadītājs', pieteicejs: 'Pieteicējs', 'gatavotājs': 'Gatavotājs', 'vadība': 'Vadība' };
+  const head = ['Vārds', 'PIN', 'Krāsa', 'Aktīvs', 'Portāla admins', 'Aizvietošana', 'Izvešana', 'Kaisāmmateriāls', 'Personāls', 'Budžets'];
+  let sh = ss.getSheetByName('Pilnvaras') || ss.insertSheet('Pilnvaras');
+  sh.clearContents();
+  const rows = list.map(p => { const q = p.perms || {}; return [p.name, String(p.pin), p.color || '', p.active ? 'Jā' : 'Nē', q.portal === 'admin' ? 'Jā' : '',
+    R[q.aizv || ''] || q.aizv, R[q.izv || ''] || q.izv, R[q.kais || ''] || q.kais, R[q.pers || ''] || q.pers, R[q.budz || ''] || q.budz]; });
+  sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold').setBackground('#0f6b5c').setFontColor('#ffffff');
+  if (rows.length) { sh.getRange(2, 2, rows.length, 1).setNumberFormat('@'); sh.getRange(2, 1, rows.length, head.length).setValues(rows); }
+  sh.setFrozenRows(1);
+  sh.getRange(rows.length + 3, 1).setValue('Mainīt tikai portālā vaitkevix.cloud/sh (Administrēšana). Šī lapa tiek pārrakstīta automātiski. © VAITKEVIX, SIA').setFontStyle('italic').setFontColor('#6b7270');
+  const us = sheet_(SH_USERS), last = us.getLastRow();
+  if (last > 1) us.getRange(2, 1, last - 1, 4).clearContent();
+  const ur = list.filter(p => p.active && p.perms && p.perms.aizv).map(p => [p.name, p.perms.aizv, String(p.pin), p.color || '']);
+  if (ur.length) { us.getRange(2, 3, ur.length, 1).setNumberFormat('@'); us.getRange(2, 1, ur.length, 4).setValues(ur); }
+  return { written: rows.length };
 }
 
 function aiParseBridge_(r) {
