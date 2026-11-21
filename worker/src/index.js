@@ -29,7 +29,13 @@ export default {
     // vaitkevix.cloud/shaizvietosana, /shizvesana → lietotnes (GitHub Pages); …/api → šis API
     for (const base in SITES) {
       if (url.pathname === base) return Response.redirect(url.origin + base + '/' + url.search, 301);
-      if (url.pathname.startsWith(base + '/') && url.pathname !== base + '/api') return site(request, url, base);
+      if (url.pathname.startsWith(base + '/') && url.pathname !== base + '/api') {
+        // Viena saite: lietotnes atveras tikai portālā (rāmī). Tieša atvēršana → vaitkevix.cloud/sh/
+        const rest = url.pathname.slice(base.length);
+        if (base !== '/sh' && SITE_KEY[base] && (rest === '/' || rest === '/index.html') && request.headers.get('Sec-Fetch-Dest') === 'document')
+          return Response.redirect(url.origin + '/sh/#' + SITE_KEY[base], 302);
+        return site(request, url, base);
+      }
     }
     if (request.method === 'GET') return json({ ok: true, app: 'SH | Aizvietošana', time: new Date().toISOString() });
     let req;
@@ -448,6 +454,7 @@ async function budz(request, env, ctx) {
 }
 
 const SITES = { '/shaizvietosana': 'https://vaitkevix.github.io/aizvietosana', '/shizvesana': 'https://vaitkevix.github.io/izvesana', '/shkaisammaterials': 'https://vaitkevix.github.io/kaisammaterials', '/shpersonals': 'https://vaitkevix.github.io/personals', '/shbudzets': 'https://vaitkevix.github.io/budzets', '/sh': 'https://vaitkevix.github.io/aizvietosana/portal' };
+const SITE_KEY = { '/shaizvietosana': 'aizv', '/shizvesana': 'izv', '/shkaisammaterials': 'kais', '/shpersonals': 'pers', '/shbudzets': 'budz' };
 /** Lietotnes faili no GitHub Pages zem tava domēna */
 async function site(request, url, base) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });

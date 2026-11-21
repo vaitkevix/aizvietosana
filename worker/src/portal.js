@@ -48,10 +48,20 @@ async function ensureSeed(db) {
 async function session(env, t) {
   if (!t) return null;
   const r = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('sess:' + await h(t)).first();
-  const s = r && parse(r.v); if (!s || !s.name || s.exp < Date.now()) return null;
+  const s = r && parse(r.v); if (!s || !(s.name || s.company) || s.exp < Date.now()) return null;
+  if (s.company) return companyBy(env.DB, 'name', s.company);
   return (await people(env.DB)).find(p => p.active && p.name === s.name) || null;
 }
-const pub = (p) => ({ name: p.name, color: p.color, perms: p.perms, admin: p.perms.portal === 'admin' });
+/** Izvedējs / kurjers (uzņēmums) ienāk ar savu SIA paroli */
+async function companyBy(db, field, v) {
+  const c = await db.prepare('SELECT name, kinds, pass FROM companies WHERE active = 1 AND ' + (field === 'pass' ? 'pass' : 'name') + ' = ?').bind(String(v || '').trim().toUpperCase() && field === 'pass' ? String(v).trim().toUpperCase() : v).first();
+  if (!c || !c.pass) return null;
+  const k = String(c.kinds || '').split(',');
+  if (k.indexOf('izvedejs') === -1 && k.indexOf('kurjers') === -1) return null;
+  return { name: c.name, company: true, pass: c.pass, color: '', perms: { izv: k.indexOf('izvedejs') !== -1 ? 'izvedejs' : '', kais: k.indexOf('kurjers') !== -1 ? 'kurjers' : '' } };
+}
+const pub = (p) => p.company ? { name: p.name, company: true, perms: p.perms, admin: false, carrier: { name: p.name, pass: p.pass } }
+  : { name: p.name, color: p.color, perms: p.perms, admin: p.perms.portal === 'admin' };
 
 async function dash(env, me) {
   const out = {}, P = me.perms, kv = async (k) => { const r = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind(k).first(); return r ? parse(r.v) : null; };
@@ -60,16 +70,22 @@ async function dash(env, me) {
     const mine = P.aizv === 'admin' ? '' : ' AND vaditajs = ?', args = P.aizv === 'admin' ? [] : [me.name];
     const q = async (d, extra) => (await env.DB.prepare('SELECT COUNT(*) n FROM jobs WHERE datums = ?' + mine + (extra || '')).bind(d, ...args).first()).n;
     out.aizv = { today: await q(td), open: await q(td, " AND statuss NOT IN ('izpildīts')"), tomorrow: await q(tm), unassigned: P.aizv === 'admin' ? await q(tm, " AND brigade = ''") : null };
+    const d0 = td.slice(0, 8) + '01', d1 = fmt.format(new Date(Date.now() + 62 * 864e5));
+    const rows = (await env.DB.prepare('SELECT datums, COUNT(*) n, SUM(CASE WHEN statuss = \'izpildīts\' THEN 1 ELSE 0 END) d FROM jobs WHERE datums >= ? AND datums <= ?' + mine + ' GROUP BY datums').bind(d0, d1, ...args).all()).results || [];
+    out.aizv.days = {}; rows.forEach(r => out.aizv.days[r.datums] = [r.n, r.d]);
+    out.aizv.next = ((await env.DB.prepare('SELECT datums, adrese, tips, brigade, statuss FROM jobs WHERE datums >= ? AND statuss != \'izpildīts\'' + mine + ' ORDER BY datums, seq LIMIT 4').bind(td, ...args).all()).results || []);
   }
   if (P.izv) {
     const b = await kv('izv:getBoot'), t = (b && b.result && b.result.tasks) || [];
     const open = t.filter(x => x.status === 'Neizpildīts');
-    out.izv = { open: open.length, urgent: open.filter(x => x.urgent).length, mine: P.izv === 'admin' ? null : open.filter(x => String(x.requester || '').toLowerCase().indexOf(me.name.toLowerCase()) === 0).length };
+    const mineF = (x) => String(x.requester || '').toLowerCase().indexOf(me.name.toLowerCase()) === 0;
+    out.izv = { open: open.length, urgent: open.filter(x => x.urgent).length, mine: P.izv === 'pieteicejs' ? open.filter(mineF).length : null,
+      top: open.slice().sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0)).slice(0, 3).map(x => ({ a: x.address, u: !!x.urgent, d: x.deadline || '' })) };
   }
   if (P.kais) {
     const b = await kv('kais:getTasks'), t = (b && b.result) || [];
     const open = t.filter(x => !/piegād[aā]ts|atcelts/i.test(String(x.status || '')));
-    out.kais = { open: open.length };
+    out.kais = { open: open.length, top: open.slice(0, 3).map(x => ({ a: x.address, m: x.material || '' })) };
   }
   if (P.pers) out.pers = {};
   if (P.budz) out.budz = {};
@@ -84,10 +100,10 @@ export async function portal(request, env, ctx, hooks) {
     if (a === 'login' || a === 'check') await ensureSeed(env.DB);
     if (a === 'lists') return pj(Object.assign({ ok: true }, await hooks.lists()));
     if (a === 'login') {
-      const me = await personByPin(env.DB, b.pin);
-      if (!me) { await new Promise(r => setTimeout(r, 700)); return pj({ ok: false, error: 'Nepareizs PIN' }); }
+      const me = await personByPin(env.DB, b.pin) || await companyBy(env.DB, 'pass', b.pin);
+      if (!me) { await new Promise(r => setTimeout(r, 700)); return pj({ ok: false, error: 'Nepareizs PIN vai parole' }); }
       const t = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-      await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)').bind('sess:' + await h(t), JSON.stringify({ name: me.name, exp: Date.now() + 60 * 864e5 })).run();
+      await env.DB.prepare('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)').bind('sess:' + await h(t), JSON.stringify(me.company ? { company: me.name, exp: Date.now() + 60 * 864e5 } : { name: me.name, exp: Date.now() + 60 * 864e5 })).run();
       return pj({ ok: true, token: t, me: pub(me), dash: await dash(env, me) });
     }
     if (a === 'check') {   // Personāls / Budžets pārbauda vienoto PIN

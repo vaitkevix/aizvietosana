@@ -147,6 +147,87 @@ button{cursor:pointer}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:90;background:#17201c;color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);max-width:calc(100vw - 32px);animation:up .25s}
 .toast.err{background:var(--red)}
 .foot{padding:8px 0 calc(28px + env(safe-area-inset-bottom));text-align:center;font-size:11.5px;font-weight:700;color:var(--ink-3)}
+
+/* ===== Kopskats (koncepts: lieli pasteļkrāsu bloki, SELECTUM HOME zaļais) ===== */
+:root{--mint:#d6e8e1;--sand:#f4e4b4;--sky:#d8e6f2;--rose:#f5dbe3;--lilac:#e2ddf2;--ink-strong:#16201b;--pill:#fff}
+:root[data-theme="dark"]{--mint:#1e3a32;--sand:#3d3520;--sky:#1e2f3d;--rose:#3d2530;--lilac:#2c2840;--ink-strong:#eef2ef;--pill:#1b2521}
+#vHome{background:var(--bg);min-height:100%}
+.shell{display:flex;min-height:100vh}
+.rail{display:none}
+@media(min-width:900px){
+  .rail{display:flex;flex-direction:column;align-items:center;gap:14px;width:96px;flex:none;padding:28px 0;background:var(--surface);border-right:1px solid var(--line);position:sticky;top:0;height:100vh}
+  .rail .rlogo{width:48px;height:48px;border-radius:14px;margin-bottom:28px}
+  .rbtns{display:flex;flex-direction:column;gap:12px;flex:1}
+  .rb{width:56px;height:56px;border-radius:50%;border:0;background:transparent;color:var(--ink-2);display:grid;place-items:center;padding:0}
+  .rb img{width:30px;height:30px;border-radius:9px}
+  .rb.on{background:var(--ink-strong);color:var(--bg)}
+  .rb:hover:not(.on){background:var(--surface-2)}
+}
+.board{flex:1;min-width:0;max-width:1240px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px 0}
+@media(min-width:900px){.board{padding:36px 40px 0}}
+.bhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bhead .hi{flex:1;min-width:200px}
+.bhead .d{font-size:13px;font-weight:700;color:var(--ink-3);text-transform:capitalize}
+.bhead h1{margin:2px 0 0;font-size:clamp(28px,4.6vw,46px);font-weight:800;letter-spacing:-.03em;line-height:1.05;color:var(--ink-strong)}
+.search{order:3;flex:1 1 100%;display:flex;align-items:center;gap:10px;height:52px;padding:0 18px;border-radius:26px;background:var(--pill);border:1px solid var(--line);color:var(--ink-3)}
+.search input{flex:1;border:0;outline:0;background:transparent;font-size:15px;font-weight:600;color:var(--ink);min-width:0}
+@media(min-width:900px){.search{order:0;flex:0 1 380px}}
+.avatar{width:52px;height:52px;border-radius:50%;border:0;display:grid;place-items:center;font-weight:800;font-size:18px;color:#fff;background:var(--brand);flex:none}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:8px 32px;margin-top:8px}
+.colL,.colR{min-width:0}
+@media(min-width:1100px){.cols{grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr)}}
+.sec{margin:22px 0 14px;font-size:clamp(22px,2.6vw,30px);font-weight:800;letter-spacing:-.02em;color:var(--ink-strong)}
+.sec span{color:var(--ink-3);font-weight:700}
+.apps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media(max-width:520px){.apps{gap:10px}}
+.ac{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-height:150px;padding:18px;border-radius:28px;border:0;text-align:left;color:#17201c;transition:transform .15s}
+.ac:active{transform:scale(.98)}
+.ac .atop{display:flex;align-items:center;gap:8px}
+.ac .atop img{width:34px;height:34px;border-radius:10px}
+.ac .chip{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800;display:flex;align-items:center;gap:5px}
+.ac .chip.w{color:#b45309}
+.ac b{display:block;font-size:clamp(17px,2.2vw,24px);font-weight:800;letter-spacing:-.02em;margin-top:18px;padding-right:52px}
+.ac small{display:block;font-size:13px;font-weight:700;opacity:.65;margin-top:2px;padding-right:52px}
+.arrow{position:absolute;right:14px;bottom:14px;width:46px;height:46px;border-radius:50%;background:#fff;display:grid;place-items:center;color:#17201c}
+.c-aizv{background:var(--mint)}.c-izv{background:var(--sand)}.c-kais{background:var(--sky)}.c-pers{background:var(--rose)}.c-budz{background:var(--lilac)}.c-adm{background:#17201c;color:#fff}
+:root[data-theme="dark"] .ac{color:var(--ink)}
+:root[data-theme="dark"] .ac .chip,:root[data-theme="dark"] .arrow{background:var(--surface);color:var(--ink)}
+.c-adm .arrow{background:#2b3732;color:#fff}.c-adm small{opacity:.7}
+.stats3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:520px){.ac{min-height:136px;padding:14px;border-radius:24px}.ac b{font-size:17px;padding-right:0;margin-top:12px}.ac small{padding-right:0;font-size:12px}.ac .arrow{width:38px;height:38px;right:10px;bottom:auto;top:10px}.ac .atop img{width:30px;height:30px}.ac .chip{display:none}}
+.sx{position:relative;padding:16px 16px 18px;border-radius:24px;min-height:118px;border:0;text-align:left;color:#17201c}
+:root[data-theme="dark"] .sx{color:var(--ink)}
+.sx span{font-size:13px;font-weight:700;display:block;padding-right:6px}
+.sx b{display:block;font-size:clamp(30px,4vw,46px);font-weight:800;letter-spacing:-.03em;margin-top:8px;line-height:1}
+.sx .arrow{width:38px;height:38px;right:10px;bottom:10px}
+@media(max-width:520px){.sx{min-height:104px;padding:12px}.sx .arrow{display:none}}
+.wide{position:relative;margin-top:14px;padding:18px 20px 22px;border-radius:28px;background:var(--sand);color:#17201c}
+:root[data-theme="dark"] .wide{color:var(--ink)}
+.wide .t1{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px}
+.wide .t1 i{width:40px;height:40px;border-radius:50%;background:#fff;display:grid;place-items:center;font-style:normal}
+.wide .meta{margin:14px 0 4px;font-size:13px;font-weight:700;opacity:.7}
+.wide h3{margin:0 0 14px;font-size:clamp(20px,2.6vw,28px);font-weight:800;letter-spacing:-.02em}
+.bar{height:8px;border-radius:4px;background:rgba(23,32,28,.15);overflow:hidden}.bar i{display:block;height:100%;background:#17201c;border-radius:4px}
+.cal{background:var(--surface);border-radius:28px;padding:20px;border:1px solid var(--line)}
+.cal .ch{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}
+.cal .ch b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.cal .ch button{width:38px;height:38px;border-radius:50%;border:0;background:transparent;color:var(--ink);font-size:20px}
+.cal .g{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.cal .wd{font-size:12px;font-weight:700;color:var(--ink-3);padding:4px 0}
+.cal .dd{aspect-ratio:1;display:grid;place-items:center;border-radius:50%;font-weight:700;font-size:14px;position:relative;border:0;background:transparent;color:var(--ink)}
+.cal .dd.o{color:var(--ink-3);opacity:.45}
+.cal .dd.has{background:var(--mint)}
+.cal .dd.today{background:var(--ink-strong);color:var(--bg)}
+.cal .dd.sel{outline:2px dashed var(--ink-3);outline-offset:-3px}
+.cal .dd small{position:absolute;bottom:2px;font-size:9px;font-weight:800;opacity:.7}
+.nextl{display:grid;gap:10px;margin:14px 0 24px}
+.ni{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:24px;background:var(--mint);border:0;text-align:left;color:#17201c;width:100%}
+:root[data-theme="dark"] .ni{color:var(--ink)}
+.ni i{width:48px;height:48px;border-radius:50%;background:#fff;display:grid;place-items:center;flex:none;font-style:normal}
+:root[data-theme="dark"] .ni i{background:var(--surface)}
+.ni b{display:block;font-size:14.5px;font-weight:800}.ni small{display:block;font-size:12.5px;font-weight:700;opacity:.65;margin-top:2px}
+.ni.u{background:var(--sand)}.ni.k{background:var(--sky)}
+.hidden-q{display:none!important}
 </style>
 </head>
 <body>
@@ -156,9 +237,9 @@ button{cursor:pointer}
   <form class="card lcard" id="loginForm" autocomplete="on">
     <img src="icon.png" alt="">
     <h2>SH | Portāls</h2>
-    <p class="sub">Visas darba lietotnes vienuviet</p>
+    <p class="sub">Ienāciet ar savu PIN vai uzņēmuma paroli</p>
     <input type="text" name="username" autocomplete="username" value="SH portāls" hidden>
-    <input class="pin" id="pin" type="password" name="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN" aria-label="PIN">
+    <input class="pin" id="pin" type="password" name="password" autocomplete="current-password" autocapitalize="characters" placeholder="PIN vai parole" aria-label="PIN vai parole">
     <div class="err" id="loginErr"></div>
     <button class="btn" id="loginBtn" type="submit">Ienākt</button>
     <p class="copy">© VAITKEVIX, SIA</p>
@@ -167,17 +248,36 @@ button{cursor:pointer}
 
 <!-- Sākums -->
 <section id="vHome" hidden>
-  <header class="top"><div class="wrap">
-    <img class="logo" src="icon.png" alt="">
-    <div class="brand"><h1>SH | Portāls</h1><p id="meLine"></p></div>
-    <button class="icon-btn" id="refreshBtn" title="Atjaunot" aria-label="Atjaunot"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg></button>
-    <button class="icon-btn" id="menuBtn" title="Izvēlne" aria-label="Izvēlne"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-  </div></header>
-  <main class="wrap">
-    <div class="hello"><div class="d" id="today"></div><h2 id="hi"></h2></div>
-    <div class="grid" id="tiles"></div>
-  </main>
-  <div class="foot">© VAITKEVIX, SIA</div>
+  <div class="shell">
+    <nav class="rail" id="rail">
+      <img class="rlogo" src="icon.png" alt="SH">
+      <div class="rbtns" id="railBtns"></div>
+      <button class="rb" id="railMenu" title="Izvēlne" aria-label="Izvēlne"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg></button>
+    </nav>
+    <main class="board">
+      <header class="bhead">
+        <div class="hi"><div class="d" id="today"></div><h1 id="hi"></h1></div>
+        <label class="search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Meklēt adresi vai lietotni" autocomplete="off"></label>
+        <button class="avatar" id="menuBtn" aria-label="Izvēlne"><span id="avatarTxt"></span></button>
+        <button class="icon-btn" id="refreshBtn" title="Atjaunot" aria-label="Atjaunot" hidden></button>
+      </header>
+      <div class="cols">
+        <div class="colL">
+          <h2 class="sec">Šodien <span id="todayN"></span></h2>
+          <div class="apps" id="tiles"></div>
+          <h2 class="sec">Kopsavilkums</h2>
+          <div class="stats3" id="stats"></div>
+          <div id="wide"></div>
+        </div>
+        <div class="colR" id="colR">
+          <h2 class="sec">Grafiks</h2>
+          <div class="cal" id="cal"></div>
+          <div class="nextl" id="nextList"></div>
+        </div>
+      </div>
+      <div class="foot">© VAITKEVIX, SIA</div>
+    </main>
+  </div>
 </section>
 
 <!-- Lietotne -->
@@ -230,7 +330,7 @@ $('loginForm').onsubmit = async (e) => {
     S.t = r.token; ls.set('sh_t', r.token); ls.set('sh_pin', pin);
     S.me = r.me; S.dash = r.dash; ls.set('sh_me', JSON.stringify(r.me)); sso(pin);
     try { if (window.PasswordCredential && navigator.credentials) navigator.credentials.store(new PasswordCredential({ id: 'SH portāls', password: pin })).catch(() => {}); } catch (e) {}
-    $('pin').value = ''; home(); maybeTour();
+    $('pin').value = ''; home(); { const k = location.hash.slice(1); if (APPS[k] && S.me.perms[k]) openApp(k, true); } maybeTour();
   } catch (err) {
     $('loginErr').textContent = netMsg(err); $('pin').value = '';
     const c = $('loginForm'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); $('pin').focus();
@@ -239,6 +339,13 @@ $('loginForm').onsubmit = async (e) => {
 /** Vienota ieeja: lietotnes uz šī paša domēna saņem pieteikšanos automātiski */
 function sso(pin) {
   const P = S.me.perms;
+  if (S.me.company) {
+    const c = S.me.carrier || {};
+    ['shx_izv_user', 'shx_kais_user', 'darbi_pin', 'personals_pin', 'budzets_pin'].forEach(ls.del);
+    if (P.izv) { ls.set('carrierPin', c.name + '\n' + c.pass); ls.set('carrierUser', c.name); }
+    if (P.kais) { ls.set('shx_kais_courier', c.name); try { sessionStorage.setItem('carrierOk', '1'); } catch (e) {} }
+    return;
+  }
   if (P.aizv) ls.set('darbi_pin', pin);
   ['izv', 'kais'].forEach(k => {
     if (P[k]) ls.set('shx_' + k + '_user', JSON.stringify({ name: S.me.name, role: P[k], kind: P[k] === 'admin' ? 'admin' : 'pieteicejs', kindLabel: P[k] === 'admin' ? 'Administrators' : 'Pieteicējs' }));
@@ -249,46 +356,95 @@ function sso(pin) {
 }
 async function logout() {
   try { await api('logout'); } catch (e) {}
-  ['sh_t', 'sh_pin', 'sh_me', 'darbi_pin', 'shx_izv_user', 'shx_kais_user', 'personals_pin', 'budzets_pin', 'budzets_user', 'budzets_list'].forEach(ls.del);
+  ['sh_t', 'sh_pin', 'sh_me', 'carrierPin', 'carrierUser', 'shx_kais_courier', 'darbi_pin', 'shx_izv_user', 'shx_kais_user', 'personals_pin', 'budzets_pin', 'budzets_user', 'budzets_list'].forEach(ls.del);
   S.t = null; S.me = null; Object.values(S.frames).forEach(f => f.remove()); S.frames = {};
   closeSheet(); history.replaceState(null, '', location.pathname); show('vLogin'); setTimeout(() => $('pin').focus(), 150);
 }
 
 /* ---------- Sākums ---------- */
 function apps() { return ORDER.filter(k => S.me && S.me.perms[k]); }
+const COLOR = { aizv: 'c-aizv', izv: 'c-izv', kais: 'c-kais', pers: 'c-pers', budz: 'c-budz' };
+const ARROW = '<span class="arrow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></span>';
+const GRID = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="7.5" cy="7.5" r="3.5"/><circle cx="16.5" cy="7.5" r="3.5"/><circle cx="7.5" cy="16.5" r="3.5"/><circle cx="16.5" cy="16.5" r="3.5"/></svg>';
+const SHIELD = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3Z"/><path d="M9 12l2 2 4-4"/></svg>';
+const CAL = { y: 0, m: 0 };
+function fmtD(iso) { const d = new Date(iso + 'T12:00:00'); return d.toLocaleDateString('lv-LV', { weekday: 'short', day: 'numeric', month: 'short' }); }
+function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function appSub(k) {
+  const D = (S.dash || {})[k] || {}, C = S.me.company;
+  if (k === 'aizv') return D.open != null ? `${D.open} šodien neizpildīti · rīt ${D.tomorrow}` : APPS[k].sub;
+  if (k === 'izv') return D.open != null ? (C ? `${D.open} jāizved` : `${D.open} gaida izvešanu`) : APPS[k].sub;
+  if (k === 'kais') return D.open != null ? (C ? `${D.open} jāpiegādā` : `${D.open} gaida piegādi`) : APPS[k].sub;
+  return APPS[k].sub;
+}
+function appChip(k) {
+  const D = (S.dash || {})[k] || {};
+  if (k === 'izv' && D.urgent) return `<span class="chip w">● ${D.urgent} steidzami</span>`;
+  if (k === 'aizv' && D.unassigned) return `<span class="chip w">● ${D.unassigned} bez brigādes</span>`;
+  const r = S.me.perms[k]; return r ? `<span class="chip">${esc(RL[r] || (r === 'izvedejs' ? 'Izvedējs' : r === 'kurjers' ? 'Kurjers' : r))}</span>` : '';
+}
 function home() {
   show('vHome');
-  const d = new Date();
+  const d = new Date(), h = d.getHours(), me = S.me, D = S.dash || {};
   $('today').textContent = d.toLocaleDateString('lv-LV', { weekday: 'long', day: 'numeric', month: 'long' });
-  const h = d.getHours();
-  $('hi').textContent = (h < 11 ? 'Labrīt' : h < 18 ? 'Labdien' : 'Labvakar') + ', ' + S.me.name.split(' ')[0] + '!';
-  $('meLine').textContent = S.me.name + (S.me.admin ? ' · administrators' : '');
+  $('hi').textContent = (h < 11 ? 'Labrīt' : h < 18 ? 'Labdien' : 'Labvakar') + ', ' + (me.company ? me.name : me.name.split(' ')[0]);
+  $('avatarTxt').textContent = me.name.replace(/^SIA\s+/i, '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  $('menuBtn').style.background = me.color || '';
   const list = apps();
-  $('tiles').innerHTML = list.map(k => `
-    <button class="tile" data-app="${k}">
-      <div class="h"><img src="${icon(k)}" alt=""><div><b>${APPS[k].name}</b><small>${esc(RL[S.me.perms[k]] || '')} · ${APPS[k].sub}</small></div>
-        <svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
-      <div class="stats" id="st-${k}">${statsHtml(k)}</div>
-    </button>`).join('') + (S.me.admin ? `
-    <button class="tile" id="admTile">
-      <div class="h"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3Z"/><path d="M9 12l2 2 4-4"/></svg></span>
-        <div><b>Administrēšana</b><small>Cilvēki, pilnvaras, objekti, uzņēmumi, saraksti</small></div>
-        <svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
-    </button>` : '') + (list.length ? '' : '<div class="card" style="padding:20px;text-align:center;font-weight:700;color:var(--ink-3)">Jums vēl nav piešķirta neviena lietotne. Sazinieties ar administratoru.</div>');
+  $('railBtns').innerHTML = `<button class="rb on" title="Sākums">${GRID}</button>` + list.map(k => `<button class="rb" data-app="${k}" title="${APPS[k].name}"><img src="${icon(k)}" alt=""></button>`).join('') + (me.admin ? `<button class="rb" data-adm title="Administrēšana">${SHIELD}</button>` : '');
+  const n = (D.aizv ? D.aizv.open || 0 : 0) + (D.izv ? (D.izv.mine != null ? D.izv.mine : D.izv.open) || 0 : 0) + (D.kais ? D.kais.open || 0 : 0);
+  $('todayN').textContent = n ? '(' + n + ')' : '';
+  $('tiles').innerHTML = list.map(k => `<button class="ac ${COLOR[k]}" data-app="${k}" data-q="${esc(APPS[k].name)}">
+      <div class="atop"><img src="${icon(k)}" alt="">${appChip(k)}</div>
+      <div><b>${APPS[k].name}</b><small>${esc(appSub(k))}</small></div>${ARROW}</button>`).join('')
+    + (me.admin ? `<button class="ac c-adm" data-adm data-q="Administrēšana pilnvaras objekti"><div class="atop"><span style="width:34px;height:34px;display:grid;place-items:center">${SHIELD}</span></div><div><b>Administrēšana</b><small>Cilvēki, pilnvaras, objekti, uzņēmumi</small></div>${ARROW}</button>` : '')
+    + (list.length ? '' : '<div class="card" style="grid-column:1/-1;padding:20px;text-align:center;font-weight:700;color:var(--ink-3)">Jums vēl nav piešķirta neviena lietotne. Sazinieties ar administratoru.</div>');
+  // Kopsavilkums
+  const sx = [];
+  if (D.aizv) sx.push(['aizv', 'Šodien neizpildīti', D.aizv.open, 'c-aizv']);
+  if (D.izv) sx.push(['izv', me.company ? 'Jāizved' : D.izv.mine != null ? 'Jūsu gaida' : 'Gaida izvešanu', D.izv.mine != null ? D.izv.mine : D.izv.open, 'c-izv']);
+  if (D.kais) sx.push(['kais', me.company ? 'Jāpiegādā' : 'Gaida piegādi', D.kais.open, 'c-kais']);
+  if (D.aizv && sx.length < 3) sx.push(['aizv', 'Rīt darbi', D.aizv.tomorrow, 'c-lilac']);
+  $('stats').innerHTML = sx.slice(0, 3).map(([k, l, v, c]) => `<button class="sx ${c === 'c-lilac' ? 'c-budz' : c}" data-app="${k}"><span>${l}</span><b>${v == null ? '—' : v}</b>${ARROW}</button>`).join('');
+  $('stats').previousElementSibling.hidden = $('stats').hidden = !sx.length;
+  // Plašā kartīte: šodienas progress
+  if (D.aizv && D.aizv.today) {
+    const done = D.aizv.today - D.aizv.open, pc = Math.round(done / D.aizv.today * 100);
+    $('wide').innerHTML = `<button class="wide" data-app="aizv" style="width:100%;border:0;text-align:left;display:block"><div class="t1"><i><img src="${icon('aizv')}" alt="" style="width:24px;height:24px;border-radius:6px"></i>Aizvietošana · šodien</div>
+      <div class="meta">${done}/${D.aizv.today} darbi izpildīti</div><h3>Rīt ${D.aizv.tomorrow} darbi${D.aizv.unassigned ? ' · ' + D.aizv.unassigned + ' bez brigādes' : ''}</h3><div class="bar"><i style="width:${pc}%"></i></div>${ARROW.replace('class="arrow"', 'class="arrow" style="top:14px;bottom:auto"')}</button>`;
+  } else $('wide').innerHTML = '';
+  // Kalendārs + tuvākais
+  const t = new Date(); if (!CAL.y) { CAL.y = t.getFullYear(); CAL.m = t.getMonth(); }
+  drawCal();
+  const items = [];
+  ((D.aizv && D.aizv.next) || []).forEach(j => items.push(`<button class="ni" data-app="aizv" data-q="${esc(j.adrese)}"><i><img src="${icon('aizv')}" alt="" style="width:26px;height:26px;border-radius:7px"></i><div><b>${esc(j.adrese)}</b><small>${esc(fmtD(j.datums))} · ${esc(j.tips || 'Darbs')}${j.brigade ? ' · ' + esc(j.brigade) : ' · bez brigādes'}</small></div></button>`));
+  ((D.izv && D.izv.top) || []).forEach(x => items.push(`<button class="ni ${x.u ? 'u' : 'u'}" data-app="izv" data-q="${esc(x.a)}"><i><img src="${icon('izv')}" alt="" style="width:26px;height:26px;border-radius:7px"></i><div><b>${esc(x.a)}</b><small>Izvešana${x.u ? ' · steidzami' : ''}${x.d ? ' · līdz ' + esc(x.d) : ''}</small></div></button>`));
+  ((D.kais && D.kais.top) || []).forEach(x => items.push(`<button class="ni k" data-app="kais" data-q="${esc(x.a)}"><i><img src="${icon('kais')}" alt="" style="width:26px;height:26px;border-radius:7px"></i><div><b>${esc(x.a)}</b><small>Kaisāmmateriāls${x.m ? ' · ' + esc(x.m) : ''}</small></div></button>`));
+  $('nextList').innerHTML = items.length ? items.join('') : '<div class="card" style="padding:18px;text-align:center;font-weight:700;color:var(--ink-3)">Nav gaidošu darbu ✓</div>';
+  filterQ();
 }
-function st(n, label, cls) { return `<div class="st ${cls || ''}"><b>${n == null ? '—' : n}</b><span>${label}</span></div>`; }
-function statsHtml(k) {
-  const D = S.dash && S.dash[k];
-  if (!D) return '<div class="skel" style="flex:1"></div>';
-  if (k === 'aizv') return st(D.open, 'šodien neizpildīti', D.open ? 'warn' : 'ok') + st(D.today, 'šodien kopā') + st(D.tomorrow, D.unassigned != null ? 'rīt · ' + D.unassigned + ' bez brigādes' : 'rīt');
-  if (k === 'izv') return st(D.open, 'gaida izvešanu', D.open ? '' : 'ok') + st(D.urgent, 'steidzami', D.urgent ? 'warn' : '') + (D.mine != null ? st(D.mine, 'jūsu') : '');
-  if (k === 'kais') return st(D.open, 'gaida piegādi', D.open ? '' : 'ok');
-  if (k === 'pers') return '<div class="st"><span>Pieņemšana darbā, atvaļinājumi un kalendārs</span></div>';
-  if (k === 'budz') return '<div class="st"><span>Tāmes, versijas un apstiprināšana</span></div>';
-  return '';
+function drawCal() {
+  const D = (S.dash && S.dash.aizv && S.dash.aizv.days) || {}, y = CAL.y, m = CAL.m, first = new Date(y, m, 1), td = ymd(new Date());
+  const start = new Date(y, m, 1 - ((first.getDay() + 6) % 7));
+  let cells = '';
+  for (let i = 0; i < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); const k = ymd(d), v = D[k];
+    if (i >= 35 && d.getMonth() !== m) break;
+    cells += `<button class="dd ${d.getMonth() !== m ? 'o' : ''} ${v ? 'has' : ''} ${k === td ? 'today' : ''}" data-day="${k}" title="${v ? v[0] + ' darbi, ' + v[1] + ' izpildīti' : ''}">${d.getDate()}${v && k !== td ? `<small>${v[0]}</small>` : ''}</button>`; }
+  $('cal').innerHTML = `<div class="ch"><b>${(m => m[0].toUpperCase() + m.slice(1))(first.toLocaleDateString('lv-LV', { month: 'long' }))} ${y}</b><span><button data-cm="-1" aria-label="Iepriekšējais">‹</button><button data-cm="1" aria-label="Nākamais">›</button></span></div>
+    <div class="g">${['P', 'O', 'T', 'C', 'Pk', 'S', 'Sv'].map(w => `<div class="wd">${w}</div>`).join('')}${cells}</div>`;
 }
+$('cal').onclick = (e) => { const b = e.target.closest('[data-cm]'); if (b) { CAL.m += +b.dataset.cm; if (CAL.m < 0) { CAL.m = 11; CAL.y--; } if (CAL.m > 11) { CAL.m = 0; CAL.y++; } drawCal(); return; }
+  const d = e.target.closest('[data-day]'); if (d && S.me && S.me.perms.aizv) openApp('aizv'); };
+function filterQ() {
+  const q = ($('q').value || '').trim().toLowerCase();
+  document.querySelectorAll('#tiles [data-q], #nextList [data-q]').forEach(el => el.classList.toggle('hidden-q', !!q && !el.dataset.q.toLowerCase().includes(q) && !el.textContent.toLowerCase().includes(q)));
+}
+$('q').oninput = filterQ;
+$('q').onkeydown = (e) => { if (e.key === 'Enter') { const f = document.querySelector('#tiles [data-app]:not(.hidden-q), #nextList [data-app]:not(.hidden-q)'); if (f) openApp(f.dataset.app); } };
+['railBtns', 'stats', 'wide', 'nextList'].forEach(id => $(id).addEventListener('click', (e) => { if (e.target.closest('[data-adm]')) return openAdmin(); const t = e.target.closest('[data-app]'); if (t) openApp(t.dataset.app); }));
+$('railMenu').onclick = () => $('menuBtn').click();
 $('tiles').onclick = (e) => {
-  if (e.target.closest('#admTile')) return openAdmin();
+  if (e.target.closest('[data-adm]')) return openAdmin();
   const t = e.target.closest('[data-app]'); if (t) openApp(t.dataset.app);
 };
 async function refresh(quiet) {
@@ -302,7 +458,7 @@ function openApp(k, noPush) {
   if (!S.me || !S.me.perms[k]) return;
   show('vApp'); $('appTitle').textContent = APPS[k].name;
   const pin = ls.get('sh_pin'); if (pin) sso(pin);
-  if (!S.frames[k]) { const f = document.createElement('iframe'); f.src = APPS[k].path; f.title = APPS[k].name; f.allow = 'geolocation; camera; clipboard-write'; $('frames').appendChild(f); S.frames[k] = f; }
+  if (!S.frames[k]) { const f = document.createElement('iframe'); f.src = APPS[k].path + (S.me.company ? '#carrier' : ''); f.title = APPS[k].name; f.allow = 'geolocation; camera; clipboard-write'; $('frames').appendChild(f); S.frames[k] = f; }
   Object.keys(S.frames).forEach(x => S.frames[x].hidden = x !== k);
   $('appSw').innerHTML = apps().map(x => `<button data-sw="${x}" class="${x === k ? 'on' : ''}" title="${APPS[x].name}"><img src="${icon(x)}" alt="${APPS[x].name}"></button>`).join('');
   if (!noPush) history.pushState({ app: k }, '', '#' + k);
@@ -518,14 +674,14 @@ window.SHX = { app: 'portal', external: true, a2hs: true,
   tours: {
     lietotajs: [
       { title: 'Sveiki portālā!', text: 'Visas jūsu darba lietotnes ir vienuviet, ar vienu PIN. Pusminūtes pamācība.' },
-      { sel: '#tiles .tile', title: 'Lietotnes', text: 'Katrā kartītē redzams svarīgākais — piemēram, cik darbu gaida. Uzspiediet, lai atvērtu.' },
-      { sel: '#refreshBtn', title: 'Atjaunot', text: 'Skaitļi atjaunojas paši ik minūti, bet varat atjaunot arī uzreiz.' },
-      { sel: '#menuBtn', title: 'Izvēlne', text: 'Pamācība, tumšais režīms, pievienošana sākuma ekrānam un iziešana.' },
+      { sel: '#tiles .ac', title: 'Lietotnes', text: 'Katrā kartītē redzams svarīgākais — piemēram, cik darbu gaida. Uzspiediet bultiņu, lai atvērtu.' },
+      { sel: '#q', title: 'Meklēt', text: 'Ierakstiet adresi vai lietotni — kartītes un darbi atlasās uzreiz.' }, { sel: '#cal', title: 'Grafiks', text: 'Dienas ar darbiem ir iekrāsotas, šodiena — tumšā. Zemāk — tuvākie darbi.' },
+      { sel: '#menuBtn', title: 'Jūsu izvēlne', text: 'Pamācība, tumšais režīms, pievienošana sākuma ekrānam un iziešana.' },
       { title: 'Viss gatavs!', text: 'Lietotnē augšā ir poga «Sākums» un ikonas ātrai pārslēgšanai. Veiksmīgu darbu!' }
     ]
   }
 };
-SHX.tours.admin = SHX.tours.lietotajs.slice(0, 2).concat([{ sel: '#admTile', title: 'Administrēšana', text: 'Viens saraksts visām lietotnēm: cilvēki un PIN, pilnvaras, objekti, uzņēmumi un saraksti. Maini šeit — mainās visur.' }], SHX.tours.lietotajs.slice(2));
+SHX.tours.admin = SHX.tours.lietotajs.slice(0, 2).concat([{ sel: '#tiles .c-adm', title: 'Administrēšana', text: 'Viens saraksts visām lietotnēm: cilvēki un PIN, pilnvaras, objekti, uzņēmumi un saraksti. Maini šeit — mainās visur.' }], SHX.tours.lietotajs.slice(2));
 </script>
 <script src="sh-addon.js?v=1"></script>
 </body>
