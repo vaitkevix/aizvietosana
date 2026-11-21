@@ -4,7 +4,7 @@
 import { people, peopleStmts, usersStmts, cleanPerms } from './portal.js';
 
 export const LIST_KINDS = { materiali: 'Materiāli', bankas: 'Bankas', atv_veidi: 'Atvaļinājuma veidi', amati: 'Amati', tel_kodi: 'Tālruņa kodi' };
-export const KINDS = { izvedejs: 'Izvedējs', kurjers: 'Kurjers', darba_devejs: 'Darba devējs' };
+export const KINDS = { izvedejs: 'Izvedējs', kurjers: 'Kurjers', plausejs: 'Pļāvējs', darba_devejs: 'Darba devējs' };
 export const normA = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
 export const normN = (s) => normA(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
 const anorm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');   // kā Aizvietošanā

@@ -1,7 +1,7 @@
 /* SH | Zāles pļaušana — grafiks, kas veidojas pats (intervāls, slodze, lietus, nepaspētie), izpilde ar bildi. © VAITKEVIX, SIA
  * Maršruts POST /pl  { pin, action, … }.  Lomas portālā: perms.pl = admin | vaditajs | izpilditajs.
  * Objekti un grupas — no portāla (tabulas objects, groups); pļaušanai savas tabulas pl_obj, pl_visit, pl_log. */
-import { personByPin } from './portal.js';
+import { personByPin, companyBy } from './portal.js';
 import { groupsOf } from './master.js';
 
 const TZ = 'Europe/Riga';
@@ -130,8 +130,9 @@ export async function plausana(request, env, X) {
   if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
   let b = {}; try { b = await request.json(); } catch (e) { return out({ ok: false, error: 'Nederīgs pieprasījums' }, 400); }
   const db = env.DB;
-  const me = await personByPin(db, b.pin);
-  const role = me && ((me.perms || {}).pl || ((me.perms || {}).portal === 'admin' ? 'admin' : 'skatitajs'));
+  let me = await personByPin(db, b.pin);
+  if (!me && b.pin) { const c = await companyBy(db, 'pass', b.pin); if (c && c.perms.pl) me = c; }   // darbu izpildītājs (SIA) ar pilnvaru pļaušanai
+  const role = me && (me.company ? me.perms.pl : ((me.perms || {}).pl || ((me.perms || {}).portal === 'admin' ? 'admin' : 'skatitajs')));
   if (!me || !role) { await new Promise(r => setTimeout(r, 700)); return out({ ok: false, error: 'Nepareizs PIN vai nav piekļuves pļaušanai', code: 'auth' }); }
   const need = (r) => { if ((ROLE_W[role] || 0) < ROLE_W[r]) throw new Error('Jums ir tikai skatīšanās tiesības'); };
   const a = b.action;

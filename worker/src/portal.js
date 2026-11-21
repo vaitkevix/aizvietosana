@@ -54,12 +54,16 @@ async function session(env, t) {
   return (await people(env.DB)).find(p => p.active && p.name === s.name) || null;
 }
 /** Izvedējs / kurjers (uzņēmums) ienāk ar savu SIA paroli */
-async function companyBy(db, field, v) {
+export async function companyBy(db, field, v) {
   const c = await db.prepare('SELECT name, kinds, pass FROM companies WHERE active = 1 AND ' + (field === 'pass' ? 'pass' : 'name') + ' = ?').bind(String(v || '').trim().toUpperCase() && field === 'pass' ? String(v).trim().toUpperCase() : v).first();
   if (!c || !c.pass) return null;
   const k = String(c.kinds || '').split(',');
-  if (k.indexOf('izvedejs') === -1 && k.indexOf('kurjers') === -1) return null;
-  return { name: c.name, company: true, pass: c.pass, color: '', perms: { izv: k.indexOf('izvedejs') !== -1 ? 'izvedejs' : '', kais: k.indexOf('kurjers') !== -1 ? 'kurjers' : '' } };
+  if (k.indexOf('izvedejs') === -1 && k.indexOf('kurjers') === -1 && k.indexOf('plausejs') === -1) return null;
+  const perms = {};   // darbu izpildītāja pilnvaras pa projektiem
+  if (k.indexOf('izvedejs') !== -1) perms.izv = 'izvedejs';
+  if (k.indexOf('kurjers') !== -1) perms.kais = 'kurjers';
+  if (k.indexOf('plausejs') !== -1) perms.pl = 'izpilditajs';
+  return { name: c.name, company: true, pass: c.pass, color: '', perms };
 }
 const pub = (p) => p.company ? { name: p.name, company: true, perms: p.perms, admin: false, carrier: { name: p.name, pass: p.pass } }
   : { name: p.name, color: p.color, perms: p.perms, admin: p.perms.portal === 'admin' };

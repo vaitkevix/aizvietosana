@@ -141,6 +141,7 @@ button{cursor:pointer}
 .perm{padding:12px;border-radius:12px;background:var(--surface-2);margin:0 0 8px}
 .perm .pt{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin:0 0 8px}
 .perm .pt img{width:22px;height:22px;border-radius:6px}
+.ah{margin:18px 2px 8px;font-size:17px;font-weight:800;letter-spacing:-.01em}.ah:first-child{margin-top:4px}.ah small{font-size:13px;color:var(--ink-3);font-weight:800;margin-left:4px}
 .tog{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;background:var(--surface-2);font-weight:700;margin:0 0 8px}
 .tog input{width:22px;height:22px;accent-color:var(--brand)}
 .acts{display:flex;gap:8px;margin-top:16px}
@@ -402,6 +403,7 @@ function sso(pin) {
     ['shx_izv_user', 'shx_kais_user', 'darbi_pin', 'personals_pin', 'budzets_pin', 'plausana_pin'].forEach(ls.del);
     if (P.izv) { ls.set('carrierPin', c.name + '\n' + c.pass); ls.set('carrierUser', c.name); }
     if (P.kais) { ls.set('shx_kais_courier', c.name); try { sessionStorage.setItem('carrierOk', '1'); } catch (e) {} }
+    if (P.pl) ls.set('plausana_pin', c.pass);
     return;
   }
   if (P.aizv) ls.set('darbi_pin', pin);
@@ -560,7 +562,10 @@ $('menuBtn').onclick = () => {
 /* ---------- Administrēšana: cilvēki un pilnvaras + pamatdati (viens saraksts visām lietotnēm) ---------- */
 const TABS = [['people', 'Cilvēki'], ['objects', 'Objekti'], ['groups', 'Grupas'], ['companies', 'Uzņēmumi'], ['lists', 'Saraksti'], ['review', 'Pārbaudīt']];
 const LK = { types: 'Darbu veidi (Aizvietošana)', materiali: 'Materiāli (Kaisāmmateriāls)', bankas: 'Bankas', atv_veidi: 'Atvaļinājuma veidi', amati: 'Amati', tel_kodi: 'Tālruņa kodi' };
-const KN = { izvedejs: 'Izvedējs', kurjers: 'Kurjers', darba_devejs: 'Darba devējs' };
+const KN = { izvedejs: 'Izvedējs', kurjers: 'Kurjers', plausejs: 'Pļāvējs', darba_devejs: 'Darba devējs' };
+/* Darbu izpildītāja (SIA) pilnvaras pa projektiem: projekts → veids */
+const CPERM = [['izv', 'izvedejs', 'Izvedējs'], ['kais', 'kurjers', 'Kurjers'], ['pl', 'plausejs', 'Izpildītājs']];
+const isDoer = (c) => CPERM.some(x => c.kinds.includes(x[1]));
 const A = { tab: 'people', q: '', M: null };
 async function openAdmin(tab) {
   if (tab) A.tab = tab;
@@ -607,10 +612,13 @@ function drawAdmin() {
   }
   if (A.tab === 'companies') {
     const list = A.M.companies.map((c, i) => Object.assign({ i }, c)).filter(c => qm(c.name));
-    const s = adminShell(`<div class="plist">${list.map(c => `<button class="prow ${c.active ? '' : 'off'}" data-c="${c.i}"><div class="nm"><b>${esc(c.name)}</b>
-      <div class="chips">${c.kinds.map(k => `<span class="chip a">${KN[k] || k}</span>`).join('')}${c.pass ? '<span class="chip">🔒 ir parole</span>' : ''}</div></div>${CHEV}</button>`).join('') || empty()}</div>`, 'Uzņēmums');
+    const row = (c) => `<button class="prow ${c.active ? '' : 'off'}" data-c="${c.i}"><div class="nm"><b>${esc(c.name)}</b>
+      <div class="chips">${CPERM.filter(x => c.kinds.includes(x[1])).map(x => `<span class="chip a">${APPS[x[0]].name} · ${x[2]}</span>`).join('')}${c.kinds.includes('darba_devejs') ? '<span class="chip">Darba devējs</span>' : ''}${isDoer(c) && c.pass ? '<span class="chip">🔒 ir parole</span>' : ''}</div></div>${CHEV}</button>`;
+    const doers = list.filter(isDoer), emp = list.filter(c => !isDoer(c));
+    const s = adminShell(`<h3 class="ah">Darbu izpildītāji <small>${doers.length}</small></h3><p class="copy" style="text-align:left;margin:0 0 10px">Ienāk portālā ar SIA paroli un redz tikai projektus, kuriem dota pilnvara.</p><div class="plist">${doers.map(row).join('') || empty()}</div>
+      <h3 class="ah">Darba devēji <small>${emp.length}</small></h3><div class="plist">${emp.map(row).join('') || empty()}</div>`, 'Uzņēmums');
     $('pAdd').onclick = () => editCompany(-1);
-    s.querySelector('.plist').onclick = (e) => { const r = e.target.closest('[data-c]'); if (r) editCompany(+r.dataset.c); };
+    s.querySelectorAll('.plist').forEach(l => l.onclick = (e) => { const r = e.target.closest('[data-c]'); if (r) editCompany(+r.dataset.c); });
   }
   if (A.tab === 'lists') {
     const vals = (k) => k === 'types' ? A.M.types.map(t => t.name + (t.group ? ' · ' + t.group : '')) : (A.M.lists[k] || []);
@@ -709,14 +717,15 @@ function genPw() { const a = 'ABCDEFGHJKLMNPRSTUVZ23456789'; let x = ''; for (le
 function editCompany(i) {
   const c = i >= 0 ? JSON.parse(JSON.stringify(A.M.companies[i])) : { name: '', kinds: ['izvedejs'], pass: genPw(), phone: '', active: true };
   subSheet(i >= 0 ? c.name : 'Jauns uzņēmums', fld('cN', 'Nosaukums', c.name, 'SIA …') +
-    `<div class="f"><label>Ko dara</label><div class="seg" id="cK">${Object.keys(KN).map(k => `<button type="button" data-k="${k}" class="${c.kinds.includes(k) ? 'on' : ''}">${KN[k]}</button>`).join('')}</div></div>` +
-    `<div class="f"><label for="cP">Parole (izvedējam / kurjeram)</label><div class="row2"><input type="text" id="cP" value="${esc(c.pass)}" autocomplete="off" style="text-transform:uppercase"><button class="btn ghost" id="cG" type="button">Jauna parole</button></div></div>` +
+    `<div class="f" style="margin-bottom:6px"><label>Pilnvaras projektiem (darbu izpildītājs)</label></div><div class="cperm" id="cK">${CPERM.map(x => `<label class="tog">${APPS[x[0]].name} · ${x[2]}<input type="checkbox" data-k="${x[1]}" ${c.kinds.includes(x[1]) ? 'checked' : ''}></label>`).join('')}
+      <label class="tog">Darba devējs (Personālā)<input type="checkbox" data-k="darba_devejs" ${c.kinds.includes('darba_devejs') ? 'checked' : ''}></label></div>` +
+    `<div class="f"><label for="cP">Parole ienākšanai (darbu izpildītājam)</label><div class="row2"><input type="text" id="cP" value="${esc(c.pass)}" autocomplete="off" style="text-transform:uppercase"><button class="btn ghost" id="cG" type="button">Jauna parole</button></div></div>` +
     fld('cT', 'Tālrunis', c.phone, '+371 …', 'tel') + `<label class="tog">Aktīvs<input type="checkbox" id="cA" ${c.active ? 'checked' : ''}></label>`,
-    () => { const list = A.M.companies.slice(); const n = { name: $('cN').value.trim(), kinds: [...document.querySelectorAll('#cK .on')].map(b => b.dataset.k), pass: $('cP').value.trim().toUpperCase(), phone: $('cT').value.trim(), active: $('cA').checked };
+    () => { const list = A.M.companies.slice(); const n = { name: $('cN').value.trim(), kinds: [...document.querySelectorAll('#cK input:checked')].map(b => b.dataset.k), pass: $('cP').value.trim().toUpperCase(), phone: $('cT').value.trim(), active: $('cA').checked };
       if (!n.name) return toast('Ierakstiet nosaukumu', 'err');
+      if (isDoer(n) && n.pass.length < 6) return toast('Darbu izpildītājam vajag paroli (vismaz 6 zīmes)', 'err');
       if (i >= 0) list[i] = n; else list.push(n); saveM('saveCompanies', { companies: list }, () => sheet('')); },
     i >= 0 ? () => { const list = A.M.companies.slice(); list.splice(i, 1); saveM('saveCompanies', { companies: list }, () => sheet('')); } : null);
-  $('cK').onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) b.classList.toggle('on'); };
   $('cG').onclick = () => { $('cP').value = genPw(); };
 }
 
