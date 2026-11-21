@@ -1144,6 +1144,7 @@ function bridge_(r) {
     case 'push': return pushTokens_(r.tokens || [], r.title, r.body);
     case 'config': return { users: users_(), types: jobTypes_(), objects: objects_() };
     case 'people': return withLock_(() => peopleWrite_(r.people || []));
+    case 'master': return withLock_(() => masterWrite_(r));
     case 'addObjects': return withLock_(() => {
       const known = objects_().map(o => normName_(o.adrese));
       const sh = objSheet_();
@@ -1182,6 +1183,25 @@ function peopleWrite_(list) {
   const ur = list.filter(p => p.active && p.perms && p.perms.aizv).map(p => [p.name, p.perms.aizv, String(p.pin), p.color || '']);
   if (ur.length) { us.getRange(2, 3, ur.length, 1).setNumberFormat('@'); us.getRange(2, 1, ur.length, 4).setValues(ur); }
   return { written: rows.length };
+}
+
+/** Portāla pamatdati → Objekti, DarbuVeidi + pārskata lapas Uzņēmumi, Saraksti, Pārbaudīt. Mainīt tikai portālā. © VAITKEVIX, SIA */
+function masterWrite_(r) {
+  const put = (sh, head, rows, keepHeadStyle) => {
+    const last = sh.getLastRow(), lc = Math.max(head.length, sh.getLastColumn(), 1);
+    if (last > 1) sh.getRange(2, 1, last - 1, lc).clearContent();
+    sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
+    if (!keepHeadStyle) sh.getRange(1, 1, 1, head.length).setBackground('#0f6b5c').setFontColor('#ffffff');
+    if (rows.length) sh.getRange(2, 1, rows.length, head.length).setNumberFormat('@').setValues(rows.map(x => head.map((_, i) => x[i] == null ? '' : x[i])));
+    sh.setFrozenRows(1);
+  };
+  const tab = (n) => ss_().getSheetByName(n) || ss_().insertSheet(n);
+  if (r.objects) put(objSheet_(), ['Adrese', 'Vaditajs', 'Grupa', 'Piekluve'], r.objects, true);
+  if (r.types) put(typesSheet_(), ['Darbs', 'Grupa'], r.types, true);
+  if (r.companies) put(tab('Uzņēmumi'), ['Uzņēmums', 'Veids', 'Parole', 'Tālrunis', 'Aktīvs'], r.companies);
+  if (r.lists) put(tab('Saraksti'), ['Saraksts', 'Vērtība'], r.lists);
+  if (r.review) put(tab('Pārbaudīt'), ['Kas', 'Ieraksts', 'Ko darīju', 'Jāpārbauda'], r.review);
+  return { ok: 1 };
 }
 
 function aiParseBridge_(r) {

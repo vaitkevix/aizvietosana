@@ -272,7 +272,7 @@ function home() {
     </button>`).join('') + (S.me.admin ? `
     <button class="tile" id="admTile">
       <div class="h"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3Z"/><path d="M9 12l2 2 4-4"/></svg></span>
-        <div><b>Pilnvaras</b><small>Kas un kurā lietotnē var strādāt</small></div>
+        <div><b>Administrēšana</b><small>Cilvēki, pilnvaras, objekti, uzņēmumi, saraksti</small></div>
         <svg class="go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
     </button>` : '') + (list.length ? '' : '<div class="card" style="padding:20px;text-align:center;font-weight:700;color:var(--ink-3)">Jums vēl nav piešķirta neviena lietotne. Sazinieties ar administratoru.</div>');
 }
@@ -323,7 +323,7 @@ $('menuBtn').onclick = () => {
     <div class="who"><span class="dot" style="background:${esc(S.me.color || '')}"></span><div>${esc(S.me.name)}<small>${S.me.admin ? 'Portāla administrators' : apps().map(k => APPS[k].name).join(' · ')}</small></div></div>
     <div class="menu">
       <button data-m="tour"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5h.01"/></svg>Pamācība — soli pa solim</button>
-      ${S.me.admin ? '<button data-m="adm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3Z"/></svg>Pilnvaras</button>' : ''}
+      ${S.me.admin ? '<button data-m="adm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3Z"/></svg>Administrēšana</button>' : ''}
       <button data-m="theme"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>${dark ? 'Gaišais režīms' : 'Tumšais režīms'}</button>
       <button data-m="a2hs"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M12 8v6M9 11h6"/></svg>Pievienot sākuma ekrānam</button>
       <button data-m="out" class="red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h3"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>Iziet</button>
@@ -339,29 +339,127 @@ $('menuBtn').onclick = () => {
   };
 };
 
-/* ---------- Pilnvaras (tikai administratoram) ---------- */
-async function openAdmin() {
-  const s = sheet(`<div class="hd"><h3>Pilnvaras</h3>${X}</div><div class="skel"></div>`);
-  try { const r = await api('people'); S.people = r.people; S.roles = r.roles; drawAdmin(''); }
-  catch (e) { s.innerHTML = `<div class="hd"><h3>Pilnvaras</h3>${X}</div><p>${esc(netMsg(e))}</p>`; }
+/* ---------- Administrēšana: cilvēki un pilnvaras + pamatdati (viens saraksts visām lietotnēm) ---------- */
+const TABS = [['people', 'Cilvēki'], ['objects', 'Objekti'], ['companies', 'Uzņēmumi'], ['lists', 'Saraksti'], ['review', 'Pārbaudīt']];
+const LK = { types: 'Darbu veidi (Aizvietošana)', materiali: 'Materiāli (Kaisāmmateriāls)', bankas: 'Bankas', atv_veidi: 'Atvaļinājuma veidi', amati: 'Amati', tel_kodi: 'Tālruņa kodi' };
+const KN = { izvedejs: 'Izvedējs', kurjers: 'Kurjers', darba_devejs: 'Darba devējs' };
+const A = { tab: 'people', q: '', M: null };
+async function openAdmin(tab) {
+  if (tab) A.tab = tab;
+  const s = sheet(`<div class="hd"><h3>Administrēšana</h3>${X}</div><div class="skel"></div>`);
+  try { const [r, m] = await Promise.all([api('people'), api('master')]); S.people = r.people; S.roles = r.roles; A.M = m; drawAdmin(); }
+  catch (e) { s.innerHTML = `<div class="hd"><h3>Administrēšana</h3>${X}</div><p>${esc(netMsg(e))}</p>`; }
 }
+function tabsHtml() {
+  const n = (A.M && A.M.review || []).length;
+  return `<div class="seg" id="aTabs" style="margin:0 0 12px">${TABS.map(([k, l]) => `<button type="button" data-t="${k}" class="${A.tab === k ? 'on' : ''}">${l}${k === 'review' && n ? ' · ' + n : ''}</button>`).join('')}</div>`;
+}
+function adminShell(inner, addLabel) {
+  const bg = $('sheetBg') || (sheet(''), $('sheetBg')); const s = bg.firstChild;
+  s.innerHTML = `<div class="hd"><h3>Administrēšana</h3>${X}</div>${tabsHtml()}
+    ${addLabel !== null ? `<div class="adm-top"><input id="pq" placeholder="Meklēt…" value="${esc(A.q)}">${addLabel ? `<button class="btn" id="pAdd">+ ${addLabel}</button>` : ''}</div>` : ''}${inner}
+    <p class="copy">Izmaiņas uzreiz darbojas visās lietotnēs un tiek ierakstītas Google tabulā (Aizvietošanas tabulā: Pilnvaras, Objekti, Uzņēmumi, Saraksti).</p>`;
+  $('aTabs').onclick = (e) => { const b = e.target.closest('[data-t]'); if (b) { A.tab = b.dataset.t; A.q = ''; drawAdmin(); } };
+  const inp = $('pq'); if (inp) inp.oninput = () => { const pos = inp.selectionStart; A.q = inp.value; drawAdmin(); const i2 = $('pq'); if (i2) { i2.focus(); i2.setSelectionRange(pos, pos); } };
+  return s;
+}
+const qm = (t) => !A.q || String(t).toLowerCase().includes(A.q.toLowerCase());
+function drawAdmin() {
+  if (A.tab === 'people') {
+    const list = S.people.filter(p => qm(p.name));
+    const s = adminShell(`<div class="plist">${list.map(p => `<button class="prow ${p.active ? '' : 'off'}" data-p="${esc(p.name)}"><span class="dot" style="background:${esc(p.color || '')}"></span>
+      <div class="nm"><b>${esc(p.name)}${p.active ? '' : ' · neaktīvs'}</b><div class="chips">${chipsOf(p)}</div></div>${CHEV}</button>`).join('') || empty()}</div>`, 'Jauns');
+    $('pAdd').onclick = () => editPerson(null);
+    s.querySelector('.plist').onclick = (e) => { const r = e.target.closest('[data-p]'); if (r) editPerson(S.people.find(p => p.name === r.dataset.p)); };
+  }
+  if (A.tab === 'objects') {
+    const list = A.M.objects.map((o, i) => Object.assign({ i }, o)).filter(o => qm(o.adrese + ' ' + o.vaditajs + ' ' + o.grupa));
+    const s = adminShell(`<div class="plist">${list.slice(0, 300).map(o => `<button class="prow" data-o="${o.i}"><div class="nm"><b>${esc(o.adrese)}</b>
+      <div class="chips">${o.grupa ? `<span class="chip">${esc(o.grupa)}</span>` : ''}${o.vaditajs ? `<span class="chip a">${esc(o.vaditajs)}</span>` : ''}${o.piekluve ? '<span class="chip">🔑 piekļuve</span>' : ''}</div></div>${CHEV}</button>`).join('') || empty()}
+      ${list.length > 300 ? `<p class="copy">Rāda 300 no ${list.length} — sašauriniet meklēšanu</p>` : ''}</div>`, 'Objekts');
+    $('pAdd').onclick = () => editObject(-1);
+    s.querySelector('.plist').onclick = (e) => { const r = e.target.closest('[data-o]'); if (r) editObject(+r.dataset.o); };
+  }
+  if (A.tab === 'companies') {
+    const list = A.M.companies.map((c, i) => Object.assign({ i }, c)).filter(c => qm(c.name));
+    const s = adminShell(`<div class="plist">${list.map(c => `<button class="prow ${c.active ? '' : 'off'}" data-c="${c.i}"><div class="nm"><b>${esc(c.name)}</b>
+      <div class="chips">${c.kinds.map(k => `<span class="chip a">${KN[k] || k}</span>`).join('')}${c.pass ? '<span class="chip">🔒 ir parole</span>' : ''}</div></div>${CHEV}</button>`).join('') || empty()}</div>`, 'Uzņēmums');
+    $('pAdd').onclick = () => editCompany(-1);
+    s.querySelector('.plist').onclick = (e) => { const r = e.target.closest('[data-c]'); if (r) editCompany(+r.dataset.c); };
+  }
+  if (A.tab === 'lists') {
+    const vals = (k) => k === 'types' ? A.M.types.map(t => t.name + (t.group ? ' · ' + t.group : '')) : (A.M.lists[k] || []);
+    const s = adminShell(Object.keys(LK).map(k => `<div class="perm"><div class="pt">${LK[k]}</div><div class="chips" style="margin-bottom:8px">${vals(k).map((v, i) => `<span class="chip">${esc(v)} <a href="#" data-del="${k}:${i}" style="color:var(--red);text-decoration:none;margin-left:4px">×</a></span>`).join('') || '<span class="chip">tukšs</span>'}</div>
+      <div class="row2"><input type="text" class="lv" data-k="${k}" placeholder="${k === 'types' ? 'Darbs · Grupa' : 'Jauna vērtība'}" style="flex:1;height:40px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface);padding:0 12px;min-width:0"><button class="btn ghost" data-add="${k}" style="height:40px">Pievienot</button></div></div>`).join(''), null);
+    s.addEventListener('click', async (e) => {
+      const d = e.target.closest('[data-del]'), a = e.target.closest('[data-add]'); if (!d && !a) return; e.preventDefault();
+      const k = (d || a).dataset[d ? 'del' : 'add'].split(':')[0];
+      if (k === 'types') {
+        const t = A.M.types.slice();
+        if (d) t.splice(+d.dataset.del.split(':')[1], 1); else { const v = s.querySelector(`.lv[data-k="types"]`).value.trim(); if (!v) return; const [n, g] = v.split('·').map(x => x.trim()); t.push({ name: n, group: g || 'Papilddarbs' }); }
+        return saveM('saveTypes', { types: t });
+      }
+      const L = JSON.parse(JSON.stringify(A.M.lists));
+      if (d) L[k].splice(+d.dataset.del.split(':')[1], 1); else { const v = s.querySelector(`.lv[data-k="${k}"]`).value.trim(); if (!v) return; L[k] = (L[k] || []).concat([v]); }
+      saveM('saveLists', { lists: L });
+    });
+  }
+  if (A.tab === 'review') {
+    const R = A.M.review || [];
+    const s = adminShell(R.length ? `<p class="copy" style="text-align:left;margin:0 0 10px">Šos ierakstus apvienojot neaiztiku — pārbaudiet un izlabojiet attiecīgajā cilnē, tad spiediet «Izdarīts».</p><div class="plist">${R.map((r, i) => `<div class="prow"><div class="nm"><b>${esc(r[0])}: ${esc(r[1])}</b><div style="font-size:13px;color:var(--ink-3);font-weight:600;margin-top:4px">${esc(r[2])}. ${esc(r[3])}</div></div><button class="btn ghost" data-done="${i}" style="width:auto;height:38px;padding:0 12px;font-size:13px">Izdarīts</button></div>`).join('')}</div>` : '<div class="card" style="padding:20px;text-align:center;font-weight:700;color:var(--ink-3)">Viss pārbaudīts ✓</div>', null);
+    s.addEventListener('click', (e) => { const b = e.target.closest('[data-done]'); if (!b) return; const R2 = R.slice(); R2.splice(+b.dataset.done, 1); saveM('saveReview', { review: R2 }); });
+  }
+}
+const CHEV = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-3);flex:none"><path d="M9 6l6 6-6 6"/></svg>';
+const empty = () => '<div class="card" style="padding:18px;text-align:center;font-weight:700;color:var(--ink-3)">Nekas nav atrasts</div>';
+async function saveM(action, data, after) {
+  try { A.M = Object.assign(A.M, await api(action, data)); toast('Saglabāts — atjaunojas visās lietotnēs'); if (after) after(); drawAdmin(); }
+  catch (e) { toast(netMsg(e), 'err'); }
+}
+function subSheet(title, body, onSave, onDel) {
+  const s = sheet('');
+  s.innerHTML = `<div class="hd"><button class="x" id="sBack" aria-label="Atpakaļ" style="font-size:18px">‹</button><h3>${esc(title)}</h3>${X}</div>${body}
+    <div class="acts">${onDel ? '<button class="btn red" id="sDel" type="button">Dzēst</button>' : ''}<button class="btn" id="sSave" type="button">Saglabāt</button></div>`;
+  $('sBack').onclick = () => { sheet(''); drawAdmin(); };
+  $('sSave').onclick = onSave;
+  if (onDel) { let armed = false; $('sDel').onclick = () => { if (!armed) { armed = true; $('sDel').textContent = 'Spiediet vēlreiz, lai dzēstu'; setTimeout(() => { armed = false; if ($('sDel')) $('sDel').textContent = 'Dzēst'; }, 3000); return; } onDel(); }; }
+  return s;
+}
+const fld = (id, label, v, ph, type) => `<div class="f"><label for="${id}">${label}</label><input type="${type || 'text'}" id="${id}" value="${esc(v || '')}" placeholder="${esc(ph || '')}" autocomplete="off"></div>`;
+function editObject(i) {
+  const o = i >= 0 ? Object.assign({}, A.M.objects[i]) : { adrese: '', vaditajs: '', grupa: 'SH objekti', piekluve: '' };
+  const mgrs = S.people.filter(p => p.active && p.perms.aizv === 'vaditajs').map(p => p.name);
+  const groups = [...new Set(A.M.objects.map(x => x.grupa).filter(Boolean))];
+  subSheet(i >= 0 ? o.adrese : 'Jauns objekts', fld('oA', 'Adrese', o.adrese, 'Iela māja, Rīga') +
+    `<div class="f"><label>Darbu vadītājs</label><div class="seg" id="oM">${['', ...mgrs].map(m => `<button type="button" data-m="${esc(m)}" class="${o.vaditajs === m ? 'on' : ''}">${m ? esc(m) : 'Nav'}</button>`).join('')}</div></div>` +
+    `<div class="f"><label for="oG">Grupa</label><input type="text" id="oG" list="oGl" value="${esc(o.grupa)}"><datalist id="oGl">${groups.map(g => `<option value="${esc(g)}">`).join('')}</datalist></div>` +
+    `<div class="f"><label for="oP">Piekļuve (vārti, kodi — redz izvedējs)</label><textarea id="oP" rows="3" style="width:100%;border-radius:12px;border:1px solid var(--line-2);background:var(--surface-2);padding:10px 14px;font:inherit;font-weight:600">${esc(o.piekluve)}</textarea></div>`,
+    () => { const list = A.M.objects.slice(); const n = { adrese: $('oA').value.trim(), vaditajs: (document.querySelector('#oM .on') || {}).dataset ? document.querySelector('#oM .on').dataset.m : '', grupa: $('oG').value.trim(), piekluve: $('oP').value.trim() };
+      if (!n.adrese) return toast('Ierakstiet adresi', 'err');
+      if (list.some((x, j) => j !== i && x.adrese.toLowerCase() === n.adrese.toLowerCase())) return toast('Šāda adrese jau ir', 'err');
+      if (i >= 0) list[i] = n; else list.unshift(n); saveM('saveObjects', { objects: list }, () => sheet('')); },
+    i >= 0 ? () => { const list = A.M.objects.slice(); list.splice(i, 1); saveM('saveObjects', { objects: list }, () => sheet('')); } : null);
+  $('oM').onclick = (e) => { const b = e.target.closest('[data-m]'); if (b) $('oM').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
+}
+function genPw() { const a = 'ABCDEFGHJKLMNPRSTUVZ23456789'; let x = ''; for (let i = 0; i < 8; i++) x += a[Math.floor(Math.random() * a.length)]; return x; }
+function editCompany(i) {
+  const c = i >= 0 ? JSON.parse(JSON.stringify(A.M.companies[i])) : { name: '', kinds: ['izvedejs'], pass: genPw(), phone: '', active: true };
+  subSheet(i >= 0 ? c.name : 'Jauns uzņēmums', fld('cN', 'Nosaukums', c.name, 'SIA …') +
+    `<div class="f"><label>Ko dara</label><div class="seg" id="cK">${Object.keys(KN).map(k => `<button type="button" data-k="${k}" class="${c.kinds.includes(k) ? 'on' : ''}">${KN[k]}</button>`).join('')}</div></div>` +
+    `<div class="f"><label for="cP">Parole (izvedējam / kurjeram)</label><div class="row2"><input type="text" id="cP" value="${esc(c.pass)}" autocomplete="off" style="text-transform:uppercase"><button class="btn ghost" id="cG" type="button">Jauna parole</button></div></div>` +
+    fld('cT', 'Tālrunis', c.phone, '+371 …', 'tel') + `<label class="tog">Aktīvs<input type="checkbox" id="cA" ${c.active ? 'checked' : ''}></label>`,
+    () => { const list = A.M.companies.slice(); const n = { name: $('cN').value.trim(), kinds: [...document.querySelectorAll('#cK .on')].map(b => b.dataset.k), pass: $('cP').value.trim().toUpperCase(), phone: $('cT').value.trim(), active: $('cA').checked };
+      if (!n.name) return toast('Ierakstiet nosaukumu', 'err');
+      if (i >= 0) list[i] = n; else list.push(n); saveM('saveCompanies', { companies: list }, () => sheet('')); },
+    i >= 0 ? () => { const list = A.M.companies.slice(); list.splice(i, 1); saveM('saveCompanies', { companies: list }, () => sheet('')); } : null);
+  $('cK').onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) b.classList.toggle('on'); };
+  $('cG').onclick = () => { $('cP').value = genPw(); };
+}
+
 function chipsOf(p) {
   const c = ORDER.filter(k => p.perms[k]).map(k => `<span class="chip ${p.perms[k] === 'admin' ? 'a' : ''}">${APPS[k].name}${p.perms[k] === 'admin' ? ' · admin' : ''}</span>`);
   if (p.perms.portal === 'admin') c.unshift('<span class="chip a">Portāla admins</span>');
   return c.join('') || '<span class="chip">Nav piekļuves</span>';
-}
-function drawAdmin(q) {
-  const bg = $('sheetBg'); if (!bg) return; const s = bg.firstChild;
-  const n = q.toLowerCase(), list = S.people.filter(p => !n || p.name.toLowerCase().includes(n));
-  s.innerHTML = `<div class="hd"><h3>Pilnvaras</h3>${X}</div>
-    <div class="adm-top"><input id="pq" placeholder="Meklēt vārdu…" value="${esc(q)}"><button class="btn" id="pAdd">+ Jauns</button></div>
-    <div class="plist">${list.map(p => `<button class="prow ${p.active ? '' : 'off'}" data-p="${esc(p.name)}"><span class="dot" style="background:${esc(p.color || '')}"></span>
-      <div class="nm"><b>${esc(p.name)}${p.active ? '' : ' · neaktīvs'}</b><div class="chips">${chipsOf(p)}</div></div>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-3);flex:none"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')}</div>
-    <p class="copy">Izmaiņas uzreiz darbojas visās lietotnēs un tiek ierakstītas Google tabulas lapā «Pilnvaras».</p>`;
-  const inp = $('pq'); inp.oninput = () => { const v = inp.value, pos = inp.selectionStart; drawAdmin(v); const i2 = $('pq'); i2.focus(); i2.setSelectionRange(pos, pos); };
-  $('pAdd').onclick = () => editPerson(null);
-  s.querySelector('.plist').onclick = (e) => { const r = e.target.closest('[data-p]'); if (r) editPerson(S.people.find(p => p.name === r.dataset.p)); };
 }
 function genPin() { const used = new Set(S.people.map(p => p.pin)); let x; do { x = String(1000 + Math.floor(Math.random() * 9000)); } while (used.has(x)); return x; }
 function editPerson(p) {
@@ -371,7 +469,8 @@ function editPerson(p) {
   const draw = () => {
     s.innerHTML = `<div class="hd"><button class="x" id="pBack" aria-label="Atpakaļ" style="font-size:18px">‹</button><h3>${isNew ? 'Jauns lietotājs' : esc(old)}</h3>${X}</div>
       <div class="f"><label for="pName">Vārds</label><input type="text" id="pName" value="${esc(p.name)}" autocomplete="off" placeholder="Vārds Uzvārds"></div>
-      <div class="f"><label for="pPin">PIN (viens visām lietotnēm)</label><div class="row2"><input type="tel" id="pPin" inputmode="numeric" maxlength="8" value="${esc(p.pin)}"><button class="btn ghost" id="pGen" type="button">Jauns PIN</button></div></div>
+      <div class="f"><label for="pPin">PIN (viens visām lietotnēm)</label><div class="row2"><input type="tel" id="pPin" maxlength="12" value="${esc(p.pin)}"><button class="btn ghost" id="pGen" type="button">Jauns PIN</button></div></div>
+      <div class="row2" style="gap:8px"><div class="f" style="flex:1"><label for="pTel">Tālrunis</label><input type="tel" id="pTel" value="${esc(p.phone || '')}"></div><div class="f" style="flex:1.4"><label for="pMail">E-pasts</label><input type="text" id="pMail" inputmode="email" value="${esc(p.email || '')}"></div></div>
       <div class="f"><label>Krāsa</label><div class="colors">${COLORS.map(c => `<button type="button" data-c="${c}" class="${c === p.color ? 'on' : ''}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div></div>
       <label class="tog">Aktīvs<input type="checkbox" id="pAct" ${p.active ? 'checked' : ''}></label>
       <label class="tog">Portāla administrators (maina pilnvaras)<input type="checkbox" id="pAdm" ${p.perms.portal === 'admin' ? 'checked' : ''}></label>
@@ -379,11 +478,11 @@ function editPerson(p) {
         ${S.roles[k].map(r => `<button type="button" data-r="${esc(r)}" class="${(p.perms[k] || '') === r ? 'on' : ''}">${r ? esc(RL[r] || r) : 'Nav piekļuves'}</button>`).join('')}</div></div>`).join('')}
       <div class="acts">${isNew ? '' : '<button class="btn red" id="pDel" type="button">Dzēst</button>'}<button class="btn" id="pSave" type="button">Saglabāt</button></div>`;
     $('pBack').onclick = () => drawAdminSheet();
-    $('pGen').onclick = () => { p.name = $('pName').value; p.pin = genPin(); draw(); };
-    s.querySelector('.colors').onclick = (e) => { const b = e.target.closest('[data-c]'); if (b) { p.name = $('pName').value; p.pin = $('pPin').value; p.color = b.dataset.c; draw(); } };
+    $('pGen').onclick = () => { p.name = $('pName').value; p.phone = $('pTel').value; p.email = $('pMail').value; p.pin = genPin(); draw(); };
+    s.querySelector('.colors').onclick = (e) => { const b = e.target.closest('[data-c]'); if (b) { p.name = $('pName').value; p.pin = $('pPin').value; p.phone = $('pTel').value; p.email = $('pMail').value; p.color = b.dataset.c; draw(); } };
     s.querySelectorAll('.seg').forEach(g => g.onclick = (e) => { const b = e.target.closest('[data-r]'); if (!b) return; p.perms[g.dataset.k] = b.dataset.r; g.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
     $('pSave').onclick = async () => {
-      p.name = $('pName').value.trim(); p.pin = $('pPin').value.trim(); p.active = $('pAct').checked; p.perms.portal = $('pAdm').checked ? 'admin' : '';
+      p.name = $('pName').value.trim(); p.pin = $('pPin').value.trim(); p.phone = $('pTel').value.trim(); p.email = $('pMail').value.trim(); p.active = $('pAct').checked; p.perms.portal = $('pAdm').checked ? 'admin' : '';
       const b = $('pSave'); b.disabled = true; b.textContent = 'Saglabā…';
       try { const r = await api('save', { person: Object.assign({}, p, { oldName: old }) }); S.people = r.people; toast('Saglabāts'); drawAdminSheet(); refresh(true); }
       catch (e) { toast(netMsg(e), 'err'); b.disabled = false; b.textContent = 'Saglabāt'; }
@@ -396,7 +495,7 @@ function editPerson(p) {
   let armed = false; function confirmDel() { if (armed) return true; armed = true; const b = $('pDel'); b.textContent = 'Spiediet vēlreiz, lai dzēstu'; setTimeout(() => { armed = false; if ($('pDel')) $('pDel').textContent = 'Dzēst'; }, 3000); return false; }
   draw();
 }
-function drawAdminSheet() { sheet(''); drawAdmin(''); }
+function drawAdminSheet() { sheet(''); drawAdmin(); }
 
 /* ---------- Starts ---------- */
 (async function boot() {
@@ -426,7 +525,7 @@ window.SHX = { app: 'portal', external: true, a2hs: true,
     ]
   }
 };
-SHX.tours.admin = SHX.tours.lietotajs.slice(0, 2).concat([{ sel: '#admTile', title: 'Pilnvaras', text: 'Šeit pievienojat cilvēkus, piešķirat PIN un izvēlaties, kurā lietotnē un ar kādu lomu katrs strādā.' }], SHX.tours.lietotajs.slice(2));
+SHX.tours.admin = SHX.tours.lietotajs.slice(0, 2).concat([{ sel: '#admTile', title: 'Administrēšana', text: 'Viens saraksts visām lietotnēm: cilvēki un PIN, pilnvaras, objekti, uzņēmumi un saraksti. Maini šeit — mainās visur.' }], SHX.tours.lietotajs.slice(2));
 </script>
 <script src="sh-addon.js?v=1"></script>
 </body>
