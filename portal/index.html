@@ -189,12 +189,20 @@ button{cursor:pointer}
 .ac b{display:block;font-size:clamp(17px,2.2vw,24px);font-weight:800;letter-spacing:-.02em;margin-top:18px;padding-right:52px}
 .ac small{display:block;font-size:13px;font-weight:700;opacity:.65;margin-top:2px;padding-right:52px}
 .arrow{position:absolute;right:14px;bottom:14px;width:46px;height:46px;border-radius:50%;background:#fff;display:grid;place-items:center;color:#17201c}
+.ib{display:inline-grid;place-items:center;flex:none;width:40px;height:40px;border-radius:12px;color:#16201b}
+.ib .gl{display:block}
+:root[data-theme="dark"] .ib{color:var(--ink-strong)}
+.ac .atop .ib{width:42px;height:42px;border-radius:50%;background:var(--pill)}
+.rb .ib{width:40px;height:40px;border-radius:12px}
+.sw .ib{width:100%;height:100%;border-radius:8px}
+.perm .pt .ib{width:26px;height:26px;border-radius:8px}
+.ni i,.wide .t1 i{color:#16201b}:root[data-theme="dark"] .ni i{color:var(--ink-strong)}
 .c-aizv{background:var(--mint)}.c-izv{background:var(--sand)}.c-kais{background:var(--sky)}.c-pers{background:var(--rose)}.c-budz{background:var(--lilac)}.c-adm{background:#17201c;color:#fff}
 :root[data-theme="dark"] .ac{color:var(--ink)}
 :root[data-theme="dark"] .ac .chip,:root[data-theme="dark"] .arrow{background:var(--surface);color:var(--ink)}
 .c-adm .arrow{background:#2b3732;color:#fff}.c-adm small{opacity:.7}
 .stats3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-@media(max-width:520px){.ac{min-height:136px;padding:14px;border-radius:24px}.ac b{font-size:17px;padding-right:0;margin-top:12px}.ac small{padding-right:0;font-size:12px}.ac .arrow{width:38px;height:38px;right:10px;bottom:auto;top:10px}.ac .atop img{width:30px;height:30px}.ac .chip{display:none}}
+@media(max-width:520px){.ac{min-height:136px;padding:14px;border-radius:24px}.ac b{font-size:17px;padding-right:0;margin-top:12px}.ac small{padding-right:0;font-size:12px}.ac .arrow{width:38px;height:38px;right:10px;bottom:auto;top:10px}.ac .atop .ib{width:36px;height:36px}.ac .chip{display:none}}
 .sx{position:relative;padding:16px 16px 18px;border-radius:24px;min-height:118px;border:0;text-align:left;color:#17201c}
 :root[data-theme="dark"] .sx{color:var(--ink)}
 .sx span{font-size:13px;font-weight:700;display:block;padding-right:6px}
@@ -306,7 +314,9 @@ const APPS = {
   budz: { name: 'Budžets', sub: 'Uzkopšanas tāmes', path: '/shbudzets/' }
 };
 const ORDER = ['aizv', 'izv', 'kais', 'pers', 'budz'];
-const icon = (k) => APPS[k].path + 'icon.png';
+const GLY = {aizv: '<path d="M17 2.5l3.5 3.5L17 9.5"/><path d="M3.5 11V9.5A3.5 3.5 0 0 1 7 6h13.5"/><path d="M7 21.5L3.5 18 7 14.5"/><path d="M20.5 13v1.5A3.5 3.5 0 0 1 17 18H3.5"/>', izv: '<path d="M14 16.5V6H2.5v10.5h2"/><path d="M14 9.5h4l3.5 4v3h-2"/><path d="M9.3 16.5h5.4"/><circle cx="7" cy="16.8" r="2.3"/><circle cx="17" cy="16.8" r="2.3"/>', kais: '<path d="M12.00 12.00L12.00 2.50M12.00 7.25L9.88 5.13M12.00 7.25L14.12 5.13M12.00 12.00L3.77 7.25M7.89 9.62L4.99 10.40M7.89 9.62L7.11 6.73M12.00 12.00L3.77 16.75M7.89 14.38L7.11 17.27M7.89 14.38L4.99 13.60M12.00 12.00L12.00 21.50M12.00 16.75L14.12 18.87M12.00 16.75L9.88 18.87M12.00 12.00L20.23 16.75M16.11 14.38L19.01 13.60M16.11 14.38L16.89 17.27M12.00 12.00L20.23 7.25M16.11 9.62L16.89 6.73M16.11 9.62L19.01 10.40"/>', pers: '<circle cx="9.5" cy="8" r="4"/><path d="M2.5 21a7 7 0 0 1 14 0"/><path d="M19.5 8v6M16.5 11h6"/>', budz: '<path d="M5.5 2.5h13v19l-3.2-2.1-3.3 2.1-3.3-2.1-3.2 2.1z"/><path d="M9 8h6M9 12h6M9 16h3.5"/>'};
+const gl = (k, n) => `<svg class="gl" width="${n || 22}" height="${n || 22}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLY[k]}</svg>`;
+const ib = (k, n) => `<span class="ib c-${k}">${gl(k, n)}</span>`;
 const RL = { admin: 'Administrators', vaditajs: 'Darbu vadītājs', pieteicejs: 'Pieteicējs', 'gatavotājs': 'Gatavotājs', 'vadība': 'Vadība' };
 const COLORS = ['#0f6b5c', '#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0891b2', '#475569'];
 
@@ -391,11 +401,11 @@ function home() {
   $('avatarTxt').textContent = me.name.replace(/^SIA\s+/i, '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   $('menuBtn').style.background = me.color || '';
   const list = apps();
-  $('railBtns').innerHTML = `<button class="rb on" title="Sākums">${GRID}</button>` + list.map(k => `<button class="rb" data-app="${k}" title="${APPS[k].name}"><img src="${icon(k)}" alt=""></button>`).join('') + (me.admin ? `<button class="rb" data-adm title="Administrēšana">${SHIELD}</button>` : '');
+  $('railBtns').innerHTML = `<button class="rb on" title="Sākums">${GRID}</button>` + list.map(k => `<button class="rb" data-app="${k}" title="${APPS[k].name}">${ib(k, 20)}</button>`).join('') + (me.admin ? `<button class="rb" data-adm title="Administrēšana">${SHIELD}</button>` : '');
   const n = (D.aizv ? D.aizv.open || 0 : 0) + (D.izv ? (D.izv.mine != null ? D.izv.mine : D.izv.open) || 0 : 0) + (D.kais ? D.kais.open || 0 : 0);
   $('todayN').textContent = n ? '(' + n + ')' : '';
   $('tiles').innerHTML = list.map(k => `<button class="ac ${COLOR[k]}" data-app="${k}" data-q="${esc(APPS[k].name)}">
-      <div class="atop"><img src="${icon(k)}" alt="">${appChip(k)}</div>
+      <div class="atop"><span class="ib">${gl(k, 20)}</span>${appChip(k)}</div>
       <div><b>${APPS[k].name}</b><small>${esc(appSub(k))}</small></div>${ARROW}</button>`).join('')
     + (me.admin ? `<button class="ac c-adm" data-adm data-q="Administrēšana pilnvaras objekti"><div class="atop"><span style="width:34px;height:34px;display:grid;place-items:center">${SHIELD}</span></div><div><b>Administrēšana</b><small>Cilvēki, pilnvaras, objekti, uzņēmumi</small></div>${ARROW}</button>` : '')
     + (list.length ? '' : '<div class="card" style="grid-column:1/-1;padding:20px;text-align:center;font-weight:700;color:var(--ink-3)">Jums vēl nav piešķirta neviena lietotne. Sazinieties ar administratoru.</div>');
@@ -410,16 +420,16 @@ function home() {
   // Plašā kartīte: šodienas progress
   if (D.aizv && D.aizv.today) {
     const done = D.aizv.today - D.aizv.open, pc = Math.round(done / D.aizv.today * 100);
-    $('wide').innerHTML = `<button class="wide" data-app="aizv" style="width:100%;border:0;text-align:left;display:block"><div class="t1"><i><img src="${icon('aizv')}" alt="" style="width:24px;height:24px;border-radius:6px"></i>Aizvietošana · šodien</div>
+    $('wide').innerHTML = `<button class="wide" data-app="aizv" style="width:100%;border:0;text-align:left;display:block"><div class="t1"><i>${gl('aizv', 20)}</i>Aizvietošana · šodien</div>
       <div class="meta">${done}/${D.aizv.today} darbi izpildīti</div><h3>Rīt ${D.aizv.tomorrow} darbi${D.aizv.unassigned ? ' · ' + D.aizv.unassigned + ' bez brigādes' : ''}</h3><div class="bar"><i style="width:${pc}%"></i></div>${ARROW.replace('class="arrow"', 'class="arrow" style="top:14px;bottom:auto"')}</button>`;
   } else $('wide').innerHTML = '';
   // Kalendārs + tuvākais
   const t = new Date(); if (!CAL.y) { CAL.y = t.getFullYear(); CAL.m = t.getMonth(); }
   drawCal();
   const items = [];
-  ((D.aizv && D.aizv.next) || []).forEach(j => items.push(`<button class="ni" data-app="aizv" data-q="${esc(j.adrese)}"><i><img src="${icon('aizv')}" alt="" style="width:26px;height:26px;border-radius:7px"></i><div><b>${esc(j.adrese)}</b><small>${esc(fmtD(j.datums))} · ${esc(j.tips || 'Darbs')}${j.brigade ? ' · ' + esc(j.brigade) : ' · bez brigādes'}</small></div></button>`));
-  ((D.izv && D.izv.top) || []).forEach(x => items.push(`<button class="ni ${x.u ? 'u' : 'u'}" data-app="izv" data-q="${esc(x.a)}"><i><img src="${icon('izv')}" alt="" style="width:26px;height:26px;border-radius:7px"></i><div><b>${esc(x.a)}</b><small>Izvešana${x.u ? ' · steidzami' : ''}${x.d ? ' · līdz ' + esc(x.d) : ''}</small></div></button>`));
-  ((D.kais && D.kais.top) || []).forEach(x => items.push(`<button class="ni k" data-app="kais" data-q="${esc(x.a)}"><i><img src="${icon('kais')}" alt="" style="width:26px;height:26px;border-radius:7px"></i><div><b>${esc(x.a)}</b><small>Kaisāmmateriāls${x.m ? ' · ' + esc(x.m) : ''}</small></div></button>`));
+  ((D.aizv && D.aizv.next) || []).forEach(j => items.push(`<button class="ni" data-app="aizv" data-q="${esc(j.adrese)}"><i>${gl('aizv')}</i><div><b>${esc(j.adrese)}</b><small>${esc(fmtD(j.datums))} · ${esc(j.tips || 'Darbs')}${j.brigade ? ' · ' + esc(j.brigade) : ' · bez brigādes'}</small></div></button>`));
+  ((D.izv && D.izv.top) || []).forEach(x => items.push(`<button class="ni ${x.u ? 'u' : 'u'}" data-app="izv" data-q="${esc(x.a)}"><i>${gl('izv')}</i><div><b>${esc(x.a)}</b><small>Izvešana${x.u ? ' · steidzami' : ''}${x.d ? ' · līdz ' + esc(x.d) : ''}</small></div></button>`));
+  ((D.kais && D.kais.top) || []).forEach(x => items.push(`<button class="ni k" data-app="kais" data-q="${esc(x.a)}"><i>${gl('kais')}</i><div><b>${esc(x.a)}</b><small>Kaisāmmateriāls${x.m ? ' · ' + esc(x.m) : ''}</small></div></button>`));
   $('nextList').innerHTML = items.length ? items.join('') : '<div class="card" style="padding:18px;text-align:center;font-weight:700;color:var(--ink-3)">Nav gaidošu darbu ✓</div>';
   filterQ();
 }
@@ -460,7 +470,7 @@ function openApp(k, noPush) {
   const pin = ls.get('sh_pin'); if (pin) sso(pin);
   if (!S.frames[k]) { const f = document.createElement('iframe'); f.src = APPS[k].path + (S.me.company ? '#carrier' : ''); f.title = APPS[k].name; f.allow = 'geolocation; camera; clipboard-write'; $('frames').appendChild(f); S.frames[k] = f; }
   Object.keys(S.frames).forEach(x => S.frames[x].hidden = x !== k);
-  $('appSw').innerHTML = apps().map(x => `<button data-sw="${x}" class="${x === k ? 'on' : ''}" title="${APPS[x].name}"><img src="${icon(x)}" alt="${APPS[x].name}"></button>`).join('');
+  $('appSw').innerHTML = apps().map(x => `<button data-sw="${x}" class="${x === k ? 'on' : ''}" title="${APPS[x].name}" aria-label="${APPS[x].name}">${ib(x, 18)}</button>`).join('');
   if (!noPush) history.pushState({ app: k }, '', '#' + k);
 }
 $('appSw').onclick = (e) => { const b = e.target.closest('[data-sw]'); if (b) openApp(b.dataset.sw, true), history.replaceState({ app: b.dataset.sw }, '', '#' + b.dataset.sw); };
@@ -630,7 +640,7 @@ function editPerson(p) {
       <div class="f"><label>Krāsa</label><div class="colors">${COLORS.map(c => `<button type="button" data-c="${c}" class="${c === p.color ? 'on' : ''}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div></div>
       <label class="tog">Aktīvs<input type="checkbox" id="pAct" ${p.active ? 'checked' : ''}></label>
       <label class="tog">Portāla administrators (maina pilnvaras)<input type="checkbox" id="pAdm" ${p.perms.portal === 'admin' ? 'checked' : ''}></label>
-      ${ORDER.map(k => `<div class="perm"><div class="pt"><img src="${icon(k)}" alt="">${APPS[k].name}</div><div class="seg" data-k="${k}">
+      ${ORDER.map(k => `<div class="perm"><div class="pt">${ib(k, 16)}${APPS[k].name}</div><div class="seg" data-k="${k}">
         ${S.roles[k].map(r => `<button type="button" data-r="${esc(r)}" class="${(p.perms[k] || '') === r ? 'on' : ''}">${r ? esc(RL[r] || r) : 'Nav piekļuves'}</button>`).join('')}</div></div>`).join('')}
       <div class="acts">${isNew ? '' : '<button class="btn red" id="pDel" type="button">Dzēst</button>'}<button class="btn" id="pSave" type="button">Saglabāt</button></div>`;
     $('pBack').onclick = () => drawAdminSheet();
