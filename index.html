@@ -1121,8 +1121,9 @@ function statusPill(j) {
   return '<span class="pill nepub">Nepiešķirts</span>';
 }
 const photoIds = (j) => String(j.foto || '').split(',').map(x => x.trim()).filter(Boolean);
-const thumb = (id) => (self.DEMO_PHOTOS && self.DEMO_PHOTOS[id]) || 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w600';
-const photoLink = (id) => (self.DEMO_PHOTOS && self.DEMO_PHOTOS[id]) || 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view';
+const IMGAPI = 'https://aizvietosana-api.vaitkevix.workers.dev/img?id=';   // R2 (r2-…) un vecās Drive bildes caur Worker kešu
+const thumb = (id) => (self.DEMO_PHOTOS && self.DEMO_PHOTOS[id]) || IMGAPI + encodeURIComponent(id) + '&sz=w600';
+const photoLink = (id) => (self.DEMO_PHOTOS && self.DEMO_PHOTOS[id]) || (/^r2-/.test(id) ? IMGAPI + encodeURIComponent(id) + '&sz=w1600' : 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view');
 function reportHtml(j) {
   let h = '';
   if (j.parbaude === 'atgriezts' && j.statuss !== 'izpildīts' && j.parbKom) h += `<div class="note bad"><b><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg> ${tr('Atgriezts — jāizlabo', 'Возвращено — исправить')}:</b> ${esc(j.parbKom)}</div>`;
