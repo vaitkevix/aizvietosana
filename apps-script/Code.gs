@@ -1262,6 +1262,7 @@ function objektuTrigeris() {
   Logger.log('Trigeris ieslēgts: Objekti un Darbu veidi izmaiņas aiziet uz portālu ~1 min laikā');
 }
 function objMainits(e) {
+  return;   // 2026-11-22: sistēma strādā tikai Cloudflare — Google trigeris vairs neko nedara. © VAITKEVIX, SIA
   let nm = '';
   try { nm = e && e.source ? e.source.getActiveSheet().getName() : ''; } catch (x) {}
   if (nm && OBJ_SYNC_SHEETS_.indexOf(nm) === -1) return;   // cita lapa — neaiztiek
@@ -1270,6 +1271,7 @@ function objMainits(e) {
   ScriptApp.newTrigger('objSinhronizet').timeBased().after(60 * 1000).create();
 }
 function objSinhronizet() {
+  return;   // 2026-11-22: sistēma strādā tikai Cloudflare — Google trigeris vairs neko nedara. © VAITKEVIX, SIA
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'objSinhronizet').forEach(t => ScriptApp.deleteTrigger(t));
   const last = +PropertiesService.getScriptProperties().getProperty('OBJ_EDIT_AT') || 0;
   if (Date.now() - last < 45000) { ScriptApp.newTrigger('objSinhronizet').timeBased().after(60 * 1000).create(); return; }   // vēl labo — gaida
@@ -1304,6 +1306,7 @@ function exportToCloudflare() {
 
 /** Nakts kopija no Cloudflare atpakaļ uz tabulu (iestatiet laika trigeri, piem., katru nakti 2:00–3:00) */
 function mirrorFromCloudflare() {
+  return;   // 2026-11-22: sistēma strādā tikai Cloudflare — Google trigeris vairs neko nedara. © VAITKEVIX, SIA
   const pull = (table) => { let rows = [], off = 0, more = true; while (more) { const r = cfPost_({ action: 'export', table: table, offset: off, limit: 1000 }); rows = rows.concat(r.rows); off += r.rows.length; more = r.more; } return rows; };
   const put = (sh, head, rows) => {
     // Nekad nepārraksta ar daudz mazāk rindām (D1 kļūda / pustukšs imports); vispirms raksta, tikai tad notīra lieko galu

@@ -1121,7 +1121,7 @@ function statusPill(j) {
   return '<span class="pill nepub">Nepiešķirts</span>';
 }
 const photoIds = (j) => String(j.foto || '').split(',').map(x => x.trim()).filter(Boolean);
-const IMGAPI = 'https://aizvietosana-api.vaitkevix.workers.dev/img?id=';   // R2 (r2-…) un vecās Drive bildes caur Worker kešu
+const IMGAPI = 'https://vaitkevix.cloud/sh/api/img?id=';   // R2 (r2-…) un vecās Drive bildes caur Worker kešu
 const thumb = (id) => (self.DEMO_PHOTOS && self.DEMO_PHOTOS[id]) || IMGAPI + encodeURIComponent(id) + '&sz=w600';
 const photoLink = (id) => (self.DEMO_PHOTOS && self.DEMO_PHOTOS[id]) || (/^r2-/.test(id) ? IMGAPI + encodeURIComponent(id) + '&sz=w1600' : 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view');
 function reportHtml(j) {
