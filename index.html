@@ -2413,29 +2413,9 @@ function renderTeam() {
     : emptyBox(tr('Darbu nav', 'Работ нет'), tr('Jūsu vienībai šajā dienā darbi nav piešķirti.', 'На этот день вашей бригаде работ не назначено.'), IC.plan)
       + `<button type="button" class="more-btn" id="probTeam"><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></svg> ${tr('Ziņot par problēmu objektā', 'Сообщить о проблеме на объекте')}</button>`);
   $('probTeam').onclick = () => openProblem(js, u);
-  dlTeam(u);
   if (!TOUR) maybeTour();
 }
-/* ---------- Darba laiks: «Sāku / Beidzu darbu» katram vienības cilvēkam (var atzīmēt arī kolēģi bez viedtālruņa) ---------- */
-const DL_API = CFG.API_URL.replace(/\/$/, '') + '/dl';
-async function dlTeam(u) {
-  if (!UV || !UV.key || S.date !== today()) return;
-  const box = document.createElement('div'); box.className = 'card panel'; box.id = 'dlBox'; box.style.cssText = 'margin-bottom:12px;padding:14px 16px';
-  const list = $('todayList'); if (!list || $('dlBox')) return; list.prepend(box);
-  const call = async (b) => { const r = await fetch(DL_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ key: UV.key }, b)) }); const j = await r.json(); if (!j.ok) throw new Error(j.error || 'Kļūda'); return j; };
-  const draw = (D) => { const ppl = u.persons.map(n => D.people.find(p => p.vards === n) || { vards: n, statuss: 'nav' });
-    box.innerHTML = `<div style="font-weight:800;font-size:15px;margin:0 0 8px">${tr('Darba laiks', 'Рабочее время')}</div>` + ppl.map(p => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)">
-      <span style="width:10px;height:10px;border-radius:50%;flex:none;background:${p.statuss === 'strada' ? '#3f7d5a' : p.statuss === 'beidza' ? 'var(--ink-3)' : '#c9d1cd'}"></span>
-      <div style="flex:1;min-width:0"><b style="display:block;font-weight:800">${esc(p.vards)}</b><small style="font-weight:700;color:var(--ink-3)">${p.statuss === 'strada' ? tr('strādā kopš ', 'работает с ') + esc(p.sak) : p.statuss === 'beidza' ? esc(p.sak + '–' + p.beidz) : tr('nav sācis', 'не начал')}</small></div>
-      ${p.statuss === 'strada' ? `<button type="button" class="btn btn-glass" data-dl="beidz" data-n="${esc(p.vards)}" style="width:auto;min-height:40px;padding:0 14px">${tr('Beidzu darbu', 'Закончил')}</button>`
-        : `<button type="button" class="btn btn-primary" data-dl="sak" data-n="${esc(p.vards)}" style="width:auto;min-height:40px;padding:0 14px">${tr('Sāku darbu', 'Начал')}</button>`}</div>`).join('')
-      + `<small style="display:block;margin-top:6px;color:var(--ink-3);font-weight:600">${tr('Var atzīmēt arī kolēģi, kuram nav viedtālruņa.', 'Можно отметить и коллегу без смартфона.')}</small>`; };
-  box.innerHTML = '<div class="skel" style="height:60px"></div>';
-  try { draw(await call({ action: 'team' })); } catch (e) { box.remove(); return; }
-  box.onclick = async (e) => { const b = e.target.closest('[data-dl]'); if (!b) return; b.disabled = true;
-    try { draw(await call({ action: 'teamMark', vards: b.dataset.n, veids: b.dataset.dl, vieniba: u.name, kas: S.dlMe || '' })); toast(b.dataset.dl === 'sak' ? tr('Atzīmēts: sāka darbu', 'Отмечено: начал') : tr('Atzīmēts: beidza darbu', 'Отмечено: закончил'), 'ok'); }
-    catch (err) { toast(netMsg(err), 'err'); b.disabled = false; } };
-}
+/* Darba laiks tagad tikai ar SMS (lietotne «Darba laiks», SAKU <kods> / BEIDZU) — brigāžu saitē atzīmju vairs nav */
 $('unitSeg').addEventListener('click', (e) => {
   const b = e.target.closest('[data-tu]'); if (!b) return;
   S.teamUnit = b.dataset.tu;
