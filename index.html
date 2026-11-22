@@ -1105,7 +1105,7 @@ const nmShort = (x) => { const w = nmKey(x).replace(/\./g, '').split(' '); retur
 function managerColor(name) {
   if (!name) return '';
   const L = S.meta.managers || [];
-  const m = L.find(x => x.name === name) || L.find(x => nmKey(x.name) === nmKey(name)) || L.find(x => nmShort(x.name) === nmShort(name));
+  const m = L.find(x => x.name === name) || L.find(x => nmKey(x.name) === nmKey(name)) || L.find(x => nmShort(x.name) === nmShort(name)) || L.find(x => nmKey(x.name).split(' ')[0] === nmKey(name));   // objektos bieži tikai vārds («Rostislavs»)
   if (m && m.color) return m.color;
   const C = S.meta.colors || {}; const k = Object.keys(C).find(n => n === name || nmKey(n) === nmKey(name) || nmShort(n) === nmShort(name));
   return k ? C[k] : '';
