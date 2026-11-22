@@ -1252,6 +1252,30 @@ function pushTokens_(tokens, title, body) {
   return { sent: sent, dead: dead };
 }
 
+/* ---------- «SH | Dati» → Objekti / Darbu veidi labojums → portāls sinhronizējas pēc ~1 min (nevis 30). © VAITKEVIX, SIA
+   VIENREIZ redaktorā palaidiet objektuTrigeris() un apstipriniet atļaujas. ---------- */
+const OBJ_SYNC_SHEETS_ = ['Objekti', 'Darbu veidi'];
+function objektuTrigeris() {
+  ScriptApp.getProjectTriggers().filter(t => ['objMainits', 'objSinhronizet'].indexOf(t.getHandlerFunction()) !== -1).forEach(t => ScriptApp.deleteTrigger(t));
+  const id = PropertiesService.getScriptProperties().getProperty('DATA_SS');
+  ScriptApp.newTrigger('objMainits').forSpreadsheet(id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet()).onChange().create();
+  Logger.log('Trigeris ieslēgts: Objekti un Darbu veidi izmaiņas aiziet uz portālu ~1 min laikā');
+}
+function objMainits(e) {
+  let nm = '';
+  try { nm = e && e.source ? e.source.getActiveSheet().getName() : ''; } catch (x) {}
+  if (nm && OBJ_SYNC_SHEETS_.indexOf(nm) === -1) return;   // cita lapa — neaiztiek
+  PropertiesService.getScriptProperties().setProperty('OBJ_EDIT_AT', String(Date.now()));
+  if (ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'objSinhronizet')) return;
+  ScriptApp.newTrigger('objSinhronizet').timeBased().after(60 * 1000).create();
+}
+function objSinhronizet() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'objSinhronizet').forEach(t => ScriptApp.deleteTrigger(t));
+  const last = +PropertiesService.getScriptProperties().getProperty('OBJ_EDIT_AT') || 0;
+  if (Date.now() - last < 45000) { ScriptApp.newTrigger('objSinhronizet').timeBased().after(60 * 1000).create(); return; }   // vēl labo — gaida
+  cfPost_({ action: 'syncConfig' });
+}
+
 function cfPost_(body) {
   const props = PropertiesService.getScriptProperties();
   const url = props.getProperty('CF_URL'), key = props.getProperty('BRIDGE_KEY');
