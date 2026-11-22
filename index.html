@@ -1099,9 +1099,19 @@ function typeText(j) {
   if (groupOfType(j.tips) === 'Aizvietošana') return tr('Aizvietot: ' + j.tips.toLowerCase(), 'Замена: ' + (RU.types[j.tips] || j.tips.toLowerCase()));
   return j.tips === 'Papilddarbs' ? tr('Papilddarbs', 'Доп. работа') : tr('Papilddarbs: ' + j.tips.toLowerCase(), 'Доп. работа: ' + (RU.types[j.tips] || j.tips.toLowerCase()));
 }
-function managerColor(name) { return (S.meta.managers.find(m => m.name === name) || {}).color || ''; }
-/* Darba krāsa = adreses (objekta) īstā vadītāja krāsa; ja objektam vadītāja nav — tā, kas pieteica */
-function jobColor(j) { const o = objOf(j.adrese); return managerColor((o && o.vaditajs) || j.vaditajs); }
+/* Vārdu salīdzina elastīgi: lielie/mazie burti, garumzīmes, «Vārds Uzvārds» = «Vārds U.» */
+const nmKey = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+const nmShort = (x) => { const w = nmKey(x).replace(/\./g, '').split(' '); return w.length > 1 ? w[0] + ' ' + w[w.length - 1][0] : w[0]; };
+function managerColor(name) {
+  if (!name) return '';
+  const L = S.meta.managers || [];
+  const m = L.find(x => x.name === name) || L.find(x => nmKey(x.name) === nmKey(name)) || L.find(x => nmShort(x.name) === nmShort(name));
+  if (m && m.color) return m.color;
+  const C = S.meta.colors || {}; const k = Object.keys(C).find(n => n === name || nmKey(n) === nmKey(name) || nmShort(n) === nmShort(name));
+  return k ? C[k] : '';
+}
+/* Darba krāsa = adreses (objekta) īstā vadītāja krāsa; ja tam krāsas nav — tā, kas pieteica */
+function jobColor(j) { const o = objOf(j.adrese); return managerColor(o && o.vaditajs) || managerColor(j.vaditajs); }
 function statusPill(j) {
   if (j.statuss === 'izpildīts' && j.parbaude === 'pieņemts') return `<span class="pill ok">${tr('Pieņemts ✓', 'Принято ✓')}</span>`;
   if (j.statuss === 'izpildīts') return `<span class="pill done">${tr('Izpildīts', 'Выполнено')}</span>`;
