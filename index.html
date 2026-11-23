@@ -2,7 +2,7 @@
 <html lang="lv">
 <head>
 <meta charset="utf-8">
-<script>/*SH viena saite: lietotne strādā tikai portālā vaitkevix.cloud/sh. © VAITKEVIX, SIA*/(function(){try{if(window.top!==window)return}catch(e){return}if(/[?&]k=/.test(location.search))return;/*brigādes saite*/var h=location.hash.slice(1);location.replace('https://vaitkevix.cloud/sh/#aizv'+(h?'/'+h:''))})()</script>
+<script>/*SH viena saite: lietotne strādā tikai portālā vaitkevix.cloud/sh. © VAITKEVIX, SIA*/(function(){try{if(window.top!==window)return}catch(e){return}var km=location.search.match(/[?&]k=([\w-]{8,64})/);if(km){try{localStorage.setItem('sh_brig_k',km[1])}catch(e){}return}/*brigādes saite — atceras*/try{var sk=localStorage.getItem('sh_brig_k');if(sk&&(navigator.standalone||matchMedia('(display-mode: standalone)').matches)){location.replace(location.pathname+'?k='+sk);return}}catch(e){}var h=location.hash.slice(1);location.replace('https://vaitkevix.cloud/sh/#aizv'+(h?'/'+h:''))})()</script>
 <!-- Darbu sadale — aizvietošana un papilddarbi. © VAITKEVIX, SIA. Visas tiesības aizsargātas. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>/* Android: lietotne nezīmējas zem sistēmas joslām (augšējās un apakšējās pogām), tāpēc bez viewport-fit=cover */
