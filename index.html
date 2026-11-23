@@ -21,6 +21,7 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
 })();</script>
 <title>SH | Aizvietošana</title>
 <link rel="manifest" href="manifest.json">
+<script>/* Brigādes saite ?k= — sākuma ekrāna ikona saglabā saiti, PIN nevajag */(function(){try{var k=new URLSearchParams(location.search).get('k');if(k&&/^[\w-]{8,64}$/.test(k)){document.querySelector('link[rel=manifest]').href='manifest.json?k='+encodeURIComponent(k)}}catch(e){}})()</script>
 <link rel="icon" type="image/svg+xml" href="icons/apps/aizvietosana.svg?v=3">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/apps/aizvietosana-32.png?v=3">
 <link rel="apple-touch-icon" href="icon.png?v=3">
