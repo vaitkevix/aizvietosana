@@ -362,6 +362,7 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
   .note.ok{background:var(--green-soft);border-color:transparent}
   .note.bad{background:var(--red-soft);border-color:transparent;color:var(--red)}
   .thumbs{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 12px 18px}
+  .vj-ph{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}.vj-ph img{width:100%;max-height:70vh;object-fit:contain;border-radius:16px;display:block;background:var(--surface-2)}
   .thumbs img{width:66px;height:66px;object-fit:cover;border-radius:14px;display:block;background:var(--surface-2);box-shadow:var(--g-shadow-sm)}
   .links{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 14px 14px 18px}
   .chip-link{display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:9px 14px;border-radius:999px;background:var(--brand-soft);color:var(--brand);text-decoration:none;
@@ -989,7 +990,7 @@ function startApp() {
   UV = null; $('langSeg').hidden = true; $('todayH').textContent = 'Mani objekti'; $('loginBtnTop').hidden = true; $('app').classList.remove('team');
   $('login').classList.remove('active'); $('login').hidden = true; $('appViews').hidden = false;
   const role = S.user.role;
-  $('brandSub').textContent = S.user.name + (role === 'admin' ? ' · Administrators' : ' · Pieteicējs');
+  $('brandSub').textContent = S.user.name + (role === 'admin' ? ' · Administrators' : role === 'vaditajs' ? ' · Vadītājs' : ' · Pieteicējs');
   const tabs = ROLE_TABS[role] || [];
   $('tabs').innerHTML = '<span class="tab-ind" id="tabInd"></span>' + tabs.map(([id, l, ic]) =>
     `<button class="tab" data-tab="${id}">${ic}<span>${l}</span><span class="count" id="cnt-${id}"></span></button>`).join('');
@@ -1464,9 +1465,21 @@ document.addEventListener('click', async (e) => {
   if (!UV && act === 'return') return returnJob(job);
   if (!UV && act === 'stop') return stopStanding(job.serija, job.adrese, job.datums);
   if (UV) return openReport(job);
-  if (S.user.role === 'vaditajs' && job.brigade) return toast('Darbs jau piešķirts vienībai — mainīt var tikai admins');
+  if (S.user.role === 'vaditajs' && job.brigade) return viewJob(job);
   openEdit(job);
 });
+/* Vadītājam: piešķirts darbs — tikai skatīt (visa info + lielas bildes) */
+function viewJob(j) {
+  const ph = photoIds(j);
+  openSheet(`<h3>${esc(j.adrese)}</h3><p class="lead">${esc(typeText(j))} · ${esc(brigs(j).join(', ') || 'nepiešķirts')}</p>
+    <div style="margin:0 0 12px">${statusPill(j)}</div>
+    ${j.apraksts ? `<div class="note">${esc(j.apraksts)}</div>` : ''}
+    ${j.statuss === 'izpildīts' && j.komentars ? `<div class="note ok"><b>Vienība:</b> ${esc(j.komentars)}</div>` : ''}
+    ${j.statuss === 'nevar izpildīt' && j.iemesls ? `<div class="note bad"><b>Nevar izpildīt:</b> ${esc(j.iemesls)}</div>` : ''}
+    ${j.izpildits ? `<p class="lead" style="margin:8px 0">Atzīmēts ${esc(j.izpildits)}</p>` : ''}
+    ${ph.length ? `<div class="vj-ph">${ph.map(id => `<a href="${photoLink(id)}" target="_blank" rel="noopener"><img src="${thumb(id).replace('sz=w600', 'sz=w1600')}" alt="Bilde" loading="lazy"></a>`).join('')}</div>` : '<p class="lead">Bilžu nav</p>'}
+    <p class="lead" style="margin-top:12px;font-size:13px">Mainīt piešķirtu darbu var tikai admins.</p>`);
+}
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-assign]'); if (!b) return;
   e.stopPropagation();
