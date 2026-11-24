@@ -241,6 +241,7 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
   .combo-input{padding-left:42px!important;padding-right:44px!important}
   .combo.picked .combo-input{border-color:var(--brand);background:var(--brand-soft);font-weight:700}
   .combo.picked .combo-ic{color:var(--brand)}
+  .combo.bad .combo-input{border-color:#d92d20!important;background:rgba(217,45,32,.06)}.combo.bad::after{content:'Izvēlieties adresi no saraksta';display:block;margin:6px 4px 0;color:#b42318;font-size:12.5px;font-weight:800}
   .combo-clear{position:absolute;right:7px;top:7px;width:36px;height:36px;border-radius:50%;border:0;background:var(--line);color:var(--ink-2);display:grid;place-items:center;cursor:pointer}
   .combo-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;max-height:320px;overflow-y:auto;overscroll-behavior:contain;padding:6px;
     background:var(--g-pop);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1px solid var(--g-brd);border-radius:20px;box-shadow:var(--g-shadow),0 24px 48px -16px rgba(20,35,28,.45)}
@@ -1525,20 +1526,24 @@ function comboShow(inp) {
   combo.querySelector('.combo-clear').hidden = !inp.value;
   const norm = (x) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const me = S.user.name, isMgr = S.user.role === 'vaditajs';
-  let list = myObjects().filter(o => !q || norm(o.adrese).includes(norm(q)));
-  if (isMgr && !q) list = list.filter(o => o.vaditajs === me);   // bez meklēšanas — visi paša objekti
-  list = list.slice(0, q ? 80 : (isMgr ? 300 : 80));
+  const toks = norm(q).replace(/\b(iela|bulvāris|bulvaris|gatve|prospekts|pr)\b\.?/g, ' ').split(/[\s,]+/).filter(Boolean);   // «dign 3a» → Dignājas 3A
+  let list = myObjects().filter(o => { if (!toks.length) return true; const a = norm(o.adrese); return toks.every(t => a.includes(t)); });
+  list = list.slice(0, 500);   // viss saraksts — ritina
   const grp = S.user.role === 'admin' ? (S.meta.groups || []).filter(g => g.adreses.length && (!q || norm(g.name).includes(norm(q)) || norm('grupa').includes(norm(q)))) : [];
-  if (!list.length && !grp.length) { box.hidden = true; return; }
+  if (!list.length && !grp.length) { box.innerHTML = `<div class="combo-sec" style="text-transform:none;letter-spacing:0;font-size:13px;padding:12px">Tādas adreses objektu sarakstā nav. Pamēģiniet citādi (piem. tikai ielas nosaukumu) — jaunu objektu pievieno admins Mājas lietā.</div>`; box.hidden = false; return; }
   const hl = (s) => { if (!q) return esc(s); const i = s.toLowerCase().indexOf(q); return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length)); };
   const mine = isMgr ? list.filter(o => o.vaditajs === me).length : 0;
   box.innerHTML = (grp.length ? '<div class="combo-sec">Visai grupai</div>' + grp.map(g => `<button type="button" class="combo-opt grp" data-a="Grupa: ${esc(g.name)}">🏘<span><b>${esc(g.name)}</b></span><small>${g.adreses.length} objekti</small></button>`).join('') + '<div class="combo-sec">Objekti</div>' : '') + (isMgr ? `<div class="combo-sec">Mani objekti · ${mine}</div>` : '') + list.map((o, i) => (isMgr && i === mine && i > 0 ? '<div class="combo-sec">Citi objekti</div>' : '') + `<button type="button" class="combo-opt" data-a="${esc(o.adrese)}">${IC.addr}<span>${hl(o.adrese)}</span>${o.grupa && o.grupa !== 'SH objekti' ? `<small>${esc(o.grupa)}</small>` : o.piekluve ? '<small><svg class="i" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/></svg></small>' : ''}</button>`).join('');
   box.hidden = false;
+  if (innerHeight - inp.getBoundingClientRect().bottom < 260) inp.scrollIntoView({ block: 'center', behavior: 'smooth' });   // telefonā sarakstam vieta zem lauka
 }
+const addrOk = (a) => !a || /^grupa:/i.test(a) || !!objOf(a);
 function bindCombo(root) {
   root.addEventListener('input', (e) => { if (e.target.classList.contains('fAddr')) comboShow(e.target); });
   root.addEventListener('focusin', (e) => { if (e.target.classList.contains('fAddr')) comboShow(e.target); });
-  root.addEventListener('focusout', (e) => { if (e.target.classList.contains('fAddr')) setTimeout(() => { const l = e.target.closest('.combo')?.querySelector('.combo-list'); if (l) l.hidden = true; }, 160); });
+  root.addEventListener('focusout', (e) => { if (e.target.classList.contains('fAddr')) setTimeout(() => { const c = e.target.closest('.combo'), l = c?.querySelector('.combo-list'); if (l) l.hidden = true;
+    if (c) { const v = e.target.value.trim(), f = !addrOk(v) && myObjects().filter(o => o.adrese.toLowerCase().includes(v.toLowerCase())); if (f && f.length === 1) { e.target.value = f[0].adrese; c.classList.add('picked'); mgrHints(); } c.classList.toggle('bad', !addrOk(e.target.value.trim())); } }, 160); });
+  root.addEventListener('input', (e) => { if (e.target.classList.contains('fAddr')) e.target.closest('.combo')?.classList.remove('bad'); });
   root.addEventListener('pointerdown', (e) => {
     const b = e.target.closest('.combo-opt'); if (!b) return;
     e.preventDefault();
@@ -1792,6 +1797,8 @@ $('jobForm').onsubmit = async (e) => {
   if (!items.length) return toast('Pievienojiet adresi', 'err');
   if (items.badGroup) return toast('Nezināma grupa: ' + items.badGroup, 'err');
   if (S.user.role === 'admin' && !formMgr && items.some(x => !(objOf(x.adrese) || {}).vaditajs)) { $('mgrField').scrollIntoView({ behavior: 'smooth', block: 'center' }); return toast('Kādai adresei nav vadītāja — izvēlieties, kam to pierakstīt', 'err'); }
+  const rowsEl = [...document.querySelectorAll('#jRows .jrow')], unk = rowsEl.findIndex(r => !addrOk(r.querySelector('.fAddr').value.trim()));
+  if (unk !== -1) { const c = rowsEl[unk].querySelector('.combo'); c.classList.add('bad'); c.scrollIntoView({ behavior: 'smooth', block: 'center' }); return toast(`${unk + 1}. adrese nav objektu sarakstā — izvēlieties no saraksta`, 'err'); }
   const bad = items.findIndex(x => !x.adrese || !x.tips);
   if (bad !== -1) return toast(`${bad + 1}. adresei trūkst ${!items[bad].adrese ? 'adreses' : 'darba'}`, 'err');
   const noP = items.findIndex(x => groupOfType(x.tips) === 'Aizvietošana' && !x.prombutne);
@@ -1849,6 +1856,7 @@ function openEdit(job) {
   $('eRow').addEventListener('change', () => updateVac($('eRow').querySelector('.jrow')));
   $('eRow').addEventListener('click', (e) => { const sc = e.target.closest('[data-sc]'); if (sc) { const t = $('eRow').querySelector('.fNote'); t.value = (t.value.trim() ? t.value.trim().replace(/[.]?$/, '. ') : '') + sc.dataset.sc + '.'; } });
   $('eSave').onclick = async () => {
+    { const ea = $('eRow').querySelector('.fAddr').value.trim(); if (ea.toLowerCase() !== String(job.adrese || '').toLowerCase() && !addrOk(ea)) { $('eRow').querySelector('.combo').classList.add('bad'); return toast('Adrese nav objektu sarakstā — izvēlieties no saraksta', 'err'); } }
     const r = $('eRow');
     const p = { id: job.id, datums: $('eDate').value, adrese: r.querySelector('.fAddr').value.trim(), tips: r.querySelector('.fType').value, apraksts: r.querySelector('.fNote').value.trim(), vaditajs: $('eMgr') ? $('eMgr').value : '',
       prombutne: groupOfType(r.querySelector('.fType').value) === 'Aizvietošana' ? (r.querySelector('.vacwrap').dataset.prom || '') : '',
