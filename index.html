@@ -309,7 +309,7 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
   .ai-btn small{display:block;color:var(--ink-2);font-size:12.5px;margin-top:1px}
   .ai-spark{font-size:22px;line-height:1}
   .ai-bar{display:flex;justify-content:flex-end;gap:14px;margin-top:6px}
-  .ai-mini{border:0;background:none;padding:4px 2px;font-weight:800;font-size:13px;color:#7c3aed;cursor:pointer}
+  .ai-mini{border:0;background:none;padding:10px 6px;margin:-6px -4px;font-weight:800;font-size:13px;color:#7c3aed;cursor:pointer}
   :root[data-theme="dark"] .ai-mini{color:#c4a5ff}
   .ai-mini.undo{color:var(--ink-3)}
   .ai-mini:disabled{opacity:.55}
@@ -327,8 +327,8 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
 
   /* ===== Kartītes ===== */
   .list{display:flex;flex-direction:column;gap:12px}
-  .task{overflow:hidden;animation:cardIn .45s cubic-bezier(.2,.8,.2,1) backwards}
-  @keyframes cardIn{from{opacity:0;transform:perspective(1000px) rotateX(-12deg) translateY(16px)}}
+  .task{overflow:hidden;animation:cardIn .25s cubic-bezier(.23,1,.32,1) backwards}
+  @keyframes cardIn{from{opacity:0;transform:translateY(8px)}}
   .task::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--mc,linear-gradient(180deg,#fbbf24,#d97706))}
   .task-top{display:flex;align-items:flex-start;gap:10px;padding:14px 14px 10px 18px}
   .task-top>div{flex:1;min-width:0}
@@ -419,8 +419,8 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
   /* Pieteikšanās */
   .lock{max-width:370px;margin:12px auto 0;padding:28px 22px;text-align:center}
   .lock .ic{width:68px;height:68px;margin:0 auto 16px;border-radius:22px;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,#fbbf24,#d97706);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 16px 26px -8px rgba(217,119,6,.55);animation:lockFloat 3s ease-in-out infinite}
-  @keyframes lockFloat{50%{transform:translateY(-5px) rotateY(18deg)}}
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 16px 26px -8px rgba(217,119,6,.55);animation:lockFloat .6s cubic-bezier(.23,1,.32,1) 1}
+  @keyframes lockFloat{from{opacity:0;transform:translateY(6px) scale(.96)}}
   .lock h3{margin:0 0 4px;font-size:20px;font-weight:800}
   .lock p{margin:0 0 18px;color:var(--ink-2);font-size:14px}
   .lock .input{text-align:center;font-size:24px;letter-spacing:.3em;font-weight:800;margin-bottom:12px}
@@ -462,11 +462,11 @@ if (/android/i.test(navigator.userAgent)) document.querySelector('meta[name=view
   .no-tabs .toasts{bottom:calc(20px + var(--safe-b))}
   .toast{display:flex;align-items:center;gap:10px;max-width:440px;width:100%;padding:14px 16px;border-radius:22px;color:#fff;font-weight:700;font-size:14px;pointer-events:auto;
     background:rgba(22,30,27,.78);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1px solid rgba(255,255,255,.14);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 18px 36px -12px rgba(0,0,0,.5);animation:toastIn .35s cubic-bezier(.3,1.4,.5,1)}
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 18px 36px -12px rgba(0,0,0,.5);animation:toastIn .25s cubic-bezier(.23,1,.32,1)}
   .toast.err{background:rgba(192,38,38,.86)}
   .toast.ok svg{color:#4ade80}
   .toast.out{animation:toastOut .25s ease forwards}
-  @keyframes toastIn{from{opacity:0;transform:perspective(600px) rotateX(-50deg) translateY(20px)}}
+  @keyframes toastIn{from{opacity:0;transform:translateY(12px)}}
   @keyframes toastOut{to{opacity:0;transform:translateY(16px) scale(.96)}}
   .push{position:fixed;left:10px;right:10px;top:calc(var(--safe-t) + 8px);z-index:95;max-width:460px;margin:0 auto;padding:12px 14px;border-radius:22px;display:flex;flex-direction:column;gap:2px;
     background:var(--g-pop);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1px solid var(--g-brd);box-shadow:var(--g-shadow),0 20px 40px -14px rgba(0,0,0,.45);
