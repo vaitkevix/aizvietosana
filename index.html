@@ -930,8 +930,8 @@ async function api(action, data = {}) {
   if (!CFG.API_URL || CFG.API_URL.includes('IELIEC')) throw new Error('config.js nav ievadīts API_URL');
   if (UV && /^team(Done|Cant|Problem)$/.test(action) && UV.canEdit === false) throw new Error(tr('Lai atzīmētu, vajag brigādes saiti no vadītāja', 'Чтобы отметить, нужна ссылка бригады от руководителя'));
   if (UV && /^team/.test(action)) data = Object.assign({ key: UV.key }, data);   // brigādes saite ?k=
-  const r = await fetch(CFG.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action, pin: S.pin }, data)) });
-  const j = await r.json();
+  const r = await fetch(CFG.API_URL, { signal: self.AbortSignal && AbortSignal.timeout ? AbortSignal.timeout(90000) : undefined, method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action, pin: S.pin }, data)) }).catch(() => { throw new Error('Nav savienojuma ar serveri — mēģiniet vēlreiz'); });
+  const j = await r.json().catch(() => ({ ok: false, error: 'Serveris neatbild — mēģiniet vēlreiz' }));
   if (!j.ok) throw new Error(j.error || 'Kļūda');
   return j;
 }
