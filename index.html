@@ -2461,6 +2461,7 @@ function openProblem(js, unit) {
     <div class="field"><span class="label">${tr('Adrese', 'Адрес')}</span>
       ${addrs.length ? `<div class="shortcuts" id="pAddrs" style="margin:0 0 8px">${addrs.map(a => `<button type="button" class="sc ${a === addr ? 'on' : ''}" data-a="${esc(a)}">${esc(a)}</button>`).join('')}</div>` : ''}
       <input class="input" id="pAddr" value="${esc(addr)}" placeholder="${tr('Vai ierakstiet citu adresi', 'Или впишите другой адрес')}" autocomplete="off"></div>
+    <div class="field"><span class="label">${tr('Kategorija', 'Категория')}</span><select class="input" id="pKat">${[['Bojājums', 'Повреждение'], ['Tīrība / atkritumi', 'Чистота / мусор'], ['Apgaismojums', 'Освещение'], ['Durvis / slēdzene', 'Двери / замок'], ['Lifts', 'Лифт'], ['Ūdens / noplūde', 'Вода / протечка'], ['Apkure', 'Отопление'], ['Teritorija / sniegs / ledus', 'Территория / снег / лёд'], ['Cits', 'Другое']].map(([v, r]) => `<option value="${v}">${tr(v, r)}</option>`).join('')}</select></div>
     <div class="field"><span class="label">${tr('Kas noticis?', 'Что случилось?')}</span><textarea class="textarea" id="pText" placeholder="${tr('Aprakstiet problēmu', 'Опишите проблему')}"></textarea></div>
     <div class="field"><span class="label">${tr('Bildes', 'Фото')} <span class="opt">· ${tr('nav obligāti', 'не обязательно')}</span></span>
       <div class="photos-edit" id="pThumbs"></div>
@@ -2480,7 +2481,7 @@ function openProblem(js, unit) {
     if (!adrese) return toast(tr('Norādiet adresi', 'Укажите адрес'), 'err');
     if (!teksts) return toast(tr('Aprakstiet problēmu', 'Опишите проблему'), 'err');
     const b = $('pSend'); b.disabled = true; b.innerHTML = '<span class="spinner"></span>' + (photos.length ? tr('Augšupielādē bildes…', 'Загрузка фото…') : tr('Sūta…', 'Отправка…'));
-    try { await api('teamProblem', { adrese, teksts, photos, vieniba: unit ? unitLabel(unit) : '' }); closeSheet(); toast(tr('Nosūtīts vadītājam', 'Отправлено руководителю'), 'ok'); }
+    try { await api('teamProblem', { adrese, teksts, photos, kategorija: $('pKat').value, vieniba: unit ? unitLabel(unit) : '' }); closeSheet(); toast(tr('Nosūtīts vadītājam', 'Отправлено руководителю'), 'ok'); }
     catch (err) { toast(netMsg(err), 'err'); b.disabled = false; b.textContent = tr('Nosūtīt', 'Отправить'); }
   };
 }
